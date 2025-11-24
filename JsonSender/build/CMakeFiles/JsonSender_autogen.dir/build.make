@@ -54,8 +54,8 @@ CMAKE_BINARY_DIR = /home/miko/qt_projects/JsonSender/build
 include CMakeFiles/JsonSender_autogen.dir/progress.make
 
 CMakeFiles/JsonSender_autogen:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC for target JsonSender"
-	/home/miko/miko/ingenic_toolchain/T40_INDUS_20221128/SDK_20221128/Zeratul_T40_Release_20220526/tools/toolchain/gcc_720/mips-linux-gnu-ingenic-gcc7.2.0-glibc2.29-fp64/bin/cmake -E cmake_autogen /home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender_autogen.dir/ Release
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC, UIC and RCC for target JsonSender"
+	/home/miko/miko/ingenic_toolchain/T40_INDUS_20221128/SDK_20221128/Zeratul_T40_Release_20220526/tools/toolchain/gcc_720/mips-linux-gnu-ingenic-gcc7.2.0-glibc2.29-fp64/bin/cmake -E cmake_autogen /home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender_autogen.dir/ ""
 
 JsonSender_autogen: CMakeFiles/JsonSender_autogen
 JsonSender_autogen: CMakeFiles/JsonSender_autogen.dir/build.make

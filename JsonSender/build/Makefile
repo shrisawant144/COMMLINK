@@ -163,86 +163,113 @@ JsonSender_autogen/moc_compilation.cpp.s:
 	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.s
 .PHONY : JsonSender_autogen/moc_compilation.cpp.s
 
-gui.o: gui.cpp.o
+src/gui.o: src/gui.cpp.o
 
-.PHONY : gui.o
-
-# target to build an object file
-gui.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/gui.cpp.o
-.PHONY : gui.cpp.o
-
-gui.i: gui.cpp.i
-
-.PHONY : gui.i
-
-# target to preprocess a source file
-gui.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/gui.cpp.i
-.PHONY : gui.cpp.i
-
-gui.s: gui.cpp.s
-
-.PHONY : gui.s
-
-# target to generate assembly for a file
-gui.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/gui.cpp.s
-.PHONY : gui.cpp.s
-
-main.o: main.cpp.o
-
-.PHONY : main.o
+.PHONY : src/gui.o
 
 # target to build an object file
-main.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/main.cpp.o
-.PHONY : main.cpp.o
+src/gui.cpp.o:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/gui.cpp.o
+.PHONY : src/gui.cpp.o
 
-main.i: main.cpp.i
+src/gui.i: src/gui.cpp.i
 
-.PHONY : main.i
+.PHONY : src/gui.i
 
 # target to preprocess a source file
-main.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/main.cpp.i
-.PHONY : main.cpp.i
+src/gui.cpp.i:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/gui.cpp.i
+.PHONY : src/gui.cpp.i
 
-main.s: main.cpp.s
+src/gui.s: src/gui.cpp.s
 
-.PHONY : main.s
+.PHONY : src/gui.s
 
 # target to generate assembly for a file
-main.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/main.cpp.s
-.PHONY : main.cpp.s
+src/gui.cpp.s:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/gui.cpp.s
+.PHONY : src/gui.cpp.s
 
-sender.o: sender.cpp.o
+src/main.o: src/main.cpp.o
 
-.PHONY : sender.o
+.PHONY : src/main.o
 
 # target to build an object file
-sender.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/sender.cpp.o
-.PHONY : sender.cpp.o
+src/main.cpp.o:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/main.cpp.o
+.PHONY : src/main.cpp.o
 
-sender.i: sender.cpp.i
+src/main.i: src/main.cpp.i
 
-.PHONY : sender.i
+.PHONY : src/main.i
 
 # target to preprocess a source file
-sender.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/sender.cpp.i
-.PHONY : sender.cpp.i
+src/main.cpp.i:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/main.cpp.i
+.PHONY : src/main.cpp.i
 
-sender.s: sender.cpp.s
+src/main.s: src/main.cpp.s
 
-.PHONY : sender.s
+.PHONY : src/main.s
 
 # target to generate assembly for a file
-sender.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/sender.cpp.s
-.PHONY : sender.cpp.s
+src/main.cpp.s:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/main.cpp.s
+.PHONY : src/main.cpp.s
+
+src/receiverthread.o: src/receiverthread.cpp.o
+
+.PHONY : src/receiverthread.o
+
+# target to build an object file
+src/receiverthread.cpp.o:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o
+.PHONY : src/receiverthread.cpp.o
+
+src/receiverthread.i: src/receiverthread.cpp.i
+
+.PHONY : src/receiverthread.i
+
+# target to preprocess a source file
+src/receiverthread.cpp.i:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiverthread.cpp.i
+.PHONY : src/receiverthread.cpp.i
+
+src/receiverthread.s: src/receiverthread.cpp.s
+
+.PHONY : src/receiverthread.s
+
+# target to generate assembly for a file
+src/receiverthread.cpp.s:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiverthread.cpp.s
+.PHONY : src/receiverthread.cpp.s
+
+src/sender.o: src/sender.cpp.o
+
+.PHONY : src/sender.o
+
+# target to build an object file
+src/sender.cpp.o:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/sender.cpp.o
+.PHONY : src/sender.cpp.o
+
+src/sender.i: src/sender.cpp.i
+
+.PHONY : src/sender.i
+
+# target to preprocess a source file
+src/sender.cpp.i:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/sender.cpp.i
+.PHONY : src/sender.cpp.i
+
+src/sender.s: src/sender.cpp.s
+
+.PHONY : src/sender.s
+
+# target to generate assembly for a file
+src/sender.cpp.s:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/sender.cpp.s
+.PHONY : src/sender.cpp.s
 
 # Help Target
 help:
@@ -257,15 +284,18 @@ help:
 	@echo "... JsonSender_autogen/moc_compilation.o"
 	@echo "... JsonSender_autogen/moc_compilation.i"
 	@echo "... JsonSender_autogen/moc_compilation.s"
-	@echo "... gui.o"
-	@echo "... gui.i"
-	@echo "... gui.s"
-	@echo "... main.o"
-	@echo "... main.i"
-	@echo "... main.s"
-	@echo "... sender.o"
-	@echo "... sender.i"
-	@echo "... sender.s"
+	@echo "... src/gui.o"
+	@echo "... src/gui.i"
+	@echo "... src/gui.s"
+	@echo "... src/main.o"
+	@echo "... src/main.i"
+	@echo "... src/main.s"
+	@echo "... src/receiverthread.o"
+	@echo "... src/receiverthread.i"
+	@echo "... src/receiverthread.s"
+	@echo "... src/sender.o"
+	@echo "... src/sender.i"
+	@echo "... src/sender.s"
 .PHONY : help
 
 

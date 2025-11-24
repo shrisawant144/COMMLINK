@@ -6,31 +6,75 @@
 
 #IncludeRegexTransform: 
 
-/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/EWIEGA46WW/moc_gui.cpp
-../../../gui.h
-/home/miko/qt_projects/JsonSender/gui.h
+/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/6YEA5652QU/moc_gui.cpp
+../../../include/gui.h
+/home/miko/qt_projects/JsonSender/include/gui.h
 QtCore/qbytearray.h
 -
 QtCore/qmetatype.h
 -
 
-/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/EWIEGA46WW/moc_sender.cpp
-../../../sender.h
-/home/miko/qt_projects/JsonSender/sender.h
+/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/6YEA5652QU/moc_receiverthread.cpp
+../../../include/receiverthread.h
+/home/miko/qt_projects/JsonSender/include/receiverthread.h
+QtCore/qbytearray.h
+-
+QtCore/qmetatype.h
+-
+
+/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/6YEA5652QU/moc_sender.cpp
+../../../include/sender.h
+/home/miko/qt_projects/JsonSender/include/sender.h
 QtCore/qbytearray.h
 -
 QtCore/qmetatype.h
 -
 
 /home/miko/qt_projects/JsonSender/build/JsonSender_autogen/moc_compilation.cpp
-EWIEGA46WW/moc_gui.cpp
-/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/EWIEGA46WW/moc_gui.cpp
-EWIEGA46WW/moc_sender.cpp
-/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/EWIEGA46WW/moc_sender.cpp
+6YEA5652QU/moc_gui.cpp
+/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/6YEA5652QU/moc_gui.cpp
+6YEA5652QU/moc_receiverthread.cpp
+/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/6YEA5652QU/moc_receiverthread.cpp
+6YEA5652QU/moc_sender.cpp
+/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/6YEA5652QU/moc_sender.cpp
 
-/home/miko/qt_projects/JsonSender/gui.cpp
-gui.h
-/home/miko/qt_projects/JsonSender/gui.h
+/home/miko/qt_projects/JsonSender/include/gui.h
+QWidget
+-
+QJsonDocument
+-
+sender.h
+/home/miko/qt_projects/JsonSender/include/sender.h
+
+/home/miko/qt_projects/JsonSender/include/receiverthread.h
+QThread
+-
+QJsonDocument
+-
+QString
+-
+sys/socket.h
+-
+netinet/in.h
+-
+atomic
+-
+
+/home/miko/qt_projects/JsonSender/include/sender.h
+QObject
+-
+QJsonDocument
+-
+functional
+-
+sys/socket.h
+-
+netinet/in.h
+-
+
+/home/miko/qt_projects/JsonSender/src/gui.cpp
+../include/gui.h
+/home/miko/qt_projects/JsonSender/include/gui.h
 QVBoxLayout
 -
 QHBoxLayout
@@ -45,24 +89,52 @@ QComboBox
 -
 QLabel
 -
+QGroupBox
+-
 QJsonDocument
 -
-
-/home/miko/qt_projects/JsonSender/gui.h
-QWidget
+QJsonParseError
 -
-sender.h
-/home/miko/qt_projects/JsonSender/sender.h
+QIntValidator
+-
+QMessageBox
+-
+QDateTime
+-
+QThread
+-
 
-/home/miko/qt_projects/JsonSender/main.cpp
+/home/miko/qt_projects/JsonSender/src/main.cpp
 QApplication
 -
-gui.h
-/home/miko/qt_projects/JsonSender/gui.h
+../include/gui.h
+/home/miko/qt_projects/JsonSender/include/gui.h
 
-/home/miko/qt_projects/JsonSender/sender.cpp
-sender.h
-/home/miko/qt_projects/JsonSender/sender.h
+/home/miko/qt_projects/JsonSender/src/receiverthread.cpp
+../include/receiverthread.h
+/home/miko/qt_projects/JsonSender/include/receiverthread.h
+QJsonDocument
+-
+QJsonParseError
+-
+QDebug
+-
+unistd.h
+-
+cstring
+-
+arpa/inet.h
+-
+fcntl.h
+-
+errno.h
+-
+
+/home/miko/qt_projects/JsonSender/src/sender.cpp
+../include/sender.h
+/home/miko/qt_projects/JsonSender/include/sender.h
+../include/receiverthread.h
+/home/miko/qt_projects/JsonSender/include/receiverthread.h
 QDebug
 -
 arpa/inet.h
@@ -71,18 +143,12 @@ unistd.h
 -
 cstring
 -
+errno.h
+-
 
-/home/miko/qt_projects/JsonSender/sender.h
-QObject
--
-QJsonDocument
--
-functional
--
-sys/socket.h
--
-netinet/in.h
--
+/usr/include/x86_64-linux-gnu/qt5/QtCore/QDateTime
+qdatetime.h
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qdatetime.h
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/QDebug
 qdebug.h
@@ -92,9 +158,21 @@ qdebug.h
 qjsondocument.h
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qjsondocument.h
 
+/usr/include/x86_64-linux-gnu/qt5/QtCore/QJsonParseError
+qjsondocument.h
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qjsondocument.h
+
 /usr/include/x86_64-linux-gnu/qt5/QtCore/QObject
 qobject.h
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qobject.h
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/QString
+qstring.h
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qstring.h
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/QThread
+qthread.h
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qthread.h
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qabstractitemmodel.h
 QtCore/qvariant.h
@@ -226,6 +304,16 @@ QtCore/qscopedpointer.h
 QtCore/qiodevice.h
 -
 QtCore/qpair.h
+-
+
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qdatetime.h
+QtCore/qstring.h
+-
+QtCore/qnamespace.h
+-
+QtCore/qshareddata.h
+-
+limits
 -
 
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qdebug.h
@@ -726,6 +814,16 @@ QtCore/qscopedpointer.h
 stdio.h
 -
 
+/usr/include/x86_64-linux-gnu/qt5/QtCore/qthread.h
+QtCore/qobject.h
+-
+future
+-
+functional
+-
+limits.h
+-
+
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qtypeinfo.h
 QtCore/qglobal.h
 -
@@ -831,6 +929,10 @@ QtCore/qpoint.h
 /usr/include/x86_64-linux-gnu/qt5/QtCore/qversiontagging.h
 QtCore/qglobal.h
 -
+
+/usr/include/x86_64-linux-gnu/qt5/QtGui/QIntValidator
+qvalidator.h
+/usr/include/x86_64-linux-gnu/qt5/QtGui/qvalidator.h
 
 /usr/include/x86_64-linux-gnu/qt5/QtGui/qbrush.h
 QtGui/qtguiglobal.h
@@ -1244,6 +1346,10 @@ qapplication.h
 qcombobox.h
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qcombobox.h
 
+/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QGroupBox
+qgroupbox.h
+/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qgroupbox.h
+
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QHBoxLayout
 qboxlayout.h
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qboxlayout.h
@@ -1255,6 +1361,10 @@ qlabel.h
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QLineEdit
 qlineedit.h
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlineedit.h
+
+/usr/include/x86_64-linux-gnu/qt5/QtWidgets/QMessageBox
+qmessagebox.h
+/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qmessagebox.h
 
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QPushButton
 qpushbutton.h
@@ -1358,6 +1468,12 @@ QtWidgets/qtwidgetsglobal.h
 QtWidgets/qwidget.h
 -
 
+/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qdialog.h
+QtWidgets/qtwidgetsglobal.h
+-
+QtWidgets/qwidget.h
+-
+
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qframe.h
 QtWidgets/qtwidgetsglobal.h
 -
@@ -1372,6 +1488,12 @@ QtWidgets/qlayout.h
 QtWidgets/qwidget.h
 -
 limits.h
+-
+
+/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qgroupbox.h
+QtWidgets/qtwidgetsglobal.h
+-
+QtWidgets/qframe.h
 -
 
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlabel.h
@@ -1420,6 +1542,12 @@ QtGui/qtextcursor.h
 QtCore/qstring.h
 -
 QtCore/qmargins.h
+-
+
+/usr/include/x86_64-linux-gnu/qt5/QtWidgets/qmessagebox.h
+QtWidgets/qtwidgetsglobal.h
+-
+QtWidgets/qdialog.h
 -
 
 /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qpushbutton.h
