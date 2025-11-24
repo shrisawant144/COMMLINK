@@ -1,0 +1,1 @@
+/usr/bin/c++  -O3 -DNDEBUG   CMakeFiles/JsonSender.dir/main.cpp.o CMakeFiles/JsonSender.dir/sender.cpp.o CMakeFiles/JsonSender.dir/gui.cpp.o CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o  -o JsonSender /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5.12.8 /usr/lib/x86_64-linux-gnu/libQt5Gui.so.5.12.8 /usr/lib/x86_64-linux-gnu/libQt5Core.so.5.12.8 
