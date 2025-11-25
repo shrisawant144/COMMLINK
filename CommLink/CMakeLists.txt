@@ -12,7 +12,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt5
-find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt5 REQUIRED COMPONENTS Core Widgets Sql)
 
 # Include directories
 include_directories(include)
@@ -31,6 +31,8 @@ set(SOURCES
     src/receiverthread.cpp
     src/filemanager.cpp
     src/exportmanager.cpp
+    src/messagehistorymanager.cpp
+    src/historytab.cpp
 )
 
 set(HEADERS
@@ -40,15 +42,18 @@ set(HEADERS
     include/receiverthread.h
     include/filemanager.h
     include/exportmanager.h
+    include/messagehistorymanager.h
+    include/historytab.h
 )
 
 # Create executable
 add_executable(CommLink ${SOURCES} ${HEADERS})
 
 # Link libraries
-target_link_libraries(CommLink 
-    Qt5::Core 
+target_link_libraries(CommLink
+    Qt5::Core
     Qt5::Widgets
+    Qt5::Sql
 )
 
 # Set target properties
