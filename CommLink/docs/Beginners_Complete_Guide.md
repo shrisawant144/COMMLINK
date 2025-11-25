@@ -102,6 +102,21 @@ JSON stands for **JavaScript Object Notation**, but don't let the name fool you 
 }
 ```
 
+### Theme Support
+
+The application now includes **theme support** for improved user experience:
+
+**Available Themes**:
+- **Light Theme**: Clean, bright interface for daytime use
+- **Dark Theme**: Easy on the eyes for low-light environments
+- **Auto Theme**: Automatically matches your system's theme preference
+
+**Benefits**:
+- **Reduced Eye Strain**: Dark theme helps in low-light conditions
+- **Accessibility**: Better visibility for users with visual preferences
+- **Professional Appearance**: Modern interface that adapts to your environment
+- **Persistent Settings**: Your theme choice is remembered between sessions
+
 ### JSON Rules (Simple Version)
 
 1. **Curly braces** `{}` contain objects

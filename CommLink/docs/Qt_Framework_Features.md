@@ -300,90 +300,183 @@ bool CommLinkGUI::validateInputs()
 - **Professional**: Behaves like commercial software
 - **Real-Time**: Validation happens as user types
 
-### 9. 🎨 **Styling and Appearance** (Making It Look Good)
+### 9. 🎨 **Theme Management and Styling** (Professional Appearance System)
 
-Qt allows you to customize the appearance of your application.
+Qt provides powerful styling capabilities that enable sophisticated theme management systems.
 
-#### **CSS-Like Styling**
+#### **Advanced Theme Architecture**
+Our application implements a comprehensive theme management system using the Singleton pattern:
+
 ```cpp
-setStyleSheet(R"(
-    QGroupBox {
-        font-weight: bold;
-        border: 2px solid #cccccc;
-        border-radius: 5px;
-        margin-top: 1ex;
+class ThemeManager : public QObject {
+    Q_OBJECT
+public:
+    static ThemeManager& instance() {
+        static ThemeManager instance;  // Thread-safe singleton
+        return instance;
     }
-    QPushButton {
-        padding: 8px 16px;
-        border-radius: 4px;
-        background-color: #f0f0f0;
-    }
-    QPushButton:hover {
-        background-color: #e0e0e0;
-    }
-)");
+    
+    void setTheme(Theme theme);
+    QString getStyleSheet() const;
+    bool isDarkMode() const;
+    
+signals:
+    void themeChanged();
+    
+private:
+    ThemeManager();  // Private constructor
+    Theme currentThemeMode = Light;
+};
 ```
 
-**What This Does**:
-- **Group Boxes**: Bold text, rounded borders
-- **Buttons**: Padding, rounded corners, hover effects
-- **Professional Look**: Modern, polished appearance
-
-### 10. 🔧 **Settings and Persistence** (Remembering User Preferences)
-
-Qt can automatically save and restore user settings.
-
+#### **Dynamic Theme Switching**
 ```cpp
-void CommLinkGUI::setupValidators()
-{
-    // Load saved settings
-    QSettings settings("CommLink", "CommLinkApp");
-    hostEdit->setText(settings.value("sendHost", "127.0.0.1").toString());
-    portEdit->setText(settings.value("sendPort", "5000").toString());
-    protocolCombo->setCurrentText(settings.value("sendProtocol", "TCP").toString());
-}
+// Theme application with signal-slot communication
+connect(&ThemeManager::instance(), &ThemeManager::themeChanged, 
+        this, [this]() {
+    setStyleSheet(ThemeManager::instance().getStyleSheet());
+    update();  // Redraw interface
+});
 
-void CommLinkGUI::saveSettings()
-{
-    // Save current settings
-    QSettings settings("CommLink", "CommLinkApp");
-    settings.setValue("sendHost", hostEdit->text());
-    settings.setValue("sendPort", portEdit->text());
-    settings.setValue("sendProtocol", protocolCombo->currentText());
+// System theme detection
+bool ThemeManager::isSystemDark() const {
+    QPalette palette = QApplication::palette();
+    return palette.color(QPalette::Window).lightness() < 128;
 }
 ```
 
-**Benefits**:
-- **User Convenience**: Remembers last used settings
-- **Cross-Platform**: Works on all operating systems
-- **Automatic**: Qt handles the file management
-- **Flexible**: Can save any type of data
+#### **Comprehensive Stylesheet System**
+```cpp
+QString ThemeManager::getLightStyleSheet() const {
+    return R"(
+        QWidget { background-color: #ffffff; color: #000000; }
+        QPushButton { 
+            background-color: #f0f0f0;
+            border: 1px solid #cccccc;
+            padding: 8px 16px;
+            border-radius: 4px;
+        }
+        QPushButton:hover { background-color: #e0e0e0; }
+        QGroupBox {
+            font-weight: bold;
+            border: 2px solid #cccccc;
+            border-radius: 5px;
+            margin-top: 1ex;
+        }
+    )";
+}
+```
+
+**Advanced Theme Features**:
+- **Singleton Pattern**: Global theme management with single instance
+- **Observer Pattern**: Automatic UI updates via signals and slots
+- **System Integration**: Automatic detection of OS theme preferences
+- **Persistent Settings**: Theme choices saved between sessions
+- **Type Safety**: Enum classes prevent theme-related errors
+- **Performance**: Efficient stylesheet generation and application
+
+### 10. 🔧 **Settings and Persistence** (Advanced Configuration Management)
+
+Qt provides sophisticated settings management that integrates seamlessly with theme systems and user preferences.
+
+#### **Comprehensive Settings Architecture**
+```cpp
+class SettingsManager {
+public:
+    static void loadApplicationSettings() {
+        QSettings settings("CommLink", "CommLinkApp");
+        
+        // Network settings
+        QString host = settings.value("sendHost", "127.0.0.1").toString();
+        int port = settings.value("sendPort", 5000).toInt();
+        QString protocol = settings.value("sendProtocol", "TCP").toString();
+        
+        // Theme settings with type safety
+        int themeValue = settings.value("theme", static_cast<int>(Theme::Light)).toInt();
+        Theme savedTheme = static_cast<Theme>(themeValue);
+        ThemeManager::instance().setTheme(savedTheme);
+        
+        // Window geometry and state
+        QByteArray geometry = settings.value("geometry").toByteArray();
+        QByteArray windowState = settings.value("windowState").toByteArray();
+    }
+    
+    static void saveApplicationSettings() {
+        QSettings settings("CommLink", "CommLinkApp");
+        
+        // Save theme with proper type conversion
+        settings.setValue("theme", static_cast<int>(ThemeManager::instance().currentTheme()));
+        
+        // Save other application state...
+    }
+};
+```
+
+#### **Theme-Aware Settings Integration**
+```cpp
+// Theme manager with persistent settings
+ThemeManager::ThemeManager() {
+    settings = new QSettings("CommLink", "CommLinkApp", this);
+    
+    // Load saved theme with validation
+    int themeValue = settings->value("theme", static_cast<int>(Light)).toInt();
+    if (themeValue >= 0 && themeValue <= static_cast<int>(Auto)) {
+        currentThemeMode = static_cast<Theme>(themeValue);
+    } else {
+        currentThemeMode = Light;  // Fallback to safe default
+    }
+}
+
+void ThemeManager::setTheme(Theme theme) {
+    if (currentThemeMode != theme) {
+        currentThemeMode = theme;
+        settings->setValue("theme", static_cast<int>(theme));
+        settings->sync();  // Force immediate write
+        emit themeChanged();
+    }
+}
+```
+
+**Advanced Settings Features**:
+- **Type Safety**: Proper enum conversion with validation
+- **Immediate Persistence**: Settings saved instantly on change
+- **Cross-Platform Storage**: Automatic platform-appropriate locations
+- **Hierarchical Organization**: Grouped settings for better management
+- **Default Value Handling**: Graceful fallbacks for missing settings
+- **Integration**: Seamless connection with theme and UI systems
 
 ## How Qt Features Work Together in Our App
 
-### 🔄 **The Complete Flow**
+### 🔄 **The Complete Integration Flow**
 
-1. **QApplication** starts the event loop
-2. **QWidget hierarchy** creates the user interface
-3. **Layouts** automatically arrange all components
-4. **Input validators** ensure data quality
-5. **Signals and slots** connect user actions to responses
-6. **QString** handles all text processing safely
-7. **QJsonDocument** processes JSON data
-8. **QSettings** remembers user preferences
-9. **Styling** makes everything look professional
+1. **QApplication** starts the event loop and initializes theme detection
+2. **ThemeManager Singleton** loads saved theme preferences
+3. **QWidget hierarchy** creates the user interface structure
+4. **Layouts** automatically arrange components with theme-aware spacing
+5. **Theme System** applies comprehensive styling to all widgets
+6. **Input validators** ensure data quality with theme-appropriate feedback
+7. **Signals and slots** connect user actions to responses and theme updates
+8. **QString** handles all text processing with proper encoding
+9. **QJsonDocument** processes data with theme-aware error display
+10. **QSettings** manages both user preferences and theme persistence
+11. **Observer Pattern** ensures all UI components update when theme changes
+12. **Cross-platform integration** adapts to system theme preferences
 
-### 🎯 **Example User Interaction**
+### 🎯 **Example User Interaction with Theme Integration**
 
-1. User types in host field (**QLineEdit**)
-2. Validator checks if it's valid (**QIntValidator**)
-3. User clicks Connect button (**QPushButton**)
-4. Signal fired (**clicked signal**)
-5. Our slot method called (**onConnect slot**)
-6. JSON processed (**QJsonDocument**)
-7. Network connection made (**Qt networking**)
-8. Status updated (**QString formatting**)
-9. Settings saved (**QSettings**)
+1. **Application Startup**: ThemeManager loads saved theme preference
+2. **UI Initialization**: All widgets styled according to current theme
+3. **User Input**: Types in host field (QLineEdit with theme-appropriate colors)
+4. **Validation**: Validator checks input with theme-aware error styling
+5. **Theme Change**: User switches to dark mode via menu
+6. **Signal Propagation**: ThemeManager emits themeChanged signal
+7. **UI Update**: All widgets automatically re-style via connected slots
+8. **User Action**: Clicks Connect button (QPushButton with updated theme)
+9. **Response**: Signal fired and slot method called
+10. **Data Processing**: JSON processed with theme-appropriate status display
+11. **Network Operation**: Connection made with themed progress indicators
+12. **Persistence**: Both connection settings and theme choice saved
+13. **Status Update**: Success/error messages displayed with theme colors
 
 ## Why Qt Is Perfect for This Project
 
@@ -400,10 +493,13 @@ void CommLinkGUI::saveSettings()
 - **Active Community**: Large community for support
 
 ### 🚀 **For This Application**
-- **Network Integration**: Built-in networking classes
-- **JSON Support**: Native JSON parsing and generation
-- **Threading**: Easy background processing
-- **Professional UI**: Looks and feels like commercial software
+- **Network Integration**: Built-in networking classes with theme-aware status display
+- **JSON Support**: Native JSON parsing with themed error reporting
+- **Threading**: Easy background processing with themed progress indicators
+- **Professional UI**: Comprehensive theme system creates commercial-quality appearance
+- **Design Patterns**: Real-world implementation of Singleton, Observer, and Strategy patterns
+- **System Integration**: Automatic adaptation to OS theme preferences
+- **User Experience**: Smooth theme transitions and persistent user preferences
 
 ### 11. 📁 **File Management and Dialogs** (Working with Files)
 
@@ -521,5 +617,210 @@ logMessage("Exported logs to " + filePath, "📋 ");
 - **Clear Messages**: Specific information about what happened
 - **Visual Cues**: Emojis make logs easier to scan
 - **Professional Feel**: Behaves like commercial software
+
+### 13. 🎨 **Advanced Theme Management System** (Design Patterns in Action)
+
+Our application showcases sophisticated C++ design patterns through its comprehensive theme management system.
+
+#### **Singleton Pattern Implementation**
+```cpp
+class ThemeManager : public QObject {
+    Q_OBJECT
+
+public:
+    // Thread-safe singleton access
+    static ThemeManager& instance() {
+        static ThemeManager instance;  // C++11 guarantees thread safety
+        return instance;
+    }
+    
+    // Prevent copying (Rule of Five)
+    ThemeManager(const ThemeManager&) = delete;
+    ThemeManager& operator=(const ThemeManager&) = delete;
+    ThemeManager(ThemeManager&&) = delete;
+    ThemeManager& operator=(ThemeManager&&) = delete;
+    
+private:
+    ThemeManager();  // Private constructor ensures singleton
+    ~ThemeManager() = default;
+};
+```
+
+**Why Singleton for Theme Management**:
+- **Global State**: Theme affects entire application uniformly
+- **Resource Efficiency**: Single stylesheet cache and settings manager
+- **Consistency**: Prevents conflicting theme states
+- **Easy Access**: Available from any part of the application
+
+#### **Type-Safe Theme Enumeration**
+```cpp
+enum class Theme { Light, Dark, Auto };
+
+// Usage demonstrates type safety
+void setApplicationTheme(Theme theme) {  // Can't pass wrong type
+    ThemeManager::instance().setTheme(theme);
+}
+
+// Compiler prevents this error:
+// setApplicationTheme(5);  // Error: cannot convert int to Theme
+```
+
+#### **Observer Pattern with Qt Signals**
+```cpp
+class ThemeManager : public QObject {
+signals:
+    void themeChanged();  // Notification to all observers
+    
+public slots:
+    void setTheme(Theme theme) {
+        if (currentThemeMode != theme) {
+            currentThemeMode = theme;
+            saveSettings();
+            emit themeChanged();  // Notify all listeners
+        }
+    }
+};
+
+// Multiple widgets can observe theme changes
+connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
+        mainWindow, &MainWindow::updateTheme);
+connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
+        settingsDialog, &SettingsDialog::refreshAppearance);
+```
+
+**Observer Pattern Benefits**:
+- **Loose Coupling**: Theme manager doesn't know about specific UI components
+- **Extensibility**: New components can easily subscribe to theme changes
+- **Automatic Updates**: All UI elements update simultaneously
+- **Thread Safety**: Qt's signal-slot system handles cross-thread communication
+
+#### **Strategy Pattern for Theme Rendering**
+```cpp
+class ThemeManager {
+private:
+    // Different strategies for different themes
+    QString getLightStyleSheet() const;
+    QString getDarkStyleSheet() const;
+    QString getAutoStyleSheet() const;  // Adapts to system
+    
+public:
+    QString getStyleSheet() const {
+        switch (currentThemeMode) {
+            case Theme::Light: return getLightStyleSheet();
+            case Theme::Dark:  return getDarkStyleSheet();
+            case Theme::Auto:  return getAutoStyleSheet();
+        }
+        return getLightStyleSheet();  // Safe fallback
+    }
+};
+```
+
+#### **System Integration and Auto-Detection**
+```cpp
+bool ThemeManager::isSystemDark() const {
+    // Cross-platform system theme detection
+    QPalette palette = QApplication::palette();
+    QColor windowColor = palette.color(QPalette::Window);
+    
+    // HSL lightness calculation
+    return windowColor.lightness() < 128;
+}
+
+QString ThemeManager::getAutoStyleSheet() const {
+    // Automatically adapt to system preference
+    return isSystemDark() ? getDarkStyleSheet() : getLightStyleSheet();
+}
+```
+
+#### **Persistent Configuration Management**
+```cpp
+class ThemeManager {
+private:
+    QSettings* settings;
+    
+    void loadSettings() {
+        int themeValue = settings->value("theme", static_cast<int>(Theme::Light)).toInt();
+        
+        // Validate loaded value
+        if (themeValue >= 0 && themeValue <= static_cast<int>(Theme::Auto)) {
+            currentThemeMode = static_cast<Theme>(themeValue);
+        } else {
+            currentThemeMode = Theme::Light;  // Safe fallback
+            qWarning() << "Invalid theme value loaded, using Light theme";
+        }
+    }
+    
+    void saveSettings() {
+        settings->setValue("theme", static_cast<int>(currentThemeMode));
+        settings->sync();  // Force immediate write to disk
+    }
+};
+```
+
+#### **Comprehensive Widget Styling**
+```cpp
+QString ThemeManager::getDarkStyleSheet() const {
+    return R"(
+        /* Base widget styling */
+        QWidget {
+            background-color: #2b2b2b;
+            color: #ffffff;
+            selection-background-color: #3d3d3d;
+        }
+        
+        /* Button styling with hover effects */
+        QPushButton {
+            background-color: #404040;
+            border: 1px solid #555555;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #4a4a4a;
+            border-color: #666666;
+        }
+        QPushButton:pressed {
+            background-color: #353535;
+        }
+        
+        /* Input field styling */
+        QLineEdit, QTextEdit {
+            background-color: #3a3a3a;
+            border: 2px solid #555555;
+            border-radius: 4px;
+            padding: 4px;
+        }
+        QLineEdit:focus, QTextEdit:focus {
+            border-color: #0078d4;
+        }
+        
+        /* Group box styling */
+        QGroupBox {
+            font-weight: bold;
+            border: 2px solid #555555;
+            border-radius: 5px;
+            margin-top: 1ex;
+            padding-top: 10px;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 5px 0 5px;
+        }
+    )";
+}
+```
+
+**Theme System Architecture Benefits**:
+- **Design Patterns**: Demonstrates Singleton, Observer, and Strategy patterns
+- **Type Safety**: Enum classes prevent theme-related errors
+- **Performance**: Efficient stylesheet caching and generation
+- **User Experience**: Smooth theme transitions and system integration
+- **Maintainability**: Centralized theme logic with clear separation of concerns
+- **Extensibility**: Easy to add new themes or modify existing ones
+- **Professional Quality**: Comprehensive styling for all widget types
+
+This theme management system exemplifies how Qt's features combine with solid C++ design patterns to create professional, maintainable applications. It demonstrates the practical application of concepts covered in the C++ Programming Concepts document.
 
 Qt transforms what could be hundreds of lines of complex, platform-specific code into clean, readable, maintainable C++. It's the difference between building a car from individual metal sheets versus assembling one from high-quality, pre-engineered components.

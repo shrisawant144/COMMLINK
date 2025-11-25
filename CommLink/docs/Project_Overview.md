@@ -167,6 +167,20 @@ CommLink/
 - **Learning Projects**: Build your own network applications
 - **Hobby Electronics**: Test Arduino/Raspberry Pi projects
 
+## Theme Support
+
+### 🎨 **Visual Customization**
+- **Light Theme**: Clean, bright interface for daytime use
+- **Dark Theme**: Easy on the eyes for low-light environments
+- **Auto Theme**: Automatically matches your system's theme preference
+- **Persistent Settings**: Your theme choice is remembered between sessions
+
+### 💡 **Why Theme Support Matters**
+- **User Comfort**: Reduce eye strain during extended use
+- **Accessibility**: Better visibility for users with visual preferences
+- **Professional Appearance**: Adapt to different work environments
+- **Modern Standards**: Follows current UI/UX best practices
+
 ## Benefits of This Approach
 
 ### 👍 **For Beginners**

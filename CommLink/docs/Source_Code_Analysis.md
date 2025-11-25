@@ -1359,3 +1359,203 @@ void HistoryTab::showMessageDetails(int row, int column) {
 This comprehensive error handling makes the application robust and user-friendly, providing clear feedback when things go wrong and preventing crashes from unexpected conditions.
 
 The code demonstrates professional software development practices: clear separation of concerns, comprehensive error handling, proper resource management, user-friendly interface design, complete file management capabilities, and sophisticated data persistence with advanced search functionality.
+
+---
+
+## 🎨 **ThemeManager - Singleton Pattern Implementation**
+
+The ThemeManager class showcases advanced C++ design patterns integrated with Qt's framework.
+
+### Singleton Pattern with Qt Integration
+
+```cpp
+class ThemeManager : public QObject {
+    Q_OBJECT
+
+public:
+    // Thread-safe singleton access (C++11 guaranteed)
+    static ThemeManager& instance() {
+        static ThemeManager instance;
+        return instance;
+    }
+    
+    // Prevent copying and assignment
+    ThemeManager(const ThemeManager&) = delete;
+    ThemeManager& operator=(const ThemeManager&) = delete;
+    
+    // Public interface
+    void setTheme(Theme theme);
+    Theme currentTheme() const { return currentThemeMode; }
+    bool isDarkMode() const;
+    QString getStyleSheet() const;
+    QString getThemeName() const;
+    
+signals:
+    void themeChanged();
+    
+private slots:
+    void onSystemThemeChanged();
+    
+private:
+    ThemeManager();
+    bool isSystemDark() const;
+    QString getLightStyleSheet() const;
+    QString getDarkStyleSheet() const;
+    
+    Theme currentThemeMode = Light;
+    QSettings* settings;
+};
+```
+
+**Key Design Elements**:
+- **QObject Inheritance**: Enables Qt's signal-slot mechanism
+- **Q_OBJECT Macro**: Required for Qt meta-object system
+- **Singleton Pattern**: Single global instance for theme management
+- **Deleted Copy Operations**: Prevents accidental copying
+- **Private Constructor**: Enforces singleton access
+
+### Constructor Implementation
+
+```cpp
+ThemeManager::ThemeManager() {
+    settings = new QSettings("CommLink", "CommLinkApp", this);
+    
+    // Monitor system theme changes
+    QTimer* timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &ThemeManager::onSystemThemeChanged);
+    timer->start(5000); // Check every 5 seconds
+}
+```
+
+**Qt Integration Features**:
+- **QSettings**: Cross-platform persistent storage
+- **QTimer**: Periodic system theme monitoring
+- **QObject Parent-Child**: Automatic memory management
+- **Signal-Slot Connection**: Qt's event system integration
+
+### Theme Setting with Signal Emission
+
+```cpp
+void ThemeManager::setTheme(Theme theme) {
+    if (currentThemeMode != theme) {
+        currentThemeMode = theme;
+        saveSettings();
+        emit themeChanged();  // Qt signal emission
+    }
+}
+```
+
+**Observer Pattern Implementation**:
+- **State Change Detection**: Only emit when theme actually changes
+- **Persistent Storage**: Automatically save theme preference
+- **Signal Emission**: Notify all connected objects of change
+- **Qt Signal-Slot**: Type-safe, thread-safe communication
+
+### System Theme Detection
+
+```cpp
+bool ThemeManager::isSystemDark() const {
+    QPalette palette = QApplication::palette();
+    return palette.color(QPalette::Window).lightness() < 128;
+}
+```
+
+**Cross-Platform Theme Detection**:
+- **QApplication::palette()**: Access system color scheme
+- **QPalette::Window**: Base window background color
+- **lightness() < 128**: Threshold for dark/light detection
+- **Automatic Adaptation**: Works on Windows, macOS, Linux
+
+### Stylesheet Generation
+
+```cpp
+QString ThemeManager::getStyleSheet() const {
+    return isDarkMode() ? getDarkStyleSheet() : getLightStyleSheet();
+}
+
+QString ThemeManager::getLightStyleSheet() const {
+    return R"(
+        QWidget {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        QGroupBox {
+            font-weight: bold;
+            border: 2px solid #cccccc;
+            border-radius: 5px;
+            margin-top: 1ex;
+            background-color: #f9f9f9;
+        }
+        /* ... comprehensive styling for all widget types */
+    )";
+}
+```
+
+**Stylesheet Architecture**:
+- **Conditional Generation**: Different styles for light/dark themes
+- **Comprehensive Coverage**: Styles for all Qt widget types
+- **CSS-like Syntax**: Familiar styling approach
+- **Performance**: Single stylesheet application
+- **Maintainability**: Centralized theme definitions
+
+### Recursive Theme Application
+
+```cpp
+void ThemeManager::applyTheme(QWidget* widget) {
+    if (widget) {
+        widget->setStyleSheet(getStyleSheet());
+        // Recursively apply to all child widgets
+        for (QObject* child : widget->children()) {
+            QWidget* childWidget = qobject_cast<QWidget*>(child);
+            if (childWidget) {
+                applyTheme(childWidget);
+            }
+        }
+    }
+}
+```
+
+**Qt Widget Tree Traversal**:
+- **Recursive Application**: Applies to widget and all descendants
+- **Qt Object System**: Uses QObject hierarchy
+- **Safe Casting**: qobject_cast prevents invalid casts
+- **Complete Coverage**: Ensures all widgets get themed
+
+### Settings Persistence
+
+```cpp
+void ThemeManager::loadSettings() {
+    int themeValue = settings->value("theme", static_cast<int>(Light)).toInt();
+    currentThemeMode = static_cast<Theme>(themeValue);
+}
+
+void ThemeManager::saveSettings() {
+    settings->setValue("theme", static_cast<int>(currentThemeMode));
+}
+```
+
+**Qt Settings Integration**:
+- **Type Safety**: Proper enum-int conversion
+- **Default Values**: Falls back to Light theme
+- **Cross-Platform**: Works on all Qt-supported platforms
+- **Automatic Serialization**: Qt handles data storage format
+
+### GUI Integration
+
+```cpp
+// In GUI constructor
+connect(&ThemeManager::instance(), &ThemeManager::themeChanged, 
+        this, [this]() {
+    // Update UI with new theme
+    setStyleSheet(ThemeManager::instance().getStyleSheet());
+    update();  // Force redraw
+});
+```
+
+**Signal-Slot Connection**:
+- **Singleton Access**: ThemeManager::instance()
+- **Lambda Slot**: Modern C++ lambda for response
+- **Stylesheet Update**: Apply new theme styles
+- **UI Refresh**: Force widget redraw for immediate effect
+
+This ThemeManager implementation demonstrates the seamless integration of modern C++ design patterns with Qt's powerful framework, creating a robust, user-friendly theming system that enhances the application's accessibility and user experience.
