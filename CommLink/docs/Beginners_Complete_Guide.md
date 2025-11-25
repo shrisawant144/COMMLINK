@@ -260,6 +260,12 @@ The application uses **tabs** to organize different functions:
 - Start/stop receiving
 - View received messages
 
+**📚 History Tab**:
+- Browse all sent and received messages
+- Search and filter message history
+- View detailed message information
+- Export historical data
+
 **📋 Logs Tab**:
 - See all activity
 - Debug connection problems
@@ -663,6 +669,14 @@ make
 2. Click "📤 Export Messages" button
 3. Choose format (JSON, TXT, or CSV) and location
 4. All received messages saved for analysis
+
+**Exploring Message History**:
+1. Go to "📚 History" tab
+2. Browse all sent and received messages with timestamps
+3. Use search box to find specific content
+4. Set date ranges to filter results
+5. Double-click any message to see full details
+6. Export filtered history in various formats
 
 ### Testing Between Computers
 

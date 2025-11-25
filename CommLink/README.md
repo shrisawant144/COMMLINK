@@ -2,13 +2,13 @@
 
 ## What Is This Application?
 
-This is a **desktop application** that lets you send and receive **JSON messages** (a common data format) over computer networks. Think of it like a specialized messaging app for computers to talk to each other.
+This is a **desktop application** that enables you to send and receive **JSON messages** (a common data format) over computer networks. Think of it as a specialized messaging app for computers to communicate with each other.
 
 ### Real-World Example
 Imagine you have two computers:
 - **Computer A** wants to send a message: `{"temperature": 25, "humidity": 60}`
 - **Computer B** wants to receive this weather data
-- This application makes that communication possible!
+- CommLink makes this communication seamless and reliable!
 
 ## What You Can Do With This App
 
@@ -35,34 +35,46 @@ Imagine you have two computers:
 - Export received messages in JSON, TXT, or CSV format
 - Clear received messages display
 
+### 📚 **Message History**
+- Persistent storage of all sent and received messages
+- Advanced search and filtering capabilities
+- SQLite database for reliable data storage
+- Session tracking and audit trails
+- Export historical data in multiple formats
+
 ## Project Structure (What Files Do What)
 
 ```
 CommLink/
 ├── 📁 src/                    # The main program code
-│   ├── main.cpp              # Starts the application
-│   ├── gui.cpp               # Creates the windows and buttons
-│   ├── sender.cpp            # Handles sending messages
-│   ├── receiver.cpp          # Handles receiving messages
-│   ├── receiverthread.cpp    # Manages background listening
-│   ├── filemanager.cpp       # Handles JSON file operations
-│   └── exportmanager.cpp     # Handles data export in multiple formats
+│   ├── main.cpp              # Application entry point
+│   ├── gui.cpp               # User interface implementation
+│   ├── sender.cpp            # Outgoing message handling
+│   ├── receiver.cpp          # Incoming message handling
+│   ├── receiverthread.cpp    # Background message processing
+│   ├── filemanager.cpp       # JSON file operations
+│   ├── exportmanager.cpp     # Multi-format data export
+│   ├── messagehistorymanager.cpp  # Database operations
+│   └── historytab.cpp        # History interface
 ├── 📁 include/               # Code blueprints (headers)
-│   ├── gui.h                 # GUI blueprint
-│   ├── sender.h              # Sender blueprint
-│   ├── receiver.h            # Receiver blueprint
-│   ├── receiverthread.h      # Background thread blueprint
-│   ├── filemanager.h         # File operations blueprint
-│   └── exportmanager.h       # Export operations blueprint
-├── 📁 docs/                  # Detailed explanations
-│   ├── Project_Overview.md   # Big picture explanation
-│   ├── CPP_Programming_Concepts.md  # C++ concepts used
-│   ├── Qt_Framework_Features.md     # GUI framework features
+│   ├── gui.h                 # GUI class definition
+│   ├── sender.h              # Sender class definition
+│   ├── receiver.h            # Receiver class definition
+│   ├── receiverthread.h      # Background thread definition
+│   ├── filemanager.h         # File operations definition
+│   ├── exportmanager.h       # Export operations definition
+│   ├── messagehistorymanager.h    # Database operations definition
+│   └── historytab.h          # History interface definition
+├── 📁 docs/                  # Comprehensive documentation
+│   ├── Project_Overview.md   # Architecture and design overview
+│   ├── CPP_Programming_Concepts.md  # C++ concepts explained
+│   ├── Qt_Framework_Features.md     # Qt framework usage
 │   ├── GUI_Implementation_Guide.md  # Complete GUI documentation
 │   ├── Beginners_Complete_Guide.md  # Step-by-step learning guide
-│   └── Source_Code_Analysis.md      # Code deep-dive
-├── CMakeLists.txt            # Build instructions for computer
+│   └── Source_Code_Analysis.md      # Detailed code analysis
+├── CMakeLists.txt            # Build configuration
 ├── README.md                 # This file you're reading
+├── OPTIMIZATION_SUMMARY.md   # Recent improvements and optimizations
 └── 📁 test_build/           # Compiled application (generated)
 ```
 

@@ -2,7 +2,7 @@
 
 ## How to Read This Guide
 
-This document explains **every important line of code** in the CommLink project. Think of it as a **guided tour** through the code, where we'll stop at each interesting part and explain what it does and why it matters.
+This document thoroughly explains **every important line of code** in the CommLink project. Think of it as a **guided tour** through the code, where we'll stop at each interesting part and explain what it does and why it matters.
 
 ### 📖 **Reading Strategy**
 1. **Start with the Big Picture**: Understand what each file does
@@ -1097,6 +1097,265 @@ void CommLinkGUI::onLoadJson() {
 - **User Feedback**: Success/error messages for all operations
 - **Logging Integration**: All file operations recorded in application logs
 
+---
+
+## 📚 **Message History System - messagehistorymanager.cpp**
+
+The application includes a sophisticated message history system using SQLite database.
+
+### Database Schema and Initialization
+
+```cpp
+bool MessageHistoryManager::initializeDatabase() {
+    QMutexLocker locker(&dbMutex);
+    
+    if (!db.isOpen()) {
+        db = QSqlDatabase::addDatabase("QSQLITE", "history_connection");
+        QString dbPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/message_history.db";
+        QDir().mkpath(QFileInfo(dbPath).absolutePath());
+        db.setDatabaseName(dbPath);
+        
+        if (!db.open()) {
+            qCritical() << "Failed to open database:" << db.lastError().text();
+            return false;
+        }
+    }
+    
+    QSqlQuery query(db);
+    QString createTable = R"(
+        CREATE TABLE IF NOT EXISTS message_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            direction TEXT NOT NULL,
+            protocol TEXT NOT NULL,
+            host TEXT NOT NULL,
+            port INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            session_id TEXT NOT NULL
+        )
+    )";
+    
+    if (!query.exec(createTable)) {
+        qCritical() << "Failed to create table:" << query.lastError().text();
+        return false;
+    }
+    
+    return true;
+}
+```
+
+**Key Features**:
+- **Thread Safety**: QMutex protects database operations
+- **Automatic Directory Creation**: Creates app data directory if needed
+- **Proper Schema**: Well-designed table structure for message storage
+- **Error Handling**: Comprehensive error checking and logging
+
+### Advanced Search Implementation
+
+```cpp
+QList<MessageRecord> MessageHistoryManager::searchMessages(const QString& searchTerm, 
+                                                          const QDateTime& fromDate, 
+                                                          const QDateTime& toDate, 
+                                                          const QString& direction, 
+                                                          const QString& protocol) {
+    QMutexLocker locker(&dbMutex);
+    QList<MessageRecord> results;
+    
+    if (!db.isOpen()) {
+        qWarning() << "Database not open";
+        return results;
+    }
+    
+    QString queryStr = "SELECT * FROM message_history WHERE 1=1";
+    QStringList conditions;
+    
+    // Build dynamic query based on filters
+    if (!searchTerm.isEmpty()) {
+        if (searchTerm.contains(":")) {
+            // Advanced filter syntax: "direction:sent", "protocol:TCP", etc.
+            QStringList parts = searchTerm.split(":");
+            if (parts.size() == 2) {
+                QString field = parts[0].trimmed().toLower();
+                QString value = parts[1].trimmed();
+                
+                if (field == "direction" || field == "protocol" || field == "host") {
+                    conditions << QString("%1 LIKE ?").arg(field);
+                }
+            }
+        } else {
+            // General content search
+            conditions << "content LIKE ?";
+        }
+    }
+    
+    // Add other conditions...
+    if (!conditions.isEmpty()) {
+        queryStr += " AND " + conditions.join(" AND ");
+    }
+    
+    queryStr += " ORDER BY timestamp DESC";
+    
+    QSqlQuery query(db);
+    query.prepare(queryStr);
+    
+    // Bind parameters safely
+    int paramIndex = 0;
+    if (!searchTerm.isEmpty()) {
+        query.bindValue(paramIndex++, "%" + searchTerm + "%");
+    }
+    
+    if (query.exec()) {
+        while (query.next()) {
+            MessageRecord record;
+            record.id = query.value("id").toInt();
+            record.timestamp = QDateTime::fromString(query.value("timestamp").toString(), Qt::ISODate);
+            record.direction = query.value("direction").toString();
+            record.protocol = query.value("protocol").toString();
+            record.host = query.value("host").toString();
+            record.port = query.value("port").toInt();
+            record.content = query.value("content").toString();
+            record.sessionId = query.value("session_id").toString();
+            results.append(record);
+        }
+    }
+    
+    return results;
+}
+```
+
+**Advanced Features**:
+- **Dynamic Query Building**: Constructs SQL based on active filters
+- **Parameter Binding**: Prevents SQL injection attacks
+- **Advanced Filter Syntax**: Supports structured search terms
+- **Comprehensive Results**: Returns all relevant message metadata
+
+---
+
+## 📊 **History Tab Interface - historytab.cpp**
+
+The history tab provides a sophisticated interface for browsing message history.
+
+### Smart Refresh System
+
+```cpp
+void HistoryTab::checkForUpdates() {
+    if (!historyManager) return;
+    
+    QDateTime lastUpdate = historyManager->getLastMessageTime();
+    if (lastUpdate > lastRefreshTime) {
+        refreshHistory();
+        lastRefreshTime = lastUpdate;
+    }
+}
+
+void HistoryTab::refreshHistory() {
+    if (!historyManager) return;
+    
+    // Disable sorting during update for better performance
+    historyTable->setSortingEnabled(false);
+    
+    QList<MessageRecord> messages = historyManager->searchMessages(
+        searchEdit->text(),
+        dateFromEdit->dateTime(),
+        dateToEdit->dateTime(),
+        typeFilterCombo->currentText() == "All Types" ? "" : typeFilterCombo->currentText().toLower(),
+        "" // Protocol filter can be added here
+    );
+    
+    historyTable->setRowCount(messages.size());
+    
+    for (int i = 0; i < messages.size(); ++i) {
+        const MessageRecord& msg = messages[i];
+        
+        // Color-code based on direction
+        QColor rowColor = (msg.direction == "sent") ? QColor(230, 255, 230) : QColor(230, 240, 255);
+        
+        historyTable->setItem(i, 0, createTableItem(msg.timestamp.toString("yyyy-MM-dd hh:mm:ss"), rowColor));
+        historyTable->setItem(i, 1, createTableItem(msg.direction.toUpper(), rowColor));
+        
+        // Truncate long content for display
+        QString displayContent = msg.content.length() > 100 ? 
+                                msg.content.left(100) + "..." : msg.content;
+        historyTable->setItem(i, 2, createTableItem(displayContent, rowColor));
+        
+        QString details = QString("%1:%2 (%3)").arg(msg.host).arg(msg.port).arg(msg.protocol);
+        historyTable->setItem(i, 3, createTableItem(details, rowColor));
+        
+        // Store full message data for details dialog
+        historyTable->item(i, 0)->setData(Qt::UserRole, QVariant::fromValue(msg));
+    }
+    
+    // Re-enable sorting
+    historyTable->setSortingEnabled(true);
+    
+    // Update status
+    int totalCount = historyManager->getMessageCount();
+    statusLabel->setText(QString("Showing %1 of %2 messages").arg(messages.size()).arg(totalCount));
+}
+```
+
+**Performance Optimizations**:
+- **Smart Refresh**: Only updates when data actually changes
+- **Sorting Control**: Disables sorting during updates for better performance
+- **Content Truncation**: Shows abbreviated content, full content available on demand
+- **Color Coding**: Visual distinction between sent and received messages
+
+### Message Details Dialog
+
+```cpp
+void HistoryTab::showMessageDetails(int row, int column) {
+    Q_UNUSED(column)
+    
+    QTableWidgetItem* item = historyTable->item(row, 0);
+    if (!item) return;
+    
+    MessageRecord msg = item->data(Qt::UserRole).value<MessageRecord>();
+    
+    QDialog dialog(this);
+    dialog.setWindowTitle("Message Details");
+    dialog.resize(600, 400);
+    
+    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+    
+    // Create formatted display of message details
+    QTextEdit* detailsEdit = new QTextEdit();
+    detailsEdit->setReadOnly(true);
+    
+    QString details = QString(
+        "<h3>Message Details</h3>"
+        "<p><b>Timestamp:</b> %1</p>"
+        "<p><b>Direction:</b> %2</p>"
+        "<p><b>Protocol:</b> %3</p>"
+        "<p><b>Host:</b> %4</p>"
+        "<p><b>Port:</b> %5</p>"
+        "<p><b>Session ID:</b> %6</p>"
+        "<h4>Content:</h4>"
+        "<pre>%7</pre>"
+    ).arg(msg.timestamp.toString("yyyy-MM-dd hh:mm:ss"))
+     .arg(msg.direction.toUpper())
+     .arg(msg.protocol)
+     .arg(msg.host)
+     .arg(msg.port)
+     .arg(msg.sessionId)
+     .arg(msg.content.toHtmlEscaped());
+    
+    detailsEdit->setHtml(details);
+    layout->addWidget(detailsEdit);
+    
+    QPushButton* closeBtn = new QPushButton("Close");
+    connect(closeBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+    layout->addWidget(closeBtn);
+    
+    dialog.exec();
+}
+```
+
+**User Experience Features**:
+- **Double-Click Details**: Easy access to full message information
+- **Formatted Display**: HTML formatting for better readability
+- **Complete Metadata**: Shows all available message information
+- **Proper Escaping**: Safe display of user content
+
 This comprehensive error handling makes the application robust and user-friendly, providing clear feedback when things go wrong and preventing crashes from unexpected conditions.
 
-The code demonstrates professional software development practices: clear separation of concerns, comprehensive error handling, proper resource management, user-friendly interface design, and complete file management capabilities.
+The code demonstrates professional software development practices: clear separation of concerns, comprehensive error handling, proper resource management, user-friendly interface design, complete file management capabilities, and sophisticated data persistence with advanced search functionality.

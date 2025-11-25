@@ -89,6 +89,20 @@ CommLink is like a **digital post office** for computers. Just like you send let
 - **Key Features**: Multi-format export, automatic format detection, data validation
 - **Real-World Analogy**: Like a printer that creates reports from stored data in different formats
 
+#### 8. **Message History Manager**
+- **What It Does**: Persistent storage and retrieval of all sent/received messages using SQLite database
+- **Why Important**: Provides complete audit trail and enables advanced search/filtering capabilities
+- **Files Involved**: `messagehistorymanager.h`, `messagehistorymanager.cpp`
+- **Key Features**: Thread-safe database operations, advanced search syntax, session tracking, automatic cleanup
+- **Real-World Analogy**: Like a detailed logbook that records every conversation with timestamps and searchable notes
+
+#### 9. **History Tab Interface**
+- **What It Does**: User interface for browsing, searching, and managing message history
+- **Why Important**: Makes historical data easily accessible and actionable
+- **Files Involved**: `historytab.h`, `historytab.cpp`
+- **Key Features**: Real-time search, date filtering, message details view, smart refresh, export capabilities
+- **Real-World Analogy**: Like a sophisticated filing system with instant search and detailed record viewing
+
 ## Technical Concepts Made Simple
 
 ### 🌐 **Networking Protocols**

@@ -2,7 +2,7 @@
 
 ## What This Guide Covers
 
-This document explains **every aspect** of the graphical user interface (GUI) implementation in the CommLink application. You'll learn how the tabbed interface, input validation, status management, and visual feedback systems work together to create a professional user experience.
+This document thoroughly explains **every aspect** of the graphical user interface (GUI) implementation in the CommLink application. You'll learn how the tabbed interface, input validation, status management, and visual feedback systems work together to create a professional user experience.
 
 ---
 
@@ -10,10 +10,11 @@ This document explains **every aspect** of the graphical user interface (GUI) im
 
 ### The Big Picture
 
-The GUI is built using a **tabbed interface** with three main sections:
+The GUI is built using a **tabbed interface** with four main sections:
 1. **📤 Sending Tab**: For outgoing messages
-2. **📥 Receiving Tab**: For incoming messages  
-3. **📋 Logs Tab**: For monitoring all activity
+2. **📥 Receiving Tab**: For incoming messages
+3. **📚 History Tab**: For browsing message history with advanced search and filtering
+4. **📋 Logs Tab**: For monitoring all activity
 
 ### Visual Layout Structure
 
@@ -21,7 +22,7 @@ The GUI is built using a **tabbed interface** with three main sections:
 ┌─────────────────────────────────────────────────────────┐
 │ CommLink - Network Communication Tool                   │
 ├─────────────────────────────────────────────────────────┤
-│ [📤 Sending] [📥 Receiving] [📋 Logs]                  │
+│ [📤 Sending] [📥 Receiving] [📚 History] [📋 Logs] │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  Current Tab Content                                    │
@@ -270,6 +271,93 @@ receivedLayout->addLayout(receivedBtnLayout);
 ```cpp
 // Logs Tab
 auto *logTab = new QWidget();
+tabWidget->addTab(logTab, "📋 Logs");
+
+auto *logLayout = new QVBoxLayout(logTab);
+
+logEdit = new QTextEdit();
+logEdit->setReadOnly(true);
+
+// File operation button for logs
+auto *logBtnLayout = new QHBoxLayout();
+exportLogsBtn = new QPushButton("📋 Export Logs");
+logBtnLayout->addWidget(exportLogsBtn);
+logBtnLayout->addStretch();
+
+logLayout->addWidget(logEdit);
+logLayout->addLayout(logBtnLayout);
+```
+
+**Purpose**:
+- **Debugging**: See exactly what's happening
+- **Troubleshooting**: Identify connection problems
+- **Learning**: Understand network communication flow
+- **Monitoring**: Track all application activity
+- **Export Logs**: Save application logs to TXT or CSV files for analysis
+
+**Log Entry Format**:
+```
+[14:23:45] ✅ Connected to 127.0.0.1:5000 via TCP
+[14:23:50] 📤 Sent: {"type":"hello","value":42}
+[14:23:52] 📥 Received from 192.168.1.100:54321: {"response":"ok"}
+[14:24:10] ❌ Connection failed to 192.168.1.200:8080 via UDP
+```
+
+---
+
+## 📚 **History Tab - Message Archive**
+
+### Advanced Search and Filtering
+
+```cpp
+// History Tab
+auto *historyTab = new QWidget();
+tabWidget->addTab(historyTab, "📚 History");
+
+auto *historyLayout = new QVBoxLayout(historyTab);
+
+// Search controls
+auto *searchGroup = new QGroupBox("Search & Filter");
+auto *searchLayout = new QFormLayout(searchGroup);
+
+searchEdit = new QLineEdit();
+searchEdit->setPlaceholderText("Search messages...");
+dateFromEdit = new QDateEdit(QDate::currentDate().addDays(-30));
+dateToEdit = new QDateEdit(QDate::currentDate());
+typeFilterCombo = new QComboBox();
+typeFilterCombo->addItems({"All Types", "Sent", "Received"});
+
+searchLayout->addRow("Search:", searchEdit);
+searchLayout->addRow("From Date:", dateFromEdit);
+searchLayout->addRow("To Date:", dateToEdit);
+searchLayout->addRow("Type:", typeFilterCombo);
+
+// History display
+historyTable = new QTableWidget();
+historyTable->setColumnCount(4);
+historyTable->setHorizontalHeaderLabels({"Time", "Type", "Content", "Details"});
+historyTable->horizontalHeader()->setStretchLastSection(true);
+
+// History controls
+auto *historyBtnLayout = new QHBoxLayout();
+clearHistoryBtn = new QPushButton("🗑️ Clear History");
+exportHistoryBtn = new QPushButton("📤 Export History");
+historyBtnLayout->addWidget(clearHistoryBtn);
+historyBtnLayout->addWidget(exportHistoryBtn);
+historyBtnLayout->addStretch();
+
+historyLayout->addWidget(searchGroup);
+historyLayout->addWidget(historyTable);
+historyLayout->addLayout(historyBtnLayout);
+```
+
+**Features**:
+- **Search Functionality**: Find messages by content
+- **Date Range Filtering**: Filter by time period
+- **Type Filtering**: Show only sent or received messages
+- **Tabular Display**: Organized view of all messages
+- **Export Options**: Save filtered results to various formats
+- **Clear History**: Remove old messages to save space new QWidget();
 tabWidget->addTab(logTab, "📋 Logs");
 
 auto *logLayout = new QVBoxLayout(logTab);
@@ -875,4 +963,30 @@ void CommLinkGUI::setupValidators()
 - Similar layouts in each tab
 - Predictable behavior patterns
 
-This GUI implementation demonstrates professional software development practices, combining functional requirements with excellent user experience design. The result is an application that's both powerful for experts and accessible for beginners.
+---
+
+## 🎯 **Conclusion**
+
+This GUI implementation demonstrates professional software development practices, combining functional requirements with excellent user experience design. The CommLink application showcases:
+
+### **Technical Excellence**
+- **Modern Qt Framework**: Leveraging Qt's powerful widget system
+- **Clean Architecture**: Well-organized code with clear separation of concerns
+- **Robust Error Handling**: Multiple layers of validation and user feedback
+- **Cross-Platform Compatibility**: Works seamlessly on Windows, macOS, and Linux
+
+### **User Experience Focus**
+- **Intuitive Interface**: Familiar tabbed design with clear visual hierarchy
+- **Immediate Feedback**: Real-time status updates and validation
+- **Professional Polish**: Consistent styling and smooth interactions
+- **Accessibility**: Clear labels, logical tab order, and keyboard navigation
+
+### **Practical Features**
+- **File Management**: Comprehensive load/save/export functionality
+- **Data Persistence**: Settings automatically saved between sessions
+- **Flexible Networking**: Support for both TCP and UDP protocols
+- **Comprehensive Logging**: Detailed activity tracking for debugging
+
+The result is an application that's both powerful for network professionals and accessible for beginners learning about network communication. Every design decision prioritizes user productivity while maintaining the flexibility needed for diverse networking scenarios.
+
+**Next Steps**: This guide provides the foundation for understanding and extending the CommLink GUI. Developers can use these patterns and principles to add new features while maintaining the established user experience standards.

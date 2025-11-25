@@ -2,12 +2,12 @@
 
 ## What Is Qt? (The Simple Explanation)
 
-Qt (pronounced "cute") is like a **giant toolbox** for building desktop applications. Instead of building everything from scratch, Qt gives you pre-made components like windows, buttons, and text boxes that you can use to create professional-looking applications.
+Qt (pronounced "cute") is like a **comprehensive toolbox** for building desktop applications. Instead of building everything from scratch, Qt provides pre-made components like windows, buttons, and text boxes that you can use to create professional-looking applications.
 
 ### Think of Qt Like This:
 - **Building a House from Scratch**: You'd need to make your own bricks, windows, doors
-- **Building with Qt**: You get pre-made, high-quality components and just assemble them
-- **Result**: Faster development, better quality, works on multiple operating systems
+- **Building with Qt**: You get pre-made, high-quality components and simply assemble them
+- **Result**: Faster development, better quality, cross-platform compatibility
 
 ## Why Qt for This Project?
 
