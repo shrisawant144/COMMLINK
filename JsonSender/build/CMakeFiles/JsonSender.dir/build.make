@@ -105,9 +105,33 @@ CMakeFiles/JsonSender.dir/src/sender.cpp.o.provides: CMakeFiles/JsonSender.dir/s
 CMakeFiles/JsonSender.dir/src/sender.cpp.o.provides.build: CMakeFiles/JsonSender.dir/src/sender.cpp.o
 
 
+CMakeFiles/JsonSender.dir/src/receiver.cpp.o: CMakeFiles/JsonSender.dir/flags.make
+CMakeFiles/JsonSender.dir/src/receiver.cpp.o: ../src/receiver.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/JsonSender.dir/src/receiver.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/JsonSender.dir/src/receiver.cpp.o -c /home/miko/qt_projects/JsonSender/src/receiver.cpp
+
+CMakeFiles/JsonSender.dir/src/receiver.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/JsonSender.dir/src/receiver.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/miko/qt_projects/JsonSender/src/receiver.cpp > CMakeFiles/JsonSender.dir/src/receiver.cpp.i
+
+CMakeFiles/JsonSender.dir/src/receiver.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/JsonSender.dir/src/receiver.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/miko/qt_projects/JsonSender/src/receiver.cpp -o CMakeFiles/JsonSender.dir/src/receiver.cpp.s
+
+CMakeFiles/JsonSender.dir/src/receiver.cpp.o.requires:
+
+.PHONY : CMakeFiles/JsonSender.dir/src/receiver.cpp.o.requires
+
+CMakeFiles/JsonSender.dir/src/receiver.cpp.o.provides: CMakeFiles/JsonSender.dir/src/receiver.cpp.o.requires
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiver.cpp.o.provides.build
+.PHONY : CMakeFiles/JsonSender.dir/src/receiver.cpp.o.provides
+
+CMakeFiles/JsonSender.dir/src/receiver.cpp.o.provides.build: CMakeFiles/JsonSender.dir/src/receiver.cpp.o
+
+
 CMakeFiles/JsonSender.dir/src/gui.cpp.o: CMakeFiles/JsonSender.dir/flags.make
 CMakeFiles/JsonSender.dir/src/gui.cpp.o: ../src/gui.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/JsonSender.dir/src/gui.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/JsonSender.dir/src/gui.cpp.o"
 	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/JsonSender.dir/src/gui.cpp.o -c /home/miko/qt_projects/JsonSender/src/gui.cpp
 
 CMakeFiles/JsonSender.dir/src/gui.cpp.i: cmake_force
@@ -131,7 +155,7 @@ CMakeFiles/JsonSender.dir/src/gui.cpp.o.provides.build: CMakeFiles/JsonSender.di
 
 CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o: CMakeFiles/JsonSender.dir/flags.make
 CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o: ../src/receiverthread.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o"
 	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o -c /home/miko/qt_projects/JsonSender/src/receiverthread.cpp
 
 CMakeFiles/JsonSender.dir/src/receiverthread.cpp.i: cmake_force
@@ -155,7 +179,7 @@ CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o.provides.build: CMakeFiles/Js
 
 CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o: CMakeFiles/JsonSender.dir/flags.make
 CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o: JsonSender_autogen/moc_compilation.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o"
 	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o -c /home/miko/qt_projects/JsonSender/build/JsonSender_autogen/moc_compilation.cpp
 
 CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.i: cmake_force
@@ -181,6 +205,7 @@ CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o.provides.buil
 JsonSender_OBJECTS = \
 "CMakeFiles/JsonSender.dir/src/main.cpp.o" \
 "CMakeFiles/JsonSender.dir/src/sender.cpp.o" \
+"CMakeFiles/JsonSender.dir/src/receiver.cpp.o" \
 "CMakeFiles/JsonSender.dir/src/gui.cpp.o" \
 "CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o" \
 "CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o"
@@ -190,6 +215,7 @@ JsonSender_EXTERNAL_OBJECTS =
 
 bin/JsonSender: CMakeFiles/JsonSender.dir/src/main.cpp.o
 bin/JsonSender: CMakeFiles/JsonSender.dir/src/sender.cpp.o
+bin/JsonSender: CMakeFiles/JsonSender.dir/src/receiver.cpp.o
 bin/JsonSender: CMakeFiles/JsonSender.dir/src/gui.cpp.o
 bin/JsonSender: CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o
 bin/JsonSender: CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o
@@ -198,7 +224,7 @@ bin/JsonSender: /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5.12.8
 bin/JsonSender: /usr/lib/x86_64-linux-gnu/libQt5Gui.so.5.12.8
 bin/JsonSender: /usr/lib/x86_64-linux-gnu/libQt5Core.so.5.12.8
 bin/JsonSender: CMakeFiles/JsonSender.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable bin/JsonSender"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/miko/qt_projects/JsonSender/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable bin/JsonSender"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/JsonSender.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -208,6 +234,7 @@ CMakeFiles/JsonSender.dir/build: bin/JsonSender
 
 CMakeFiles/JsonSender.dir/requires: CMakeFiles/JsonSender.dir/src/main.cpp.o.requires
 CMakeFiles/JsonSender.dir/requires: CMakeFiles/JsonSender.dir/src/sender.cpp.o.requires
+CMakeFiles/JsonSender.dir/requires: CMakeFiles/JsonSender.dir/src/receiver.cpp.o.requires
 CMakeFiles/JsonSender.dir/requires: CMakeFiles/JsonSender.dir/src/gui.cpp.o.requires
 CMakeFiles/JsonSender.dir/requires: CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o.requires
 CMakeFiles/JsonSender.dir/requires: CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o.requires

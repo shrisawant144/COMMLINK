@@ -7,6 +7,7 @@ set(CMAKE_DEPENDS_CHECK_CXX
   "/home/miko/qt_projects/JsonSender/build/JsonSender_autogen/moc_compilation.cpp" "/home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o"
   "/home/miko/qt_projects/JsonSender/src/gui.cpp" "/home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender.dir/src/gui.cpp.o"
   "/home/miko/qt_projects/JsonSender/src/main.cpp" "/home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender.dir/src/main.cpp.o"
+  "/home/miko/qt_projects/JsonSender/src/receiver.cpp" "/home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender.dir/src/receiver.cpp.o"
   "/home/miko/qt_projects/JsonSender/src/receiverthread.cpp" "/home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o"
   "/home/miko/qt_projects/JsonSender/src/sender.cpp" "/home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender.dir/src/sender.cpp.o"
   )

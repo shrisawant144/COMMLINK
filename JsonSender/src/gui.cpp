@@ -1,18 +1,26 @@
 #include "../include/gui.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QComboBox>
-#include <QLabel>
-#include <QGroupBox>
-#include <QJsonDocument>
-#include <QJsonParseError>
-#include <QIntValidator>
-#include <QMessageBox>
-#include <QDateTime>
-#include <QThread>
+#include "../include/sender.h"
+#include "../include/receiver.h"
+#include <QtWidgets/QVBoxLayout>
+#include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QTextEdit>
+#include <QtWidgets/QComboBox>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QGroupBox>
+#include <QtWidgets/QTabWidget>
+#include <QtWidgets/QFormLayout>
+#include <QtWidgets/QStatusBar>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonParseError>
+#include <QtGui/QIntValidator>
+#include <QtWidgets/QMessageBox>
+#include <QtCore/QDateTime>
+#include <QtCore/QThread>
+#include <QtCore/QSettings>
+#include <QtGui/QFont>
+#include <QtGui/QPalette>
 
 JsonSenderGUI::JsonSenderGUI() {
     setWindowTitle("JSON Sender/Receiver");
@@ -25,80 +33,146 @@ JsonSenderGUI::JsonSenderGUI() {
 
 void JsonSenderGUI::setupUI()
 {
-    auto *layout = new QVBoxLayout(this);
+    auto *mainLayout = new QVBoxLayout(this);
 
-    // Connection settings
-    auto *connGroup = new QGroupBox("Connection Settings");
-    auto *connLayout = new QHBoxLayout(connGroup);
-    
+    // Create tab widget
+    auto *tabWidget = new QTabWidget();
+    mainLayout->addWidget(tabWidget);
+
+    // Status bar
+    statusBar = new QStatusBar();
+    mainLayout->addWidget(statusBar);
+
+    // Sending Tab
+    auto *sendTab = new QWidget();
+    tabWidget->addTab(sendTab, "📤 Sending");
+
+    auto *sendLayout = new QVBoxLayout(sendTab);
+
+    // Connection settings for sending
+    auto *sendConnGroup = new QGroupBox("Connection Settings");
+    auto *sendConnLayout = new QFormLayout(sendConnGroup);
+
     protocolCombo = new QComboBox();
     protocolCombo->addItems({"TCP", "UDP"});
     hostEdit = new QLineEdit("127.0.0.1");
     portEdit = new QLineEdit("5000");
-    connectBtn = new QPushButton("Connect");
+    connectBtn = new QPushButton("🔗 Connect");
 
-    connLayout->addWidget(new QLabel("Protocol:"));
-    connLayout->addWidget(protocolCombo);
-    connLayout->addWidget(new QLabel("Host:"));
-    connLayout->addWidget(hostEdit);
-    connLayout->addWidget(new QLabel("Port:"));
-    connLayout->addWidget(portEdit);
-    connLayout->addWidget(connectBtn);
+    sendConnLayout->addRow("Protocol:", protocolCombo);
+    sendConnLayout->addRow("Host:", hostEdit);
+    sendConnLayout->addRow("Port:", portEdit);
+    sendConnLayout->addRow(connectBtn);
 
     // Send section
     auto *sendGroup = new QGroupBox("Send JSON");
-    auto *sendLayout = new QVBoxLayout(sendGroup);
-    
+    auto *sendMsgLayout = new QVBoxLayout(sendGroup);
+
     jsonEdit = new QTextEdit();
     jsonEdit->setPlainText(R"({"type":"hello","from":"gui","value":42})");
-    jsonEdit->setMaximumHeight(100);
-    
-    sendBtn = new QPushButton("Send JSON");
+    jsonEdit->setMaximumHeight(120);
 
-    sendLayout->addWidget(new QLabel("JSON Message:"));
-    sendLayout->addWidget(jsonEdit);
-    sendLayout->addWidget(sendBtn);
+    sendBtn = new QPushButton("📤 Send JSON");
 
-    // Receive section
-    auto *receiveGroup = new QGroupBox("Receive JSON");
-    auto *receiveLayout = new QVBoxLayout(receiveGroup);
-    auto *receiveBtnLayout = new QHBoxLayout();
-    
+    sendMsgLayout->addWidget(new QLabel("JSON Message:"));
+    sendMsgLayout->addWidget(jsonEdit);
+    sendMsgLayout->addWidget(sendBtn);
+
+    sendLayout->addWidget(sendConnGroup);
+    sendLayout->addWidget(sendGroup);
+
+    // Receiving Tab
+    auto *receiveTab = new QWidget();
+    tabWidget->addTab(receiveTab, "📥 Receiving");
+
+    auto *receiveLayout = new QVBoxLayout(receiveTab);
+
+    // Receive connection settings
+    auto *receiveConnGroup = new QGroupBox("Connection Settings");
+    auto *receiveConnLayout = new QFormLayout(receiveConnGroup);
+
+    receiveProtocolCombo = new QComboBox();
+    receiveProtocolCombo->addItems({"TCP", "UDP"});
+    receiveHostEdit = new QLineEdit("0.0.0.0");
     receivePortEdit = new QLineEdit("5001");
-    startReceiveBtn = new QPushButton("Start Receiving");
-    stopReceiveBtn = new QPushButton("Stop Receiving");
 
-    receiveBtnLayout->addWidget(new QLabel("Listen Port:"));
-    receiveBtnLayout->addWidget(receivePortEdit);
-    receiveBtnLayout->addWidget(startReceiveBtn);
-    receiveBtnLayout->addWidget(stopReceiveBtn);
+    receiveConnLayout->addRow("Protocol:", receiveProtocolCombo);
+    receiveConnLayout->addRow("Bind Host:", receiveHostEdit);
+    receiveConnLayout->addRow("Port:", receivePortEdit);
+
+    // Receive controls
+    auto *receiveCtrlGroup = new QGroupBox("Controls");
+    auto *receiveCtrlLayout = new QHBoxLayout(receiveCtrlGroup);
+
+    startReceiveBtn = new QPushButton("▶️ Start Receiving");
+    stopReceiveBtn = new QPushButton("⏹️ Stop Receiving");
+
+    receiveCtrlLayout->addWidget(startReceiveBtn);
+    receiveCtrlLayout->addWidget(stopReceiveBtn);
+
+    // Received messages
+    auto *receivedGroup = new QGroupBox("Received Messages");
+    auto *receivedLayout = new QVBoxLayout(receivedGroup);
 
     receivedEdit = new QTextEdit();
     receivedEdit->setReadOnly(true);
-    receivedEdit->setMaximumHeight(150);
+    receivedEdit->setMaximumHeight(200);
 
-    receiveLayout->addLayout(receiveBtnLayout);
-    receiveLayout->addWidget(new QLabel("Received Messages:"));
-    receiveLayout->addWidget(receivedEdit);
+    receivedLayout->addWidget(receivedEdit);
 
-    // Log section
-    auto *logGroup = new QGroupBox("Activity Log");
-    auto *logLayout = new QVBoxLayout(logGroup);
+    receiveLayout->addWidget(receiveConnGroup);
+    receiveLayout->addWidget(receiveCtrlGroup);
+    receiveLayout->addWidget(receivedGroup);
+
+    // Logs Tab
+    auto *logTab = new QWidget();
+    tabWidget->addTab(logTab, "📋 Logs");
+
+    auto *logLayout = new QVBoxLayout(logTab);
+
     logEdit = new QTextEdit();
     logEdit->setReadOnly(true);
     logLayout->addWidget(logEdit);
-
-    layout->addWidget(connGroup);
-    layout->addWidget(sendGroup);
-    layout->addWidget(receiveGroup);
-    layout->addWidget(logGroup);
 
     // Connect signals
     connect(connectBtn, &QPushButton::clicked, this, &JsonSenderGUI::onConnect);
     connect(sendBtn, &QPushButton::clicked, this, &JsonSenderGUI::onSend);
     connect(startReceiveBtn, &QPushButton::clicked, this, &JsonSenderGUI::onStartReceive);
     connect(stopReceiveBtn, &QPushButton::clicked, this, &JsonSenderGUI::onStopReceive);
-    connect(&sender, &Sender::jsonReceived, this, &JsonSenderGUI::onJsonReceived);
+    connect(&receiver, &Receiver::jsonReceived, this, &JsonSenderGUI::onJsonReceived);
+
+    // Set modern style
+    setStyleSheet(R"(
+        QGroupBox {
+            font-weight: bold;
+            border: 2px solid #cccccc;
+            border-radius: 5px;
+            margin-top: 1ex;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 10px;
+            padding: 0 10px 0 10px;
+        }
+        QPushButton {
+            padding: 8px 16px;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+        }
+        QPushButton:hover {
+            background-color: #e0e0e0;
+        }
+        QPushButton:pressed {
+            background-color: #d0d0d0;
+        }
+        QLineEdit, QTextEdit, QComboBox {
+            padding: 4px;
+            border: 1px solid #cccccc;
+            border-radius: 3px;
+        }
+    )");
+
+    updateStatusBar();
 }
 
 void JsonSenderGUI::setupValidators()
@@ -106,18 +180,29 @@ void JsonSenderGUI::setupValidators()
     portValidator = new QIntValidator(1, 65535, this);
     portEdit->setValidator(portValidator);
     receivePortEdit->setValidator(portValidator);
+
+    // Load settings
+    QSettings settings("JsonSender", "JsonSenderApp");
+    hostEdit->setText(settings.value("sendHost", "127.0.0.1").toString());
+    portEdit->setText(settings.value("sendPort", "5000").toString());
+    protocolCombo->setCurrentText(settings.value("sendProtocol", "TCP").toString());
+    receiveHostEdit->setText(settings.value("receiveHost", "0.0.0.0").toString());
+    receivePortEdit->setText(settings.value("receivePort", "5001").toString());
+    receiveProtocolCombo->setCurrentText(settings.value("receiveProtocol", "TCP").toString());
 }
 
 void JsonSenderGUI::updateConnectionState(bool connected)
 {
     isConnected = connected;
     sendBtn->setEnabled(connected);
-    connectBtn->setText(connected ? "Disconnect" : "Connect");
-    
+    connectBtn->setText(connected ? "🔌 Disconnect" : "🔗 Connect");
+
     // Disable connection settings when connected
     protocolCombo->setEnabled(!connected);
     hostEdit->setEnabled(!connected);
     portEdit->setEnabled(!connected);
+
+    updateStatusBar();
 }
 
 void JsonSenderGUI::updateReceiveState(bool receiving)
@@ -125,7 +210,11 @@ void JsonSenderGUI::updateReceiveState(bool receiving)
     isReceiving = receiving;
     startReceiveBtn->setEnabled(!receiving);
     stopReceiveBtn->setEnabled(receiving);
+    receiveHostEdit->setEnabled(!receiving);
     receivePortEdit->setEnabled(!receiving);
+    receiveProtocolCombo->setEnabled(!receiving);
+
+    updateStatusBar();
 }
 
 void JsonSenderGUI::logMessage(const QString &message, const QString &prefix)
@@ -220,10 +309,10 @@ void JsonSenderGUI::onSend() {
 }
 
 void JsonSenderGUI::onStartReceive() {
-    QString proto = protocolCombo->currentText().toLower();
+    QString proto = receiveProtocolCombo->currentText().toLower();
     bool ok;
     int port = receivePortEdit->text().toInt(&ok);
-    
+
     if (!ok || port < 1 || port > 65535) {
         QMessageBox::warning(this, "Error", "Invalid receive port number");
         return;
@@ -231,9 +320,9 @@ void JsonSenderGUI::onStartReceive() {
 
     bool started = false;
     if (proto == "tcp") {
-        started = sender.startTcpReceiver(static_cast<quint16>(port));
+        started = receiver.connectTcp(static_cast<quint16>(port));
     } else {
-        started = sender.startUdpReceiver(static_cast<quint16>(port));
+        started = receiver.connectUdp(static_cast<quint16>(port));
     }
 
     updateReceiveState(started);
@@ -245,7 +334,7 @@ void JsonSenderGUI::onStartReceive() {
 }
 
 void JsonSenderGUI::onStopReceive() {
-    sender.stopReceiver();
+    receiver.disconnect();
     updateReceiveState(false);
     logMessage("Stopped receiving", "🛑 ");
 }
@@ -257,4 +346,24 @@ void JsonSenderGUI::onJsonReceived(const QJsonDocument &doc, const QString &prot
                      .arg(timestamp).arg(protocol).arg(senderInfo).arg(jsonText);
     receivedEdit->append(message);
     logMessage(QString("Received %1 message from %2").arg(protocol).arg(senderInfo), "📨 ");
+
+    // Save settings on successful receive
+    saveSettings();
+}
+
+void JsonSenderGUI::updateStatusBar() {
+    QString status = QString("Send: %1 | Receive: %2")
+                    .arg(isConnected ? "Connected" : "Disconnected")
+                    .arg(isReceiving ? "Active" : "Inactive");
+    statusBar->showMessage(status);
+}
+
+void JsonSenderGUI::saveSettings() {
+    QSettings settings("JsonSender", "JsonSenderApp");
+    settings.setValue("sendHost", hostEdit->text());
+    settings.setValue("sendPort", portEdit->text());
+    settings.setValue("sendProtocol", protocolCombo->currentText());
+    settings.setValue("receiveHost", receiveHostEdit->text());
+    settings.setValue("receivePort", receivePortEdit->text());
+    settings.setValue("receiveProtocol", receiveProtocolCombo->currentText());
 }

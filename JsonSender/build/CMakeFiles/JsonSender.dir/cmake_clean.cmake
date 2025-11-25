@@ -3,6 +3,7 @@ file(REMOVE_RECURSE
   "JsonSender_autogen/"
   "CMakeFiles/JsonSender.dir/src/main.cpp.o"
   "CMakeFiles/JsonSender.dir/src/sender.cpp.o"
+  "CMakeFiles/JsonSender.dir/src/receiver.cpp.o"
   "CMakeFiles/JsonSender.dir/src/gui.cpp.o"
   "CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o"
   "CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o"

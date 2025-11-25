@@ -1,11 +1,9 @@
 #pragma once
-#include <QObject>
-#include <QJsonDocument>
+#include <QtCore/QObject>
+#include <QtCore/QJsonDocument>
 #include <functional>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
-class ReceiverThread;
 
 class Sender : public QObject
 {
@@ -21,16 +19,9 @@ public:
     bool connectTcp(const QString &host, quint16 port);
     bool connectUdp(const QString &host, quint16 port);
     void disconnect();
-
-    bool startTcpReceiver(quint16 port);
-    bool startUdpReceiver(quint16 port);
-    void stopReceiver();
     
     bool isConnected() const { return tcp_fd >= 0 || udp_fd >= 0; }
     ConnectionType getConnectionType() const;
-
-signals:
-    void jsonReceived(const QJsonDocument &doc, const QString &protocol, const QString &senderInfo);
 
 private:
     bool validatePort(quint16 port) const;
@@ -40,7 +31,5 @@ private:
     
     int tcp_fd = -1;
     int udp_fd = -1;
-    int listen_fd = -1;
     sockaddr_in udp_addr{};
-    ReceiverThread *receiverThread = nullptr;
 };

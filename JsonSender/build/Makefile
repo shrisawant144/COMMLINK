@@ -217,6 +217,33 @@ src/main.cpp.s:
 	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/receiver.o: src/receiver.cpp.o
+
+.PHONY : src/receiver.o
+
+# target to build an object file
+src/receiver.cpp.o:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiver.cpp.o
+.PHONY : src/receiver.cpp.o
+
+src/receiver.i: src/receiver.cpp.i
+
+.PHONY : src/receiver.i
+
+# target to preprocess a source file
+src/receiver.cpp.i:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiver.cpp.i
+.PHONY : src/receiver.cpp.i
+
+src/receiver.s: src/receiver.cpp.s
+
+.PHONY : src/receiver.s
+
+# target to generate assembly for a file
+src/receiver.cpp.s:
+	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiver.cpp.s
+.PHONY : src/receiver.cpp.s
+
 src/receiverthread.o: src/receiverthread.cpp.o
 
 .PHONY : src/receiverthread.o
@@ -290,6 +317,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/receiver.o"
+	@echo "... src/receiver.i"
+	@echo "... src/receiver.s"
 	@echo "... src/receiverthread.o"
 	@echo "... src/receiverthread.i"
 	@echo "... src/receiverthread.s"

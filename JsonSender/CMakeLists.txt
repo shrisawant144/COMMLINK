@@ -26,12 +26,14 @@ endif()
 set(SOURCES
     src/main.cpp
     src/sender.cpp
+    src/receiver.cpp
     src/gui.cpp
     src/receiverthread.cpp
 )
 
 set(HEADERS
     include/sender.h
+    include/receiver.h
     include/gui.h
     include/receiverthread.h
 )

@@ -1,5 +1,5 @@
-set(AM_SOURCES "/home/miko/qt_projects/JsonSender/src/main.cpp;/home/miko/qt_projects/JsonSender/src/sender.cpp;/home/miko/qt_projects/JsonSender/src/gui.cpp;/home/miko/qt_projects/JsonSender/src/receiverthread.cpp")
-set(AM_HEADERS "/home/miko/qt_projects/JsonSender/include/sender.h;/home/miko/qt_projects/JsonSender/include/gui.h;/home/miko/qt_projects/JsonSender/include/receiverthread.h")
+set(AM_SOURCES "/home/miko/qt_projects/JsonSender/src/main.cpp;/home/miko/qt_projects/JsonSender/src/sender.cpp;/home/miko/qt_projects/JsonSender/src/receiver.cpp;/home/miko/qt_projects/JsonSender/src/gui.cpp;/home/miko/qt_projects/JsonSender/src/receiverthread.cpp")
+set(AM_HEADERS "/home/miko/qt_projects/JsonSender/include/sender.h;/home/miko/qt_projects/JsonSender/include/receiver.h;/home/miko/qt_projects/JsonSender/include/gui.h;/home/miko/qt_projects/JsonSender/include/receiverthread.h")
 set(AM_SKIP_MOC "")
 set(AM_SKIP_UIC "")
 set(AM_MOC_COMPILE_DEFINITIONS "QT_CORE_LIB;QT_GUI_LIB;QT_NO_DEBUG;QT_WIDGETS_LIB")
