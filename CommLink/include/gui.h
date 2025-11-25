@@ -16,6 +16,7 @@
 #include "receiver.h"
 #include "filemanager.h"
 #include "exportmanager.h"
+#include "messagehistorymanager.h"
 
 class CommLinkGUI : public QWidget
 {
@@ -64,6 +65,7 @@ private:
     // Business logic
     Sender sender;
     Receiver receiver;
+    MessageHistoryManager historyManager;
     bool isConnected = false;
     bool isReceiving = false;
 };

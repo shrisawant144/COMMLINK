@@ -1,6 +1,7 @@
 #include "../include/gui.h"
 #include "../include/sender.h"
 #include "../include/receiver.h"
+#include "../include/historytab.h"
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLineEdit>
@@ -29,6 +30,16 @@
 CommLinkGUI::CommLinkGUI() {
     setWindowTitle("CommLink - Network Communication Tool");
     resize(700, 700);
+    
+    // Initialize database with better error handling
+    if (!historyManager.initializeDatabase()) {
+        QMessageBox::critical(this, "Database Error", 
+            "Failed to initialize message history database.\n"
+            "History features will be disabled.\n"
+            "Please check file permissions and disk space.");
+        // Could disable history tab here if needed
+    }
+    
     setupUI();
     setupValidators();
     updateConnectionState(false);
@@ -143,6 +154,10 @@ void CommLinkGUI::setupUI()
     receiveLayout->addWidget(receiveConnGroup);
     receiveLayout->addWidget(receiveCtrlGroup);
     receiveLayout->addWidget(receivedGroup);
+
+    // History Tab
+    auto *historyTab = new HistoryTab(&historyManager);
+    tabWidget->addTab(historyTab, "📚 History");
 
     // Logs Tab
     auto *logTab = new QWidget();
@@ -315,13 +330,13 @@ void CommLinkGUI::onSend() {
         QMessageBox::warning(this, "Error", "Not connected");
         return;
     }
-    
+
     QString jsonText = jsonEdit->toPlainText().trimmed();
     if (jsonText.isEmpty()) {
         QMessageBox::warning(this, "Error", "JSON message cannot be empty");
         return;
     }
-    
+
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(jsonText.toUtf8(), &error);
 
@@ -336,6 +351,13 @@ void CommLinkGUI::onSend() {
     if (sender.sendJson) {
         sender.sendJson(doc);
         logMessage("Sent: " + jsonText, "→ ");
+
+        // Save to history
+        QString host = hostEdit->text().trimmed();
+        int port = portEdit->text().toInt();
+        if (!historyManager.saveMessage("sent", protocolCombo->currentText(), host, port, doc)) {
+            logMessage("Failed to save sent message to history", "⚠️ ");
+        }
     } else {
         logMessage("Send function not available", "❌ ");
     }
@@ -379,6 +401,13 @@ void CommLinkGUI::onJsonReceived(const QJsonDocument &doc, const QString &protoc
                      .arg(timestamp).arg(protocol).arg(senderInfo).arg(jsonText);
     receivedEdit->append(message);
     logMessage(QString("Received %1 message from %2").arg(protocol).arg(senderInfo), "📨 ");
+
+    // Save received message to history
+    QString host = senderInfo.split(':').first(); // Extract host from senderInfo
+    int port = receivePortEdit->text().toInt();
+    if (!historyManager.saveMessage("received", protocol, host, port, doc, senderInfo)) {
+        logMessage("Failed to save received message to history", "⚠️ ");
+    }
 
     // Save settings on successful receive
     saveSettings();
