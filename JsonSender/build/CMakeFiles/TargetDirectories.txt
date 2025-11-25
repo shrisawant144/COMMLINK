@@ -1,4 +1,0 @@
-/home/miko/qt_projects/JsonSender/build/CMakeFiles/rebuild_cache.dir
-/home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender.dir
-/home/miko/qt_projects/JsonSender/build/CMakeFiles/edit_cache.dir
-/home/miko/qt_projects/JsonSender/build/CMakeFiles/JsonSender_autogen.dir
