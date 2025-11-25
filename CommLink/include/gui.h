@@ -17,6 +17,7 @@
 #include "filemanager.h"
 #include "exportmanager.h"
 #include "messagehistorymanager.h"
+#include "thememanager.h"
 
 class CommLinkGUI : public QWidget
 {
@@ -35,6 +36,10 @@ private slots:
     void onExportLogs();
     void onExportMessages();
     void onClearMessages();
+    void onThemeChanged();
+    void onToggleLightMode();
+    void onToggleDarkMode();
+    void onToggleAutoMode();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -58,6 +63,9 @@ private:
     QTextEdit *jsonEdit, *logEdit, *receivedEdit;
     QStatusBar *statusBar;
     QMenuBar *menuBar;
+    QAction *lightModeAction;
+    QAction *darkModeAction;
+    QAction *autoModeAction;
 
     // Validators
     QIntValidator *portValidator;

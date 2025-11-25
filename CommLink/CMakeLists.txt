@@ -33,6 +33,7 @@ set(SOURCES
     src/exportmanager.cpp
     src/messagehistorymanager.cpp
     src/historytab.cpp
+    src/thememanager.cpp
 )
 
 set(HEADERS
@@ -44,6 +45,7 @@ set(HEADERS
     include/exportmanager.h
     include/messagehistorymanager.h
     include/historytab.h
+    include/thememanager.h
 )
 
 # Create executable

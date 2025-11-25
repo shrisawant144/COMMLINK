@@ -26,6 +26,8 @@
 #include <QtWidgets/QAction>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QActionGroup>
+#include "../include/thememanager.h"
 
 CommLinkGUI::CommLinkGUI() {
     setWindowTitle("CommLink - Network Communication Tool");
@@ -44,12 +46,42 @@ CommLinkGUI::CommLinkGUI() {
     setupValidators();
     updateConnectionState(false);
     updateReceiveState(false);
+    
+    // Initialize theme
+    ThemeManager::instance().loadSettings();
+    connect(&ThemeManager::instance(), &ThemeManager::themeChanged, this, &CommLinkGUI::onThemeChanged);
+    onThemeChanged();
 }
 
 void CommLinkGUI::setupUI()
 {
     auto *mainLayout = new QVBoxLayout(this);
 
+    // Create menu bar
+    menuBar = new QMenuBar(this);
+    mainLayout->setMenuBar(menuBar);
+    
+    // Create View menu with theme options
+    auto *viewMenu = menuBar->addMenu("&View");
+    auto *themeMenu = viewMenu->addMenu("&Appearance");
+    
+    auto *themeGroup = new QActionGroup(this);
+    
+    lightModeAction = new QAction("&Light Mode", this);
+    lightModeAction->setCheckable(true);
+    lightModeAction->setActionGroup(themeGroup);
+    themeMenu->addAction(lightModeAction);
+    
+    darkModeAction = new QAction("&Dark Mode", this);
+    darkModeAction->setCheckable(true);
+    darkModeAction->setActionGroup(themeGroup);
+    themeMenu->addAction(darkModeAction);
+    
+    autoModeAction = new QAction("&System Default", this);
+    autoModeAction->setCheckable(true);
+    autoModeAction->setActionGroup(themeGroup);
+    themeMenu->addAction(autoModeAction);
+    
     // Create tab widget
     auto *tabWidget = new QTabWidget();
     mainLayout->addWidget(tabWidget);
@@ -60,7 +92,7 @@ void CommLinkGUI::setupUI()
 
     // Sending Tab
     auto *sendTab = new QWidget();
-    tabWidget->addTab(sendTab, "📤 Sending");
+    tabWidget->addTab(sendTab, "Send");
 
     auto *sendLayout = new QVBoxLayout(sendTab);
 
@@ -72,7 +104,8 @@ void CommLinkGUI::setupUI()
     protocolCombo->addItems({"TCP", "UDP"});
     hostEdit = new QLineEdit("127.0.0.1");
     portEdit = new QLineEdit("5000");
-    connectBtn = new QPushButton("🔗 Connect");
+    connectBtn = new QPushButton("&Connect");
+    connectBtn->setShortcut(QKeySequence("Ctrl+C"));
 
     sendConnLayout->addRow("Protocol:", protocolCombo);
     sendConnLayout->addRow("Host:", hostEdit);
@@ -89,12 +122,13 @@ void CommLinkGUI::setupUI()
 
     // File operation buttons for JSON
     auto *jsonBtnLayout = new QHBoxLayout();
-    loadJsonBtn = new QPushButton("📁 Load JSON");
-    saveJsonBtn = new QPushButton("💾 Save JSON");
+    loadJsonBtn = new QPushButton("Load JSON");
+    saveJsonBtn = new QPushButton("Save JSON");
     jsonBtnLayout->addWidget(loadJsonBtn);
     jsonBtnLayout->addWidget(saveJsonBtn);
 
-    sendBtn = new QPushButton("📤 Send JSON");
+    sendBtn = new QPushButton("&Send JSON");
+    sendBtn->setShortcut(QKeySequence("Ctrl+S"));
 
     sendMsgLayout->addWidget(new QLabel("JSON Message:"));
     sendMsgLayout->addWidget(jsonEdit);
@@ -106,7 +140,7 @@ void CommLinkGUI::setupUI()
 
     // Receiving Tab
     auto *receiveTab = new QWidget();
-    tabWidget->addTab(receiveTab, "📥 Receiving");
+    tabWidget->addTab(receiveTab, "Receive");
 
     auto *receiveLayout = new QVBoxLayout(receiveTab);
 
@@ -127,8 +161,8 @@ void CommLinkGUI::setupUI()
     auto *receiveCtrlGroup = new QGroupBox("Controls");
     auto *receiveCtrlLayout = new QHBoxLayout(receiveCtrlGroup);
 
-    startReceiveBtn = new QPushButton("▶️ Start Receiving");
-    stopReceiveBtn = new QPushButton("⏹️ Stop Receiving");
+    startReceiveBtn = new QPushButton("Start Receiving");
+    stopReceiveBtn = new QPushButton("Stop Receiving");
 
     receiveCtrlLayout->addWidget(startReceiveBtn);
     receiveCtrlLayout->addWidget(stopReceiveBtn);
@@ -145,8 +179,8 @@ void CommLinkGUI::setupUI()
 
     // File operation buttons for received messages
     auto *receivedBtnLayout = new QHBoxLayout();
-    exportMessagesBtn = new QPushButton("📤 Export Messages");
-    clearMessagesBtn = new QPushButton("🗑️ Clear Messages");
+    exportMessagesBtn = new QPushButton("Export Messages");
+    clearMessagesBtn = new QPushButton("Clear Messages");
     receivedBtnLayout->addWidget(exportMessagesBtn);
     receivedBtnLayout->addWidget(clearMessagesBtn);
     receivedLayout->addLayout(receivedBtnLayout);
@@ -157,11 +191,11 @@ void CommLinkGUI::setupUI()
 
     // History Tab
     auto *historyTab = new HistoryTab(&historyManager);
-    tabWidget->addTab(historyTab, "📚 History");
+    tabWidget->addTab(historyTab, "History");
 
     // Logs Tab
     auto *logTab = new QWidget();
-    tabWidget->addTab(logTab, "📋 Logs");
+    tabWidget->addTab(logTab, "Logs");
 
     auto *logLayout = new QVBoxLayout(logTab);
 
@@ -170,7 +204,7 @@ void CommLinkGUI::setupUI()
 
     // File operation button for logs
     auto *logBtnLayout = new QHBoxLayout();
-    exportLogsBtn = new QPushButton("📋 Export Logs");
+    exportLogsBtn = new QPushButton("Export Logs");
     logBtnLayout->addWidget(exportLogsBtn);
     logBtnLayout->addStretch();
 
@@ -188,37 +222,13 @@ void CommLinkGUI::setupUI()
     connect(exportLogsBtn, &QPushButton::clicked, this, &CommLinkGUI::onExportLogs);
     connect(exportMessagesBtn, &QPushButton::clicked, this, &CommLinkGUI::onExportMessages);
     connect(clearMessagesBtn, &QPushButton::clicked, this, &CommLinkGUI::onClearMessages);
+    
+    // Connect theme actions
+    connect(lightModeAction, &QAction::triggered, this, &CommLinkGUI::onToggleLightMode);
+    connect(darkModeAction, &QAction::triggered, this, &CommLinkGUI::onToggleDarkMode);
+    connect(autoModeAction, &QAction::triggered, this, &CommLinkGUI::onToggleAutoMode);
 
-    // Set modern style
-    setStyleSheet(R"(
-        QGroupBox {
-            font-weight: bold;
-            border: 2px solid #cccccc;
-            border-radius: 5px;
-            margin-top: 1ex;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 10px 0 10px;
-        }
-        QPushButton {
-            padding: 8px 16px;
-            border-radius: 4px;
-            background-color: #f0f0f0;
-        }
-        QPushButton:hover {
-            background-color: #e0e0e0;
-        }
-        QPushButton:pressed {
-            background-color: #d0d0d0;
-        }
-        QLineEdit, QTextEdit, QComboBox {
-            padding: 4px;
-            border: 1px solid #cccccc;
-            border-radius: 3px;
-        }
-    )");
+    // Theme will be applied in onThemeChanged()
 
     updateStatusBar();
 }
@@ -243,7 +253,7 @@ void CommLinkGUI::updateConnectionState(bool connected)
 {
     isConnected = connected;
     sendBtn->setEnabled(connected);
-    connectBtn->setText(connected ? "🔌 Disconnect" : "🔗 Connect");
+    connectBtn->setText(connected ? "&Disconnect" : "&Connect");
 
     // Disable connection settings when connected
     protocolCombo->setEnabled(!connected);
@@ -294,7 +304,7 @@ void CommLinkGUI::onConnect() {
         // Disconnect
         sender.disconnect();
         updateConnectionState(false);
-        logMessage("Disconnected", "🔌 ");
+        logMessage("Disconnected", "[INFO] ");
         return;
     }
     
@@ -319,9 +329,9 @@ void CommLinkGUI::onConnect() {
 
     updateConnectionState(connected);
     if (connected) {
-        logMessage(QString("Connected to %1:%2 via %3").arg(host).arg(port).arg(proto.toUpper()), "✅ ");
+        logMessage(QString("Connected to %1:%2 via %3").arg(host).arg(port).arg(proto.toUpper()), "[INFO] ");
     } else {
-        logMessage(QString("Connection failed to %1:%2 via %3").arg(host).arg(port).arg(proto.toUpper()), "❌ ");
+        logMessage(QString("Connection failed to %1:%2 via %3").arg(host).arg(port).arg(proto.toUpper()), "[ERROR] ");
     }
 }
 
@@ -344,22 +354,22 @@ void CommLinkGUI::onSend() {
         QString errorMsg = QString("Invalid JSON at offset %1: %2")
                           .arg(error.offset).arg(error.errorString());
         QMessageBox::warning(this, "JSON Error", errorMsg);
-        logMessage(errorMsg, "❌ ");
+        logMessage(errorMsg, "[ERROR] ");
         return;
     }
 
     if (sender.sendJson) {
         sender.sendJson(doc);
-        logMessage("Sent: " + jsonText, "→ ");
+        logMessage("Sent: " + jsonText, "[SEND] ");
 
         // Save to history
         QString host = hostEdit->text().trimmed();
         int port = portEdit->text().toInt();
         if (!historyManager.saveMessage("sent", protocolCombo->currentText(), host, port, doc)) {
-            logMessage("Failed to save sent message to history", "⚠️ ");
+            logMessage("Failed to save sent message to history", "[WARN] ");
         }
     } else {
-        logMessage("Send function not available", "❌ ");
+        logMessage("Send function not available", "[ERROR] ");
     }
 }
 
@@ -382,16 +392,16 @@ void CommLinkGUI::onStartReceive() {
 
     updateReceiveState(started);
     if (started) {
-        logMessage(QString("Started receiving on port %1 via %2").arg(port).arg(proto.toUpper()), "✅ ");
+        logMessage(QString("Started receiving on port %1 via %2").arg(port).arg(proto.toUpper()), "[INFO] ");
     } else {
-        logMessage("Failed to start receiver", "❌ ");
+        logMessage("Failed to start receiver", "[ERROR] ");
     }
 }
 
 void CommLinkGUI::onStopReceive() {
     receiver.disconnect();
     updateReceiveState(false);
-    logMessage("Stopped receiving", "🛑 ");
+    logMessage("Stopped receiving", "[INFO] ");
 }
 
 void CommLinkGUI::onJsonReceived(const QJsonDocument &doc, const QString &protocol, const QString &senderInfo) {
@@ -400,13 +410,13 @@ void CommLinkGUI::onJsonReceived(const QJsonDocument &doc, const QString &protoc
     QString message = QString("[%1] ← %2 from %3:\n%4\n")
                      .arg(timestamp).arg(protocol).arg(senderInfo).arg(jsonText);
     receivedEdit->append(message);
-    logMessage(QString("Received %1 message from %2").arg(protocol).arg(senderInfo), "📨 ");
+    logMessage(QString("Received %1 message from %2").arg(protocol).arg(senderInfo), "[RECV] ");
 
     // Save received message to history
     QString host = senderInfo.split(':').first(); // Extract host from senderInfo
     int port = receivePortEdit->text().toInt();
     if (!historyManager.saveMessage("received", protocol, host, port, doc, senderInfo)) {
-        logMessage("Failed to save received message to history", "⚠️ ");
+        logMessage("Failed to save received message to history", "[WARN] ");
     }
 
     // Save settings on successful receive
@@ -414,9 +424,10 @@ void CommLinkGUI::onJsonReceived(const QJsonDocument &doc, const QString &protoc
 }
 
 void CommLinkGUI::updateStatusBar() {
-    QString status = QString("Send: %1 | Receive: %2")
-                    .arg(isConnected ? "Connected" : "Disconnected")
-                    .arg(isReceiving ? "Active" : "Inactive");
+    QString sendStatus = isConnected ? QString("TX: %1:%2").arg(hostEdit->text()).arg(portEdit->text()) : "TX: Idle";
+    QString recvStatus = isReceiving ? QString("RX: Port %1").arg(receivePortEdit->text()) : "RX: Idle";
+    QString themeStatus = QString("UI: %1").arg(ThemeManager::instance().getThemeName());
+    QString status = QString("%1 | %2 | %3").arg(sendStatus).arg(recvStatus).arg(themeStatus);
     statusBar->showMessage(status);
 }
 
@@ -436,7 +447,7 @@ void CommLinkGUI::onLoadJson() {
         QString content = FileManager::loadJsonFromFile(filePath);
         if (!content.isEmpty()) {
             jsonEdit->setPlainText(content);
-            logMessage("Loaded JSON from " + filePath, "📁 ");
+            logMessage("Loaded JSON from " + filePath, "[FILE] ");
             QMessageBox::information(this, "Success", "JSON file loaded successfully");
         } else {
             QMessageBox::warning(this, "Error", "Failed to load JSON file or file contains invalid JSON");
@@ -453,7 +464,7 @@ void CommLinkGUI::onSaveJson() {
     QString filePath = QFileDialog::getSaveFileName(this, "Save JSON Message", FileManager::getDefaultSaveLocation() + "/message.json", "JSON Files (*.json);;All Files (*)");
     if (!filePath.isEmpty()) {
         if (FileManager::saveJsonToFile(content, filePath)) {
-            logMessage("Saved JSON to " + filePath, "💾 ");
+            logMessage("Saved JSON to " + filePath, "[FILE] ");
             QMessageBox::information(this, "Success", "JSON file saved successfully");
         } else {
             QMessageBox::warning(this, "Error", "Failed to save JSON file");
@@ -467,7 +478,7 @@ void CommLinkGUI::onExportLogs() {
     if (!filePath.isEmpty()) {
         QString format = filePath.endsWith(".csv") ? "csv" : "txt";
         if (ExportManager::exportLogs(logs, format, filePath)) {
-            logMessage("Exported logs to " + filePath, "📋 ");
+            logMessage("Exported logs to " + filePath, "[EXPORT] ");
             QMessageBox::information(this, "Success", "Logs exported successfully to: " + filePath);
         } else {
             QMessageBox::warning(this, "Error", "Failed to export logs");
@@ -505,7 +516,7 @@ void CommLinkGUI::onExportMessages() {
         else if (filePath.endsWith(".csv")) format = "csv";
         
         if (ExportManager::exportMessages(messages, format, filePath)) {
-            logMessage("Exported messages to " + filePath, "📤 ");
+            logMessage("Exported messages to " + filePath, "[EXPORT] ");
             QMessageBox::information(this, "Success", "Messages exported successfully to: " + filePath);
         } else {
             QMessageBox::warning(this, "Error", "Failed to export messages");
@@ -515,7 +526,35 @@ void CommLinkGUI::onExportMessages() {
 
 void CommLinkGUI::onClearMessages() {
     receivedEdit->clear();
-    logMessage("Cleared received messages", "🗑️ ");
+    logMessage("Cleared received messages", "[INFO] ");
+}
+
+void CommLinkGUI::onThemeChanged() {
+    ThemeManager::instance().applyTheme(this);
+    
+    // Update menu checkmarks
+    auto currentTheme = ThemeManager::instance().currentTheme();
+    lightModeAction->setChecked(currentTheme == ThemeManager::Light);
+    darkModeAction->setChecked(currentTheme == ThemeManager::Dark);
+    autoModeAction->setChecked(currentTheme == ThemeManager::Auto);
+    
+    // Update status bar to show current theme
+    updateStatusBar();
+}
+
+void CommLinkGUI::onToggleLightMode() {
+    ThemeManager::instance().setTheme(ThemeManager::Light);
+    logMessage("Switched to Light theme", "[THEME] ");
+}
+
+void CommLinkGUI::onToggleDarkMode() {
+    ThemeManager::instance().setTheme(ThemeManager::Dark);
+    logMessage("Switched to Dark theme", "[THEME] ");
+}
+
+void CommLinkGUI::onToggleAutoMode() {
+    ThemeManager::instance().setTheme(ThemeManager::Auto);
+    logMessage("Switched to Auto theme (follows system)", "[THEME] ");
 }
 
 void CommLinkGUI::closeEvent(QCloseEvent *event) {
@@ -529,6 +568,7 @@ void CommLinkGUI::closeEvent(QCloseEvent *event) {
     
     // Save settings
     saveSettings();
+    ThemeManager::instance().saveSettings();
     
     // Accept the close event
     event->accept();
