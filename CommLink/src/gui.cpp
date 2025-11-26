@@ -4,6 +4,7 @@
 #include "../include/historytab.h"
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTextEdit>
@@ -13,6 +14,7 @@
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QSplitter>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonParseError>
 #include <QtGui/QIntValidator>
@@ -27,11 +29,13 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QActionGroup>
+#include <QtGui/QIcon>
 #include "../include/thememanager.h"
 
 CommLinkGUI::CommLinkGUI() {
     setWindowTitle("CommLink - Network Communication Tool");
-    resize(700, 700);
+    resize(1000, 700);
+    setMinimumSize(800, 600);
     
     // Initialize database with better error handling
     if (!historyManager.initializeDatabase()) {
@@ -39,7 +43,6 @@ CommLinkGUI::CommLinkGUI() {
             "Failed to initialize message history database.\n"
             "History features will be disabled.\n"
             "Please check file permissions and disk space.");
-        // Could disable history tab here if needed
     }
     
     setupUI();
@@ -56,6 +59,8 @@ CommLinkGUI::CommLinkGUI() {
 void CommLinkGUI::setupUI()
 {
     auto *mainLayout = new QVBoxLayout(this);
+    mainLayout->setSpacing(8);
+    mainLayout->setContentsMargins(8, 8, 8, 8);
 
     // Create menu bar
     menuBar = new QMenuBar(this);
@@ -81,142 +86,277 @@ void CommLinkGUI::setupUI()
     autoModeAction->setCheckable(true);
     autoModeAction->setActionGroup(themeGroup);
     themeMenu->addAction(autoModeAction);
+
+    // Main content area with horizontal splitter
+    auto *splitter = new QSplitter(Qt::Horizontal);
+    mainLayout->addWidget(splitter);
+
+    // Left panel - Communication
+    auto *leftPanel = new QWidget();
+    leftPanel->setMinimumWidth(400);
+    auto *leftLayout = new QVBoxLayout(leftPanel);
+    leftLayout->setSpacing(12);
+
+    // Connection Status Panel
+    auto *statusPanel = new QGroupBox("Connection Status");
+    auto *statusLayout = new QGridLayout(statusPanel);
     
-    // Create tab widget
-    auto *tabWidget = new QTabWidget();
-    mainLayout->addWidget(tabWidget);
+    auto *sendStatusLabel = new QLabel("Send:");
+    auto *sendStatusValue = new QLabel("Disconnected");
+    sendStatusValue->setObjectName("sendStatus");
+    sendStatusValue->setStyleSheet("color: red; font-weight: bold;");
+    
+    auto *receiveStatusLabel = new QLabel("Receive:");
+    auto *receiveStatusValue = new QLabel("Stopped");
+    receiveStatusValue->setObjectName("receiveStatus");
+    receiveStatusValue->setStyleSheet("color: red; font-weight: bold;");
+    
+    statusLayout->addWidget(sendStatusLabel, 0, 0);
+    statusLayout->addWidget(sendStatusValue, 0, 1);
+    statusLayout->addWidget(receiveStatusLabel, 1, 0);
+    statusLayout->addWidget(receiveStatusValue, 1, 1);
+    
+    leftLayout->addWidget(statusPanel);
 
-    // Status bar
-    statusBar = new QStatusBar();
-    mainLayout->addWidget(statusBar);
-
-    // Sending Tab
-    auto *sendTab = new QWidget();
-    tabWidget->addTab(sendTab, "Send");
-
-    auto *sendLayout = new QVBoxLayout(sendTab);
-
-    // Connection settings for sending
-    auto *sendConnGroup = new QGroupBox("Connection Settings");
-    auto *sendConnLayout = new QFormLayout(sendConnGroup);
-
+    // Send Configuration
+    auto *sendGroup = new QGroupBox("Send Configuration");
+    auto *sendLayout = new QGridLayout(sendGroup);
+    
     protocolCombo = new QComboBox();
     protocolCombo->addItems({"TCP", "UDP"});
+    protocolCombo->setMinimumHeight(32);
+    
     hostEdit = new QLineEdit("127.0.0.1");
+    hostEdit->setMinimumHeight(32);
+    hostEdit->setPlaceholderText("Enter host address");
+    
     portEdit = new QLineEdit("5000");
-    connectBtn = new QPushButton("&Connect");
-    connectBtn->setShortcut(QKeySequence("Ctrl+C"));
+    portEdit->setMinimumHeight(32);
+    portEdit->setPlaceholderText("Port number");
+    
+    connectBtn = new QPushButton("Connect");
+    connectBtn->setMinimumHeight(36);
+    connectBtn->setStyleSheet("QPushButton { font-weight: bold; }");
+    
+    sendLayout->addWidget(new QLabel("Protocol:"), 0, 0);
+    sendLayout->addWidget(protocolCombo, 0, 1);
+    sendLayout->addWidget(new QLabel("Host:"), 1, 0);
+    sendLayout->addWidget(hostEdit, 1, 1);
+    sendLayout->addWidget(new QLabel("Port:"), 2, 0);
+    sendLayout->addWidget(portEdit, 2, 1);
+    sendLayout->addWidget(connectBtn, 3, 0, 1, 2);
+    
+    leftLayout->addWidget(sendGroup);
 
-    sendConnLayout->addRow("Protocol:", protocolCombo);
-    sendConnLayout->addRow("Host:", hostEdit);
-    sendConnLayout->addRow("Port:", portEdit);
-    sendConnLayout->addRow(connectBtn);
-
-    // Send section
-    auto *sendGroup = new QGroupBox("Send JSON");
-    auto *sendMsgLayout = new QVBoxLayout(sendGroup);
-
-    jsonEdit = new QTextEdit();
-    jsonEdit->setPlainText(R"({"type":"hello","from":"gui","value":42})");
-    jsonEdit->setMaximumHeight(120);
-
-    // File operation buttons for JSON
-    auto *jsonBtnLayout = new QHBoxLayout();
-    loadJsonBtn = new QPushButton("Load JSON");
-    saveJsonBtn = new QPushButton("Save JSON");
-    jsonBtnLayout->addWidget(loadJsonBtn);
-    jsonBtnLayout->addWidget(saveJsonBtn);
-
-    sendBtn = new QPushButton("&Send JSON");
-    sendBtn->setShortcut(QKeySequence("Ctrl+S"));
-
-    sendMsgLayout->addWidget(new QLabel("JSON Message:"));
-    sendMsgLayout->addWidget(jsonEdit);
-    sendMsgLayout->addLayout(jsonBtnLayout);
-    sendMsgLayout->addWidget(sendBtn);
-
-    sendLayout->addWidget(sendConnGroup);
-    sendLayout->addWidget(sendGroup);
-
-    // Receiving Tab
-    auto *receiveTab = new QWidget();
-    tabWidget->addTab(receiveTab, "Receive");
-
-    auto *receiveLayout = new QVBoxLayout(receiveTab);
-
-    // Receive connection settings
-    auto *receiveConnGroup = new QGroupBox("Connection Settings");
-    auto *receiveConnLayout = new QFormLayout(receiveConnGroup);
-
+    // Receive Configuration
+    auto *receiveGroup = new QGroupBox("Receive Configuration");
+    auto *receiveLayout = new QGridLayout(receiveGroup);
+    
     receiveProtocolCombo = new QComboBox();
     receiveProtocolCombo->addItems({"TCP", "UDP"});
+    receiveProtocolCombo->setMinimumHeight(32);
+    
     receiveHostEdit = new QLineEdit("0.0.0.0");
+    receiveHostEdit->setMinimumHeight(32);
+    receiveHostEdit->setPlaceholderText("Bind address");
+    
     receivePortEdit = new QLineEdit("5001");
+    receivePortEdit->setMinimumHeight(32);
+    receivePortEdit->setPlaceholderText("Listen port");
+    
+    auto *receiveButtonLayout = new QHBoxLayout();
+    startReceiveBtn = new QPushButton("Start");
+    startReceiveBtn->setMinimumHeight(36);
+    startReceiveBtn->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }");
+    
+    stopReceiveBtn = new QPushButton("Stop");
+    stopReceiveBtn->setMinimumHeight(36);
+    stopReceiveBtn->setStyleSheet("QPushButton { background-color: #f44336; color: white; font-weight: bold; }");
+    
+    receiveButtonLayout->addWidget(startReceiveBtn);
+    receiveButtonLayout->addWidget(stopReceiveBtn);
+    
+    receiveLayout->addWidget(new QLabel("Protocol:"), 0, 0);
+    receiveLayout->addWidget(receiveProtocolCombo, 0, 1);
+    receiveLayout->addWidget(new QLabel("Bind Host:"), 1, 0);
+    receiveLayout->addWidget(receiveHostEdit, 1, 1);
+    receiveLayout->addWidget(new QLabel("Port:"), 2, 0);
+    receiveLayout->addWidget(receivePortEdit, 2, 1);
+    receiveLayout->addWidget(new QLabel("Controls:"), 3, 0);
+    receiveLayout->addLayout(receiveButtonLayout, 3, 1);
+    
+    leftLayout->addWidget(receiveGroup);
+    leftLayout->addStretch();
+    
+    splitter->addWidget(leftPanel);
 
-    receiveConnLayout->addRow("Protocol:", receiveProtocolCombo);
-    receiveConnLayout->addRow("Bind Host:", receiveHostEdit);
-    receiveConnLayout->addRow("Port:", receivePortEdit);
-
-    // Receive controls
-    auto *receiveCtrlGroup = new QGroupBox("Controls");
-    auto *receiveCtrlLayout = new QHBoxLayout(receiveCtrlGroup);
-
-    startReceiveBtn = new QPushButton("Start Receiving");
-    stopReceiveBtn = new QPushButton("Stop Receiving");
-
-    receiveCtrlLayout->addWidget(startReceiveBtn);
-    receiveCtrlLayout->addWidget(stopReceiveBtn);
-
-    // Received messages
+    // Right panel - Message handling with tabs
+    auto *tabWidget = new QTabWidget();
+    tabWidget->setMinimumWidth(500);
+    
+    // Send Message Tab
+    auto *sendTab = new QWidget();
+    auto *sendTabLayout = new QVBoxLayout(sendTab);
+    sendTabLayout->setSpacing(12);
+    
+    // Format selector
+    auto *formatGroup = new QGroupBox("Message Format");
+    auto *formatLayout = new QHBoxLayout(formatGroup);
+    
+    dataFormatCombo = new QComboBox();
+    dataFormatCombo->addItem("JSON", static_cast<int>(DataFormatType::JSON));
+    dataFormatCombo->addItem("XML", static_cast<int>(DataFormatType::XML));
+    dataFormatCombo->addItem("CSV", static_cast<int>(DataFormatType::CSV));
+    dataFormatCombo->addItem("Text", static_cast<int>(DataFormatType::TEXT));
+    dataFormatCombo->addItem("Binary (Hex)", static_cast<int>(DataFormatType::BINARY));
+    dataFormatCombo->addItem("Hex", static_cast<int>(DataFormatType::HEX));
+    dataFormatCombo->setMinimumHeight(32);
+    
+    formatLayout->addWidget(new QLabel("Format:"));
+    formatLayout->addWidget(dataFormatCombo);
+    formatLayout->addStretch();
+    
+    sendTabLayout->addWidget(formatGroup);
+    
+    // Message editor
+    auto *messageGroup = new QGroupBox("Message Content");
+    auto *messageLayout = new QVBoxLayout(messageGroup);
+    
+    auto *messageLabel = new QLabel("JSON Message:");
+    messageLabel->setObjectName("messageLabel");
+    
+    jsonEdit = new QTextEdit();
+    jsonEdit->setPlainText(R"({"type":"hello","from":"gui","value":42})");
+    jsonEdit->setMinimumHeight(200);
+    jsonEdit->setFont(QFont("Consolas, Monaco, monospace", 10));
+    
+    // File operations
+    auto *fileButtonLayout = new QHBoxLayout();
+    loadJsonBtn = new QPushButton("Load File");
+    saveJsonBtn = new QPushButton("Save File");
+    loadJsonBtn->setMinimumHeight(32);
+    saveJsonBtn->setMinimumHeight(32);
+    
+    fileButtonLayout->addWidget(loadJsonBtn);
+    fileButtonLayout->addWidget(saveJsonBtn);
+    fileButtonLayout->addStretch();
+    
+    // Send button
+    sendBtn = new QPushButton("Send Message");
+    sendBtn->setMinimumHeight(40);
+    sendBtn->setStyleSheet("QPushButton { background-color: #2196F3; color: white; font-weight: bold; font-size: 14px; }");
+    
+    messageLayout->addWidget(messageLabel);
+    messageLayout->addWidget(jsonEdit);
+    messageLayout->addLayout(fileButtonLayout);
+    messageLayout->addWidget(sendBtn);
+    
+    sendTabLayout->addWidget(messageGroup);
+    
+    tabWidget->addTab(sendTab, "Send Message");
+    
+    // Received Messages Tab
+    auto *receiveTab = new QWidget();
+    auto *receiveTabLayout = new QVBoxLayout(receiveTab);
+    
     auto *receivedGroup = new QGroupBox("Received Messages");
     auto *receivedLayout = new QVBoxLayout(receivedGroup);
-
+    
     receivedEdit = new QTextEdit();
     receivedEdit->setReadOnly(true);
-    receivedEdit->setMaximumHeight(200);
-
-    receivedLayout->addWidget(receivedEdit);
-
-    // File operation buttons for received messages
-    auto *receivedBtnLayout = new QHBoxLayout();
+    receivedEdit->setFont(QFont("Consolas, Monaco, monospace", 9));
+    
+    auto *receivedButtonLayout = new QHBoxLayout();
     exportMessagesBtn = new QPushButton("Export Messages");
-    clearMessagesBtn = new QPushButton("Clear Messages");
-    receivedBtnLayout->addWidget(exportMessagesBtn);
-    receivedBtnLayout->addWidget(clearMessagesBtn);
-    receivedLayout->addLayout(receivedBtnLayout);
-
-    receiveLayout->addWidget(receiveConnGroup);
-    receiveLayout->addWidget(receiveCtrlGroup);
-    receiveLayout->addWidget(receivedGroup);
-
+    clearMessagesBtn = new QPushButton("Clear All");
+    exportMessagesBtn->setMinimumHeight(32);
+    clearMessagesBtn->setMinimumHeight(32);
+    
+    receivedButtonLayout->addWidget(exportMessagesBtn);
+    receivedButtonLayout->addWidget(clearMessagesBtn);
+    receivedButtonLayout->addStretch();
+    
+    receivedLayout->addWidget(receivedEdit);
+    receivedLayout->addLayout(receivedButtonLayout);
+    
+    receiveTabLayout->addWidget(receivedGroup);
+    
+    tabWidget->addTab(receiveTab, "Received Messages");
+    
     // History Tab
     auto *historyTab = new HistoryTab(&historyManager);
     tabWidget->addTab(historyTab, "History");
-
+    
     // Logs Tab
     auto *logTab = new QWidget();
-    tabWidget->addTab(logTab, "Logs");
-
-    auto *logLayout = new QVBoxLayout(logTab);
-
+    auto *logTabLayout = new QVBoxLayout(logTab);
+    
+    auto *logGroup = new QGroupBox("Application Logs");
+    auto *logLayout = new QVBoxLayout(logGroup);
+    
     logEdit = new QTextEdit();
     logEdit->setReadOnly(true);
-
-    // File operation button for logs
-    auto *logBtnLayout = new QHBoxLayout();
+    logEdit->setFont(QFont("Consolas, Monaco, monospace", 9));
+    
+    auto *logButtonLayout = new QHBoxLayout();
     exportLogsBtn = new QPushButton("Export Logs");
-    logBtnLayout->addWidget(exportLogsBtn);
-    logBtnLayout->addStretch();
-
+    exportLogsBtn->setMinimumHeight(32);
+    
+    logButtonLayout->addWidget(exportLogsBtn);
+    logButtonLayout->addStretch();
+    
     logLayout->addWidget(logEdit);
-    logLayout->addLayout(logBtnLayout);
+    logLayout->addLayout(logButtonLayout);
+    
+    logTabLayout->addWidget(logGroup);
+    
+    tabWidget->addTab(logTab, "Logs");
+    
+    splitter->addWidget(tabWidget);
+    splitter->setSizes({400, 600});
 
-    // Connect signals
+    // Status bar
+    statusBar = new QStatusBar();
+    statusBar->setStyleSheet("QStatusBar { border-top: 1px solid #ccc; }");
+    mainLayout->addWidget(statusBar);
+
+    // Format change handler
+    connect(dataFormatCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), [this, messageLabel](int index) {
+        DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->itemData(index).toInt());
+        switch (format) {
+        case DataFormatType::JSON:
+            messageLabel->setText("JSON Message:");
+            jsonEdit->setPlainText(R"({"type":"hello","from":"gui","value":42})");
+            break;
+        case DataFormatType::XML:
+            messageLabel->setText("XML Message:");
+            jsonEdit->setPlainText("<message><type>hello</type><from>gui</from><value>42</value></message>");
+            break;
+        case DataFormatType::CSV:
+            messageLabel->setText("CSV Message:");
+            jsonEdit->setPlainText("type,from,value\nhello,gui,42");
+            break;
+        case DataFormatType::TEXT:
+            messageLabel->setText("Text Message:");
+            jsonEdit->setPlainText("Hello from GUI");
+            break;
+        case DataFormatType::BINARY:
+            messageLabel->setText("Binary Message (as Hex):");
+            jsonEdit->setPlainText("48656c6c6f");
+            break;
+        case DataFormatType::HEX:
+            messageLabel->setText("Hex Message:");
+            jsonEdit->setPlainText("48 65 6c 6c 6f");
+            break;
+        }
+    });
+
+    // Connect all signals
     connect(connectBtn, &QPushButton::clicked, this, &CommLinkGUI::onConnect);
     connect(sendBtn, &QPushButton::clicked, this, &CommLinkGUI::onSend);
     connect(startReceiveBtn, &QPushButton::clicked, this, &CommLinkGUI::onStartReceive);
     connect(stopReceiveBtn, &QPushButton::clicked, this, &CommLinkGUI::onStopReceive);
-    connect(&receiver, &Receiver::jsonReceived, this, &CommLinkGUI::onJsonReceived);
+    connect(&receiver, &Receiver::dataReceived, this, &CommLinkGUI::onDataReceived);
     connect(loadJsonBtn, &QPushButton::clicked, this, &CommLinkGUI::onLoadJson);
     connect(saveJsonBtn, &QPushButton::clicked, this, &CommLinkGUI::onSaveJson);
     connect(exportLogsBtn, &QPushButton::clicked, this, &CommLinkGUI::onExportLogs);
@@ -227,8 +367,6 @@ void CommLinkGUI::setupUI()
     connect(lightModeAction, &QAction::triggered, this, &CommLinkGUI::onToggleLightMode);
     connect(darkModeAction, &QAction::triggered, this, &CommLinkGUI::onToggleDarkMode);
     connect(autoModeAction, &QAction::triggered, this, &CommLinkGUI::onToggleAutoMode);
-
-    // Theme will be applied in onThemeChanged()
 
     updateStatusBar();
 }
@@ -253,7 +391,19 @@ void CommLinkGUI::updateConnectionState(bool connected)
 {
     isConnected = connected;
     sendBtn->setEnabled(connected);
-    connectBtn->setText(connected ? "&Disconnect" : "&Connect");
+    connectBtn->setText(connected ? "Disconnect" : "Connect");
+    
+    // Update visual status
+    auto *sendStatus = findChild<QLabel*>("sendStatus");
+    if (sendStatus) {
+        if (connected) {
+            sendStatus->setText(QString("Connected (%1:%2)").arg(hostEdit->text()).arg(portEdit->text()));
+            sendStatus->setStyleSheet("color: green; font-weight: bold;");
+        } else {
+            sendStatus->setText("Disconnected");
+            sendStatus->setStyleSheet("color: red; font-weight: bold;");
+        }
+    }
 
     // Disable connection settings when connected
     protocolCombo->setEnabled(!connected);
@@ -271,6 +421,18 @@ void CommLinkGUI::updateReceiveState(bool receiving)
     receiveHostEdit->setEnabled(!receiving);
     receivePortEdit->setEnabled(!receiving);
     receiveProtocolCombo->setEnabled(!receiving);
+    
+    // Update visual status
+    auto *receiveStatus = findChild<QLabel*>("receiveStatus");
+    if (receiveStatus) {
+        if (receiving) {
+            receiveStatus->setText(QString("Listening on port %1").arg(receivePortEdit->text()));
+            receiveStatus->setStyleSheet("color: green; font-weight: bold;");
+        } else {
+            receiveStatus->setText("Stopped");
+            receiveStatus->setStyleSheet("color: red; font-weight: bold;");
+        }
+    }
 
     updateStatusBar();
 }
@@ -341,32 +503,33 @@ void CommLinkGUI::onSend() {
         return;
     }
 
-    QString jsonText = jsonEdit->toPlainText().trimmed();
-    if (jsonText.isEmpty()) {
-        QMessageBox::warning(this, "Error", "JSON message cannot be empty");
+    QString messageText = jsonEdit->toPlainText().trimmed();
+    if (messageText.isEmpty()) {
+        QMessageBox::warning(this, "Error", "Message cannot be empty");
         return;
     }
 
-    QJsonParseError error;
-    QJsonDocument doc = QJsonDocument::fromJson(jsonText.toUtf8(), &error);
-
-    if (error.error != QJsonParseError::NoError) {
-        QString errorMsg = QString("Invalid JSON at offset %1: %2")
-                          .arg(error.offset).arg(error.errorString());
-        QMessageBox::warning(this, "JSON Error", errorMsg);
-        logMessage(errorMsg, "[ERROR] ");
+    DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->currentData().toInt());
+    if (!DataMessage::validateInput(messageText, format)) {
+        QMessageBox::warning(this, "Input Error", "Invalid input for selected format");
         return;
     }
 
-    if (sender.sendJson) {
-        sender.sendJson(doc);
-        logMessage("Sent: " + jsonText, "[SEND] ");
+    QVariant data = DataMessage::parseInput(messageText, format);
+    DataMessage msg(format, data);
 
-        // Save to history
-        QString host = hostEdit->text().trimmed();
-        int port = portEdit->text().toInt();
-        if (!historyManager.saveMessage("sent", protocolCombo->currentText(), host, port, doc)) {
-            logMessage("Failed to save sent message to history", "[WARN] ");
+    if (sender.sendData) {
+        sender.sendData(msg);
+        logMessage("Sent: " + messageText, "[SEND] ");
+
+        // Save to history (only for JSON messages)
+        if (msg.type == DataFormatType::JSON && msg.data.canConvert<QJsonDocument>()) {
+            QString host = hostEdit->text().trimmed();
+            int port = portEdit->text().toInt();
+            QJsonDocument doc = msg.data.value<QJsonDocument>();
+            if (!historyManager.saveMessage("sent", protocolCombo->currentText(), host, port, doc)) {
+                logMessage("Failed to save sent message to history", "[WARN] ");
+            }
         }
     } else {
         logMessage("Send function not available", "[ERROR] ");
@@ -404,19 +567,22 @@ void CommLinkGUI::onStopReceive() {
     logMessage("Stopped receiving", "[INFO] ");
 }
 
-void CommLinkGUI::onJsonReceived(const QJsonDocument &doc, const QString &protocol, const QString &senderInfo) {
-    QString jsonText = doc.toJson(QJsonDocument::Indented);
+void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo) {
+    QString displayText = msg.toDisplayString();
     QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
     QString message = QString("[%1] ← %2 from %3:\n%4\n")
-                     .arg(timestamp).arg(protocol).arg(senderInfo).arg(jsonText);
+                     .arg(timestamp).arg(protocol).arg(senderInfo).arg(displayText);
     receivedEdit->append(message);
     logMessage(QString("Received %1 message from %2").arg(protocol).arg(senderInfo), "[RECV] ");
 
-    // Save received message to history
-    QString host = senderInfo.split(':').first(); // Extract host from senderInfo
-    int port = receivePortEdit->text().toInt();
-    if (!historyManager.saveMessage("received", protocol, host, port, doc, senderInfo)) {
-        logMessage("Failed to save received message to history", "[WARN] ");
+    // Save received message to history (only for JSON messages)
+    if (msg.type == DataFormatType::JSON && msg.data.canConvert<QJsonDocument>()) {
+        QString host = senderInfo.split(':').first(); // Extract host from senderInfo
+        int port = receivePortEdit->text().toInt();
+        QJsonDocument doc = msg.data.value<QJsonDocument>();
+        if (!historyManager.saveMessage("received", protocol, host, port, doc, senderInfo)) {
+            logMessage("Failed to save received message to history", "[WARN] ");
+        }
     }
 
     // Save settings on successful receive

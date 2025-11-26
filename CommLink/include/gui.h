@@ -12,6 +12,7 @@
 #include <QtGui/QCloseEvent>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QSettings>
+#include "dataformat.h"
 #include "sender.h"
 #include "receiver.h"
 #include "filemanager.h"
@@ -30,7 +31,7 @@ private slots:
     void onSend();
     void onStartReceive();
     void onStopReceive();
-    void onJsonReceived(const QJsonDocument &doc, const QString &protocol, const QString &senderInfo);
+    void onDataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo);
     void onLoadJson();
     void onSaveJson();
     void onExportLogs();
@@ -56,6 +57,7 @@ private:
 
     // UI Components
     QComboBox *protocolCombo;
+    QComboBox *dataFormatCombo;
     QComboBox *receiveProtocolCombo;
     QLineEdit *hostEdit, *portEdit, *receiveHostEdit, *receivePortEdit;
     QPushButton *connectBtn, *sendBtn, *startReceiveBtn, *stopReceiveBtn;
