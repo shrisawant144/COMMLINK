@@ -16,6 +16,7 @@ find_package(Qt5 REQUIRED COMPONENTS Core Widgets Sql)
 
 # Include directories
 include_directories(include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Compiler-specific options
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -29,6 +30,7 @@ set(SOURCES
     src/receiver.cpp
     src/gui.cpp
     src/receiverthread.cpp
+    src/dataformat.cpp
     src/filemanager.cpp
     src/exportmanager.cpp
     src/messagehistorymanager.cpp
@@ -41,6 +43,7 @@ set(HEADERS
     include/receiver.h
     include/gui.h
     include/receiverthread.h
+    include/dataformat.h
     include/filemanager.h
     include/exportmanager.h
     include/messagehistorymanager.h
