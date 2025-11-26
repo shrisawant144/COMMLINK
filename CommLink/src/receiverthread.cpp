@@ -39,19 +39,32 @@ bool ReceiverThread::processReceivedData(const char *buffer, ssize_t size, const
 {
     if (size <= 0) return false;
 
-    QString jsonString = QString::fromUtf8(buffer, static_cast<int>(size)).trimmed();
-    if (jsonString.isEmpty()) return false;
+    QByteArray data = QByteArray::fromRawData(buffer, static_cast<int>(size)).trimmed();
+    if (data.isEmpty()) return false;
 
-    QJsonParseError error;
-    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &error);
-
-    if (error.error == QJsonParseError::NoError) {
-        emit jsonReceived(doc, is_tcp ? "TCP" : "UDP", senderInfo);
-        return true;
-    } else {
-        qWarning() << "Invalid JSON from" << senderInfo << ":" << error.errorString();
-        return false;
+    // Try to detect format and deserialize accordingly
+    DataMessage msg;
+    QString dataStr = QString::fromUtf8(data);
+    
+    // Try JSON first
+    if (DataMessage::validateInput(dataStr, DataFormatType::JSON)) {
+        msg = DataMessage::deserialize(data, DataFormatType::JSON);
     }
+    // Try XML
+    else if (dataStr.contains('<') && dataStr.contains('>')) {
+        msg = DataMessage::deserialize(data, DataFormatType::XML);
+    }
+    // Try CSV (contains commas)
+    else if (dataStr.contains(',')) {
+        msg = DataMessage::deserialize(data, DataFormatType::CSV);
+    }
+    // Default to TEXT
+    else {
+        msg = DataMessage::deserialize(data, DataFormatType::TEXT);
+    }
+    
+    emit dataReceived(msg, is_tcp ? "TCP" : "UDP", senderInfo);
+    return true;
 }
 
 void ReceiverThread::run()

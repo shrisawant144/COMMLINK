@@ -72,7 +72,7 @@ bool Receiver::connectTcp(quint16 port)
         return false;
     }
     
-    connect(receiverThread, &ReceiverThread::jsonReceived, this, &Receiver::jsonReceived);
+    connect(receiverThread, &ReceiverThread::dataReceived, this, &Receiver::dataReceived);
     receiverThread->start();
 
     qInfo() << "✅ TCP Receiver listening on port" << port;
@@ -108,7 +108,7 @@ bool Receiver::connectUdp(quint16 port)
         return false;
     }
     
-    connect(receiverThread, &ReceiverThread::jsonReceived, this, &Receiver::jsonReceived);
+    connect(receiverThread, &ReceiverThread::dataReceived, this, &Receiver::dataReceived);
     receiverThread->start();
 
     qInfo() << "✅ UDP Receiver listening on port" << port;

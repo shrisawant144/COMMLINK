@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <atomic>
+#include "dataformat.h"
 
 class ReceiverThread : public QThread
 {
@@ -16,7 +17,7 @@ public:
     void stop();
 
 signals:
-    void jsonReceived(const QJsonDocument &doc, const QString &protocol, const QString &senderInfo);
+    void dataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo);
 
 protected:
     void run() override;

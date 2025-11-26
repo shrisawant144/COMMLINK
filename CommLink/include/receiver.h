@@ -3,6 +3,7 @@
 #include <QtCore/QJsonDocument>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "dataformat.h"
 
 class ReceiverThread;
 
@@ -20,7 +21,7 @@ public:
     bool isConnected() const { return listen_fd >= 0; }
 
 signals:
-    void jsonReceived(const QJsonDocument &doc, const QString &protocol, const QString &senderInfo);
+    void dataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo);
 
 private:
     bool validatePort(quint16 port) const;
