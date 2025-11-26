@@ -75,12 +75,12 @@ bool Sender::connectTcp(const QString &host, quint16 port)
     
     qInfo() << "✅ TCP connected:" << host << ":" << port;
 
-    sendJson = [this, host, port](const QJsonDocument &doc) {
+    sendData = [this, host, port](const DataMessage &msg) {
         if (tcp_fd < 0) {
             qWarning() << "TCP not connected";
             return;
         }
-        QByteArray payload = doc.toJson(QJsonDocument::Compact) + "\n";
+        QByteArray payload = msg.serialize() + "\n";
         ssize_t written = send(tcp_fd, payload.constData(), payload.size(), MSG_NOSIGNAL);
         if (written < 0) {
             qWarning() << "TCP send failed to" << host << ":" << port << "- Error:" << strerror(errno);
@@ -108,12 +108,12 @@ bool Sender::connectUdp(const QString &host, quint16 port)
 
     qInfo() << "✅ UDP configured:" << host << ":" << port;
 
-    sendJson = [this](const QJsonDocument &doc) {
+    sendData = [this](const DataMessage &msg) {
         if (udp_fd < 0) {
             qWarning() << "UDP not configured";
             return;
         }
-        QByteArray payload = doc.toJson(QJsonDocument::Compact) + "\n";
+        QByteArray payload = msg.serialize() + "\n";
         ssize_t written = sendto(udp_fd, payload.constData(), payload.size(), 0,
                                reinterpret_cast<sockaddr*>(&udp_addr), sizeof(udp_addr));
         if (written < 0) {
@@ -131,7 +131,7 @@ void Sender::disconnect()
 {
     closeSocket(tcp_fd);
     closeSocket(udp_fd);
-    sendJson = nullptr;
+    sendData = nullptr;
 }
 
 Sender::ConnectionType Sender::getConnectionType() const

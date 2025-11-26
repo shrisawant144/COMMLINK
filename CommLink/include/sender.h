@@ -4,6 +4,7 @@
 #include <functional>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "dataformat.h"
 
 class Sender : public QObject
 {
@@ -14,7 +15,7 @@ public:
     Sender() = default;
     ~Sender();
 
-    std::function<void(const QJsonDocument&)> sendJson;
+    std::function<void(const DataMessage&)> sendData;
 
     bool connectTcp(const QString &host, quint16 port);
     bool connectUdp(const QString &host, quint16 port);
