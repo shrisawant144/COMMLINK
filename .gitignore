@@ -1,4 +1,6 @@
 # Build directories
+build/
+test_build/
 **/build/
 **/test_build/
 
@@ -7,6 +9,10 @@ CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
+**/CMakeCache.txt
+**/CMakeFiles/
+**/cmake_install.cmake
+**/Makefile
 
 # Object files
 *.o
@@ -16,11 +22,15 @@ Makefile
 *.exe
 *.out
 *.app
+CommLink
+**/bin/
 
 # Qt generated files
 moc_*.cpp
 ui_*.h
 qrc_*.cpp
+*_autogen/
+**/*_autogen/
 
 # IDE files
 .vscode/
