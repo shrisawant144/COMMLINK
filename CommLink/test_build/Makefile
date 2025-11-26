@@ -48,10 +48,10 @@ RM = /home/miko/miko/ingenic_toolchain/T40_INDUS_20221128/SDK_20221128/Zeratul_T
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/miko/qt_projects/JsonSender
+CMAKE_SOURCE_DIR = /home/miko/qt_projects/CommLink
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/miko/qt_projects/JsonSender/test_build
+CMAKE_BINARY_DIR = /home/miko/qt_projects/CommLink/test_build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/miko/qt_projects/JsonSender/test_build/CMakeFiles /home/miko/qt_projects/JsonSender/test_build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/miko/qt_projects/CommLink/test_build/CMakeFiles /home/miko/qt_projects/CommLink/test_build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/miko/qt_projects/JsonSender/test_build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/miko/qt_projects/CommLink/test_build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -111,57 +111,111 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named JsonSender
+# Target rules for targets named CommLink
 
 # Build rule for target.
-JsonSender: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 JsonSender
-.PHONY : JsonSender
+CommLink: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 CommLink
+.PHONY : CommLink
 
 # fast build rule for target.
-JsonSender/fast:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/build
-.PHONY : JsonSender/fast
+CommLink/fast:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/build
+.PHONY : CommLink/fast
 
 #=============================================================================
-# Target rules for targets named JsonSender_autogen
+# Target rules for targets named CommLink_autogen
 
 # Build rule for target.
-JsonSender_autogen: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 JsonSender_autogen
-.PHONY : JsonSender_autogen
+CommLink_autogen: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 CommLink_autogen
+.PHONY : CommLink_autogen
 
 # fast build rule for target.
-JsonSender_autogen/fast:
-	$(MAKE) -f CMakeFiles/JsonSender_autogen.dir/build.make CMakeFiles/JsonSender_autogen.dir/build
-.PHONY : JsonSender_autogen/fast
+CommLink_autogen/fast:
+	$(MAKE) -f CMakeFiles/CommLink_autogen.dir/build.make CMakeFiles/CommLink_autogen.dir/build
+.PHONY : CommLink_autogen/fast
 
-JsonSender_autogen/moc_compilation.o: JsonSender_autogen/moc_compilation.cpp.o
+CommLink_autogen/moc_compilation.o: CommLink_autogen/moc_compilation.cpp.o
 
-.PHONY : JsonSender_autogen/moc_compilation.o
+.PHONY : CommLink_autogen/moc_compilation.o
 
 # target to build an object file
-JsonSender_autogen/moc_compilation.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.o
-.PHONY : JsonSender_autogen/moc_compilation.cpp.o
+CommLink_autogen/moc_compilation.cpp.o:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/CommLink_autogen/moc_compilation.cpp.o
+.PHONY : CommLink_autogen/moc_compilation.cpp.o
 
-JsonSender_autogen/moc_compilation.i: JsonSender_autogen/moc_compilation.cpp.i
+CommLink_autogen/moc_compilation.i: CommLink_autogen/moc_compilation.cpp.i
 
-.PHONY : JsonSender_autogen/moc_compilation.i
+.PHONY : CommLink_autogen/moc_compilation.i
 
 # target to preprocess a source file
-JsonSender_autogen/moc_compilation.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.i
-.PHONY : JsonSender_autogen/moc_compilation.cpp.i
+CommLink_autogen/moc_compilation.cpp.i:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/CommLink_autogen/moc_compilation.cpp.i
+.PHONY : CommLink_autogen/moc_compilation.cpp.i
 
-JsonSender_autogen/moc_compilation.s: JsonSender_autogen/moc_compilation.cpp.s
+CommLink_autogen/moc_compilation.s: CommLink_autogen/moc_compilation.cpp.s
 
-.PHONY : JsonSender_autogen/moc_compilation.s
+.PHONY : CommLink_autogen/moc_compilation.s
 
 # target to generate assembly for a file
-JsonSender_autogen/moc_compilation.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/JsonSender_autogen/moc_compilation.cpp.s
-.PHONY : JsonSender_autogen/moc_compilation.cpp.s
+CommLink_autogen/moc_compilation.cpp.s:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/CommLink_autogen/moc_compilation.cpp.s
+.PHONY : CommLink_autogen/moc_compilation.cpp.s
+
+src/exportmanager.o: src/exportmanager.cpp.o
+
+.PHONY : src/exportmanager.o
+
+# target to build an object file
+src/exportmanager.cpp.o:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/exportmanager.cpp.o
+.PHONY : src/exportmanager.cpp.o
+
+src/exportmanager.i: src/exportmanager.cpp.i
+
+.PHONY : src/exportmanager.i
+
+# target to preprocess a source file
+src/exportmanager.cpp.i:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/exportmanager.cpp.i
+.PHONY : src/exportmanager.cpp.i
+
+src/exportmanager.s: src/exportmanager.cpp.s
+
+.PHONY : src/exportmanager.s
+
+# target to generate assembly for a file
+src/exportmanager.cpp.s:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/exportmanager.cpp.s
+.PHONY : src/exportmanager.cpp.s
+
+src/filemanager.o: src/filemanager.cpp.o
+
+.PHONY : src/filemanager.o
+
+# target to build an object file
+src/filemanager.cpp.o:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/filemanager.cpp.o
+.PHONY : src/filemanager.cpp.o
+
+src/filemanager.i: src/filemanager.cpp.i
+
+.PHONY : src/filemanager.i
+
+# target to preprocess a source file
+src/filemanager.cpp.i:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/filemanager.cpp.i
+.PHONY : src/filemanager.cpp.i
+
+src/filemanager.s: src/filemanager.cpp.s
+
+.PHONY : src/filemanager.s
+
+# target to generate assembly for a file
+src/filemanager.cpp.s:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/filemanager.cpp.s
+.PHONY : src/filemanager.cpp.s
 
 src/gui.o: src/gui.cpp.o
 
@@ -169,7 +223,7 @@ src/gui.o: src/gui.cpp.o
 
 # target to build an object file
 src/gui.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/gui.cpp.o
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/gui.cpp.o
 .PHONY : src/gui.cpp.o
 
 src/gui.i: src/gui.cpp.i
@@ -178,7 +232,7 @@ src/gui.i: src/gui.cpp.i
 
 # target to preprocess a source file
 src/gui.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/gui.cpp.i
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/gui.cpp.i
 .PHONY : src/gui.cpp.i
 
 src/gui.s: src/gui.cpp.s
@@ -187,8 +241,35 @@ src/gui.s: src/gui.cpp.s
 
 # target to generate assembly for a file
 src/gui.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/gui.cpp.s
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/gui.cpp.s
 .PHONY : src/gui.cpp.s
+
+src/historytab.o: src/historytab.cpp.o
+
+.PHONY : src/historytab.o
+
+# target to build an object file
+src/historytab.cpp.o:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/historytab.cpp.o
+.PHONY : src/historytab.cpp.o
+
+src/historytab.i: src/historytab.cpp.i
+
+.PHONY : src/historytab.i
+
+# target to preprocess a source file
+src/historytab.cpp.i:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/historytab.cpp.i
+.PHONY : src/historytab.cpp.i
+
+src/historytab.s: src/historytab.cpp.s
+
+.PHONY : src/historytab.s
+
+# target to generate assembly for a file
+src/historytab.cpp.s:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/historytab.cpp.s
+.PHONY : src/historytab.cpp.s
 
 src/main.o: src/main.cpp.o
 
@@ -196,7 +277,7 @@ src/main.o: src/main.cpp.o
 
 # target to build an object file
 src/main.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/main.cpp.o
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/main.cpp.o
 .PHONY : src/main.cpp.o
 
 src/main.i: src/main.cpp.i
@@ -205,7 +286,7 @@ src/main.i: src/main.cpp.i
 
 # target to preprocess a source file
 src/main.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/main.cpp.i
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/main.cpp.i
 .PHONY : src/main.cpp.i
 
 src/main.s: src/main.cpp.s
@@ -214,8 +295,35 @@ src/main.s: src/main.cpp.s
 
 # target to generate assembly for a file
 src/main.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/main.cpp.s
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
+
+src/messagehistorymanager.o: src/messagehistorymanager.cpp.o
+
+.PHONY : src/messagehistorymanager.o
+
+# target to build an object file
+src/messagehistorymanager.cpp.o:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/messagehistorymanager.cpp.o
+.PHONY : src/messagehistorymanager.cpp.o
+
+src/messagehistorymanager.i: src/messagehistorymanager.cpp.i
+
+.PHONY : src/messagehistorymanager.i
+
+# target to preprocess a source file
+src/messagehistorymanager.cpp.i:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/messagehistorymanager.cpp.i
+.PHONY : src/messagehistorymanager.cpp.i
+
+src/messagehistorymanager.s: src/messagehistorymanager.cpp.s
+
+.PHONY : src/messagehistorymanager.s
+
+# target to generate assembly for a file
+src/messagehistorymanager.cpp.s:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/messagehistorymanager.cpp.s
+.PHONY : src/messagehistorymanager.cpp.s
 
 src/receiver.o: src/receiver.cpp.o
 
@@ -223,7 +331,7 @@ src/receiver.o: src/receiver.cpp.o
 
 # target to build an object file
 src/receiver.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiver.cpp.o
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/receiver.cpp.o
 .PHONY : src/receiver.cpp.o
 
 src/receiver.i: src/receiver.cpp.i
@@ -232,7 +340,7 @@ src/receiver.i: src/receiver.cpp.i
 
 # target to preprocess a source file
 src/receiver.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiver.cpp.i
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/receiver.cpp.i
 .PHONY : src/receiver.cpp.i
 
 src/receiver.s: src/receiver.cpp.s
@@ -241,7 +349,7 @@ src/receiver.s: src/receiver.cpp.s
 
 # target to generate assembly for a file
 src/receiver.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiver.cpp.s
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/receiver.cpp.s
 .PHONY : src/receiver.cpp.s
 
 src/receiverthread.o: src/receiverthread.cpp.o
@@ -250,7 +358,7 @@ src/receiverthread.o: src/receiverthread.cpp.o
 
 # target to build an object file
 src/receiverthread.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiverthread.cpp.o
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/receiverthread.cpp.o
 .PHONY : src/receiverthread.cpp.o
 
 src/receiverthread.i: src/receiverthread.cpp.i
@@ -259,7 +367,7 @@ src/receiverthread.i: src/receiverthread.cpp.i
 
 # target to preprocess a source file
 src/receiverthread.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiverthread.cpp.i
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/receiverthread.cpp.i
 .PHONY : src/receiverthread.cpp.i
 
 src/receiverthread.s: src/receiverthread.cpp.s
@@ -268,7 +376,7 @@ src/receiverthread.s: src/receiverthread.cpp.s
 
 # target to generate assembly for a file
 src/receiverthread.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/receiverthread.cpp.s
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/receiverthread.cpp.s
 .PHONY : src/receiverthread.cpp.s
 
 src/sender.o: src/sender.cpp.o
@@ -277,7 +385,7 @@ src/sender.o: src/sender.cpp.o
 
 # target to build an object file
 src/sender.cpp.o:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/sender.cpp.o
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/sender.cpp.o
 .PHONY : src/sender.cpp.o
 
 src/sender.i: src/sender.cpp.i
@@ -286,7 +394,7 @@ src/sender.i: src/sender.cpp.i
 
 # target to preprocess a source file
 src/sender.cpp.i:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/sender.cpp.i
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/sender.cpp.i
 .PHONY : src/sender.cpp.i
 
 src/sender.s: src/sender.cpp.s
@@ -295,8 +403,35 @@ src/sender.s: src/sender.cpp.s
 
 # target to generate assembly for a file
 src/sender.cpp.s:
-	$(MAKE) -f CMakeFiles/JsonSender.dir/build.make CMakeFiles/JsonSender.dir/src/sender.cpp.s
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/sender.cpp.s
 .PHONY : src/sender.cpp.s
+
+src/thememanager.o: src/thememanager.cpp.o
+
+.PHONY : src/thememanager.o
+
+# target to build an object file
+src/thememanager.cpp.o:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/thememanager.cpp.o
+.PHONY : src/thememanager.cpp.o
+
+src/thememanager.i: src/thememanager.cpp.i
+
+.PHONY : src/thememanager.i
+
+# target to preprocess a source file
+src/thememanager.cpp.i:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/thememanager.cpp.i
+.PHONY : src/thememanager.cpp.i
+
+src/thememanager.s: src/thememanager.cpp.s
+
+.PHONY : src/thememanager.s
+
+# target to generate assembly for a file
+src/thememanager.cpp.s:
+	$(MAKE) -f CMakeFiles/CommLink.dir/build.make CMakeFiles/CommLink.dir/src/thememanager.cpp.s
+.PHONY : src/thememanager.cpp.s
 
 # Help Target
 help:
@@ -305,18 +440,30 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... rebuild_cache"
-	@echo "... JsonSender"
 	@echo "... edit_cache"
-	@echo "... JsonSender_autogen"
-	@echo "... JsonSender_autogen/moc_compilation.o"
-	@echo "... JsonSender_autogen/moc_compilation.i"
-	@echo "... JsonSender_autogen/moc_compilation.s"
+	@echo "... CommLink"
+	@echo "... CommLink_autogen"
+	@echo "... CommLink_autogen/moc_compilation.o"
+	@echo "... CommLink_autogen/moc_compilation.i"
+	@echo "... CommLink_autogen/moc_compilation.s"
+	@echo "... src/exportmanager.o"
+	@echo "... src/exportmanager.i"
+	@echo "... src/exportmanager.s"
+	@echo "... src/filemanager.o"
+	@echo "... src/filemanager.i"
+	@echo "... src/filemanager.s"
 	@echo "... src/gui.o"
 	@echo "... src/gui.i"
 	@echo "... src/gui.s"
+	@echo "... src/historytab.o"
+	@echo "... src/historytab.i"
+	@echo "... src/historytab.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/messagehistorymanager.o"
+	@echo "... src/messagehistorymanager.i"
+	@echo "... src/messagehistorymanager.s"
 	@echo "... src/receiver.o"
 	@echo "... src/receiver.i"
 	@echo "... src/receiver.s"
@@ -326,6 +473,9 @@ help:
 	@echo "... src/sender.o"
 	@echo "... src/sender.i"
 	@echo "... src/sender.s"
+	@echo "... src/thememanager.o"
+	@echo "... src/thememanager.i"
+	@echo "... src/thememanager.s"
 .PHONY : help
 
 

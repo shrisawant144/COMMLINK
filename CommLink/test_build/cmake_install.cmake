@@ -1,4 +1,4 @@
-# Install script for directory: /home/miko/qt_projects/JsonSender
+# Install script for directory: /home/miko/qt_projects/CommLink
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -40,5 +40,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/miko/qt_projects/JsonSender/test_build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/miko/qt_projects/CommLink/test_build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
