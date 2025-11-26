@@ -30,6 +30,8 @@ set(SOURCES
     src/receiver.cpp
     src/gui.cpp
     src/receiverthread.cpp
+    src/senderthread.cpp
+    src/connectionstats.cpp
     src/dataformat.cpp
     src/filemanager.cpp
     src/exportmanager.cpp
@@ -43,6 +45,8 @@ set(HEADERS
     include/receiver.h
     include/gui.h
     include/receiverthread.h
+    include/senderthread.h
+    include/connectionstats.h
     include/dataformat.h
     include/filemanager.h
     include/exportmanager.h
