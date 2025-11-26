@@ -29,7 +29,7 @@ By the end of this guide, you'll understand:
 
 ### What Is CommLink?
 
-CommLink is like a **digital post office** for computers. Just like you send letters through the postal service, this application lets computers send **structured messages** (called JSON) to each other over computer networks.
+CommLink is like a **digital post office** for computers. Just like you send letters through the postal service, this application lets computers send **structured messages** in multiple formats (JSON, XML, CSV, TEXT, BINARY, HEX) to each other over computer networks.
 
 ### Real-World Analogy
 
@@ -41,11 +41,12 @@ CommLink is like a **digital post office** for computers. Just like you send let
 - Recipient reads the letter
 
 **CommLink System**:
-- You type a JSON message
+- You select a data format (JSON, XML, CSV, TEXT, BINARY, HEX)
+- You type a message in the chosen format
 - Specify destination (IP address and port)
 - Click "Send"
-- Network delivers it
-- Other computer receives and displays it
+- Network delivers it with format information
+- Other computer receives, processes, and displays it
 
 ### Why This Matters
 
@@ -65,7 +66,9 @@ CommLink helps you understand and test these communications.
 
 JSON stands for **JavaScript Object Notation**, but don't let the name fool you - it's used everywhere, not just in JavaScript. Think of JSON as a **standardized way to structure information**.
 
-### JSON Examples
+### Data Format Examples
+
+#### JSON Format
 
 **Simple Message**:
 ```json
@@ -117,6 +120,38 @@ The application now includes **theme support** for improved user experience:
 - **Professional Appearance**: Modern interface that adapts to your environment
 - **Persistent Settings**: Your theme choice is remembered between sessions
 
+#### XML Format
+```xml
+<?xml version="1.0"?>
+<message>
+  <type>greeting</type>
+  <content>Hello, World!</content>
+  <timestamp>2024-01-15T10:30:00Z</timestamp>
+</message>
+```
+
+#### CSV Format
+```csv
+type,content,timestamp
+greeting,"Hello, World!",2024-01-15T10:30:00Z
+```
+
+#### TEXT Format
+```
+Greeting: Hello, World!
+Time: 2024-01-15T10:30:00Z
+```
+
+#### BINARY Format
+```
+Raw binary data (displayed as hex): 48656C6C6F20576F726C6421
+```
+
+#### HEX Format
+```
+48 65 6C 6C 6F 20 57 6F 72 6C 64 21
+```
+
 ### JSON Rules (Simple Version)
 
 1. **Curly braces** `{}` contain objects
@@ -126,6 +161,16 @@ The application now includes **theme support** for improved user experience:
 5. **true/false** are special values
 6. **Commas** separate items
 7. **Colons** separate names from values
+
+### Why Multiple Formats Matter
+
+**Different Use Cases**:
+- **JSON**: Web APIs, configuration files, modern applications
+- **XML**: Legacy systems, SOAP services, structured documents
+- **CSV**: Data analysis, spreadsheet import/export, simple databases
+- **TEXT**: Human-readable logs, simple protocols, debugging
+- **BINARY**: High-performance applications, embedded systems, file transfers
+- **HEX**: Low-level debugging, firmware development, protocol analysis
 
 ### Why JSON Is Popular
 
@@ -199,13 +244,15 @@ CommLink/
 │   ├── sender.cpp            # Handles sending messages
 │   ├── receiver.cpp          # Handles receiving messages
 │   ├── receiverthread.cpp    # Background message listening
-│   ├── filemanager.cpp       # Handles JSON file operations
+│   ├── dataformat.cpp        # Handles multiple message formats
+│   ├── filemanager.cpp       # Handles file operations for all formats
 │   └── exportmanager.cpp     # Handles data export in multiple formats
 ├── 📁 include/               # Code blueprints (headers)
 │   ├── gui.h                 # GUI blueprint
 │   ├── sender.h              # Sender blueprint
 │   ├── receiver.h            # Receiver blueprint
 │   ├── receiverthread.h      # Background thread blueprint
+│   ├── dataformat.h          # Multi-format message handling blueprint
 │   ├── filemanager.h         # File operations blueprint
 │   └── exportmanager.h       # Export operations blueprint
 └── 📁 docs/                  # All these explanation files
@@ -264,10 +311,11 @@ CommLinkGUI::CommLinkGUI() {
 The application uses **tabs** to organize different functions:
 
 **📤 Sending Tab**:
+- Choose data format (JSON, XML, CSV, TEXT, BINARY, HEX)
 - Choose protocol (TCP/UDP)
 - Enter destination (IP address and port)
-- Type JSON message
-- Send the message
+- Type message in selected format
+- Send the message with format information
 
 **📥 Receiving Tab**:
 - Choose protocol for listening
@@ -299,7 +347,7 @@ The application prevents you from entering invalid data:
 
 **Port Numbers**: Only allows 1-65535
 **IP Addresses**: Checks format is correct
-**JSON Messages**: Validates syntax before sending
+**Message Formats**: Validates syntax for all supported formats before sending
 
 **Why Validation Matters**:
 - Prevents crashes
@@ -370,6 +418,13 @@ myCar.startEngine();    // Tell the car to start
 - Doesn't block the user interface
 - Continuously listens for messages
 - Thread-safe communication
+- Handles format detection and parsing
+
+**DataFormat Classes**:
+- Manages multiple data formats
+- Handles serialization and deserialization
+- Provides format validation
+- Enables format conversion
 
 ### How Classes Work Together
 
@@ -654,24 +709,26 @@ make
 4. Status bar shows "Connected"
 
 **Step 3: Send a Message**:
-1. Edit JSON in text area (or use default)
-2. Click "Send JSON"
-3. Check "Receiving" tab - message should appear
-4. Check "Logs" tab - see all activity
+1. Select desired format from dropdown
+2. Edit message in text area (format-appropriate content)
+3. Click "Send Message"
+4. Check "Receiving" tab - message should appear with format info
+5. Check "Logs" tab - see all activity
 
 ### Using File Management Features
 
-**Saving JSON Messages**:
-1. Type or edit JSON in the sending tab
-2. Click "💾 Save JSON" button
+**Saving Messages**:
+1. Select format and type/edit message in the sending tab
+2. Click "💾 Save Message" button
 3. Choose location and filename
-4. File saved with .json extension
+4. File saved with appropriate extension for selected format
 
-**Loading JSON Messages**:
-1. Click "📁 Load JSON" button
-2. Select a .json file from your computer
-3. Content appears in the text editor
-4. Ready to send or edit further
+**Loading Messages**:
+1. Click "📁 Load Message" button
+2. Select a file from your computer (any supported format)
+3. Format is automatically detected and selected
+4. Content appears in the text editor
+5. Ready to send or edit further
 
 **Exporting Logs**:
 1. Go to "Logs" tab
@@ -749,27 +806,41 @@ make
 - Use port numbers above 1024
 - Run as administrator if necessary
 
-### JSON Problems
+### Data Format Problems
 
-**"Invalid JSON" Error**:
-- Check for missing quotes around strings
-- Ensure proper comma placement
-- Verify bracket/brace matching
-- Use online JSON validator to check format
+**"Invalid Format" Error**:
+- Check format-specific syntax rules
+- Ensure proper structure for selected format
+- Use format validators or online tools
+- Verify format selection matches content
 
-**Common JSON Mistakes**:
+**Common Format Mistakes**:
+
+**JSON**:
 ```json
 // WRONG - missing quotes around strings
 {type: "hello", value: 42}
 
-// WRONG - trailing comma
-{"type": "hello", "value": 42,}
-
-// WRONG - single quotes
-{'type': 'hello', 'value': 42}
-
 // CORRECT
 {"type": "hello", "value": 42}
+```
+
+**XML**:
+```xml
+<!-- WRONG - unclosed tag -->
+<message><type>hello</message>
+
+<!-- CORRECT -->
+<message><type>hello</type></message>
+```
+
+**HEX**:
+```
+// WRONG - invalid characters
+48ZZ6C6F
+
+// CORRECT
+48656C6F
 ```
 
 ### Application Issues
@@ -928,7 +999,8 @@ Remember: every expert was once a beginner. The key is to keep learning, keep ex
 - `sender.h/cpp` - Outgoing messages
 - `receiver.h/cpp` - Incoming messages
 - `receiverthread.h/cpp` - Background processing
-- `filemanager.h/cpp` - JSON file operations
+- `dataformat.h/cpp` - Multi-format message handling
+- `filemanager.h/cpp` - File operations for all formats
 - `exportmanager.h/cpp` - Data export in multiple formats
 
 ### **Key Classes**
@@ -936,14 +1008,16 @@ Remember: every expert was once a beginner. The key is to keep learning, keep ex
 - `Sender` - Network sending functionality
 - `Receiver` - Network receiving functionality
 - `ReceiverThread` - Background message processing
-- `FileManager` - JSON file loading and saving
+- `DataMessage` - Multi-format message serialization
+- `FileManager` - File loading and saving for all formats
 - `ExportManager` - Multi-format data export
 
 ### **Important Concepts**
 - **Signals/Slots** - Qt's event handling system
 - **Threading** - Background processing
 - **Sockets** - Network communication endpoints
-- **JSON** - Structured data format
+- **DataFormat** - Multi-format message system
+- **JSON/XML/CSV/TEXT/BINARY/HEX** - Supported data formats
 - **Validation** - Input checking and error prevention
 
 ### **Build Commands**
@@ -958,3 +1032,5 @@ make
 - **Send**: TCP, 127.0.0.1:5000
 - **Receive**: TCP, 0.0.0.0:5001
 - **Example JSON**: `{"type":"hello","from":"gui","value":42}`
+- **Example XML**: `<message><type>hello</type></message>`
+- **Example CSV**: `type,value\nhello,42`

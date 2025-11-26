@@ -194,7 +194,54 @@ connect(&receiver, &Receiver::jsonReceived, this, &CommLinkGUI::onJsonReceived);
 
 **Real-World Analogy**: Like a doorbell system - when someone presses the button (signal), the bell rings inside (slot). The button doesn't need to know how the bell works.
 
-### 6. 📊 **JSON Handling** (Data Processing)
+### 6. 📊 **Multi-Format Data Processing** (Advanced Data Handling)
+
+Qt provides excellent support for various data formats, and our application extends this with a comprehensive multi-format system.
+
+#### **DataMessage System Integration**
+```cpp
+// Multi-format message creation
+DataFormatType currentFormat = static_cast<DataFormatType>(formatCombo->currentIndex());
+QString messageText = messageEdit->toPlainText().trimmed();
+
+// Format-specific validation
+if (!DataMessage::validateInput(messageText, currentFormat)) {
+    QMessageBox::warning(this, "Invalid Format", 
+        QString("Message validation failed for %1 format").arg(formatCombo->currentText()));
+    return;
+}
+
+// Create and serialize message
+QVariant parsedData = DataMessage::parseInput(messageText, currentFormat);
+DataMessage dataMsg(currentFormat, parsedData);
+QByteArray serializedData = dataMsg.serialize();
+```
+
+#### **Format-Specific Processing**
+```cpp
+// Handle different formats with Qt's built-in classes
+switch (format) {
+    case DataFormatType::JSON: {
+        QJsonParseError error;
+        QJsonDocument doc = QJsonDocument::fromJson(input.toUtf8(), &error);
+        return error.error == QJsonParseError::NoError;
+    }
+    case DataFormatType::XML: {
+        QXmlStreamReader reader(input);
+        while (!reader.atEnd()) {
+            reader.readNext();
+            if (reader.hasError()) return false;
+        }
+        return true;
+    }
+    case DataFormatType::HEX: {
+        QRegularExpression hexPattern("^[0-9A-Fa-f\\s]*$");
+        return hexPattern.match(input.trimmed()).hasMatch();
+    }
+}
+```
+
+### 7. 📊 **JSON Handling** (Specific Data Processing)
 
 Qt makes working with JSON data incredibly easy.
 
@@ -222,11 +269,13 @@ QJsonDocument doc(obj);
 QString jsonText = doc.toJson(QJsonDocument::Compact);
 ```
 
-**Why Qt's JSON is Great**:
-- **Error Handling**: Tells you exactly what's wrong with invalid JSON
-- **Flexible**: Works with objects, arrays, and primitive types
-- **Efficient**: Fast parsing and generation
+**Why Qt's Multi-Format Support is Great**:
+- **Comprehensive**: Built-in support for JSON, XML, regular expressions
+- **Error Handling**: Detailed error reporting for each format type
+- **Flexible**: Works with objects, arrays, and primitive types across formats
+- **Efficient**: Fast parsing and generation for all supported formats
 - **Unicode Safe**: Handles international characters correctly
+- **Extensible**: Easy to add support for new formats
 
 ### 7. 🔤 **String Handling** (Text Processing)
 

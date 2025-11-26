@@ -106,43 +106,57 @@ connectBtn = new QPushButton("🔗 Connect");
 - **Emoji**: Visual indicator of function
 - **State Management**: Text changes to "Disconnect" when connected
 
-### JSON Message Group
+### Data Format Selection and Message Group
 
 ```cpp
+// Data format selection
+auto *formatGroup = new QGroupBox("Data Format");
+auto *formatLayout = new QFormLayout(formatGroup);
+
+formatCombo = new QComboBox();
+formatCombo->addItems({"JSON", "XML", "CSV", "TEXT", "BINARY", "HEX"});
+formatLayout->addRow("Format:", formatCombo);
+
+sendLayout->addWidget(formatGroup);
+
 // Send section
-auto *sendGroup = new QGroupBox("Send JSON");
+auto *sendGroup = new QGroupBox("Send Message");
 auto *sendMsgLayout = new QVBoxLayout(sendGroup);
 
-jsonEdit = new QTextEdit();
-jsonEdit->setPlainText(R"({"type":"hello","from":"gui","value":42})");
-jsonEdit->setMaximumHeight(120);
+messageEdit = new QTextEdit();
+messageEdit->setPlainText(R"({"type":"hello","from":"gui","value":42})");
+messageEdit->setMaximumHeight(120);
 
-// File operation buttons for JSON
-auto *jsonBtnLayout = new QHBoxLayout();
-loadJsonBtn = new QPushButton("📁 Load JSON");
-saveJsonBtn = new QPushButton("💾 Save JSON");
-jsonBtnLayout->addWidget(loadJsonBtn);
-jsonBtnLayout->addWidget(saveJsonBtn);
+// File operation buttons for messages
+auto *msgBtnLayout = new QHBoxLayout();
+loadMsgBtn = new QPushButton("📁 Load Message");
+saveMsgBtn = new QPushButton("💾 Save Message");
+msgBtnLayout->addWidget(loadMsgBtn);
+msgBtnLayout->addWidget(saveMsgBtn);
 
-sendBtn = new QPushButton("📤 Send JSON");
+sendBtn = new QPushButton("📤 Send Message");
 
-sendMsgLayout->addWidget(new QLabel("JSON Message:"));
-sendMsgLayout->addWidget(jsonEdit);
-sendMsgLayout->addLayout(jsonBtnLayout);
+sendMsgLayout->addWidget(new QLabel("Message Content:"));
+sendMsgLayout->addWidget(messageEdit);
+sendMsgLayout->addLayout(msgBtnLayout);
 sendMsgLayout->addWidget(sendBtn);
 ```
 
 **Visual Result**:
 ```
-┌─ Send JSON ────────────────────────────────┐
-│ JSON Message:                              │
+┌─ Data Format ──────────────────────────────┐
+│ Format: [JSON        ▼]                    │
+└────────────────────────────────────────────┘
+
+┌─ Send Message ─────────────────────────────┐
+│ Message Content:                           │
 │ ┌────────────────────────────────────────┐ │
 │ │{"type":"hello","from":"gui","value":42}│ │
 │ │                                        │ │
 │ │                                        │ │
 │ └────────────────────────────────────────┘ │
-│ [📁 Load JSON] [💾 Save JSON]             │
-│           [📤 Send JSON]                   │
+│ [📁 Load Message] [💾 Save Message]       │
+│           [📤 Send Message]                │
 └────────────────────────────────────────────┘
 ```
 

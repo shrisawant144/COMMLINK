@@ -356,6 +356,108 @@ void CommLinkGUI::setupValidators()
 
 ---
 
+## 📊 **dataformat.cpp - Message Serialization System**
+
+The DataFormat module provides a unified system for handling multiple data formats.
+
+### DataMessage Class Implementation
+
+```cpp
+DataMessage::DataMessage(DataFormatType t, const QVariant& d) 
+    : type(t), data(d) {}
+
+QByteArray DataMessage::serialize() const {
+    QByteArray result;
+    QDataStream stream(&result, QIODevice::WriteOnly);
+    
+    // Write format type first
+    stream << static_cast<quint8>(type);
+    
+    switch (type) {
+        case DataFormatType::JSON: {
+            QJsonDocument doc = QJsonDocument::fromVariant(data);
+            QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+            stream << jsonData;
+            break;
+        }
+        case DataFormatType::XML: {
+            QString xmlString = data.toString();
+            stream << xmlString.toUtf8();
+            break;
+        }
+        case DataFormatType::CSV: {
+            QString csvString = data.toString();
+            stream << csvString.toUtf8();
+            break;
+        }
+        case DataFormatType::TEXT: {
+            QString textString = data.toString();
+            stream << textString.toUtf8();
+            break;
+        }
+        case DataFormatType::BINARY: {
+            QByteArray binaryData = data.toByteArray();
+            stream << binaryData;
+            break;
+        }
+        case DataFormatType::HEX: {
+            QString hexString = data.toString();
+            QByteArray hexData = QByteArray::fromHex(hexString.toUtf8());
+            stream << hexData;
+            break;
+        }
+    }
+    
+    return result;
+}
+```
+
+### Key Features Explained:
+
+**1. Type-Safe Serialization**
+- **Format Header**: Each message includes its format type
+- **QDataStream**: Binary serialization for network transmission
+- **Format-Specific Handling**: Different logic for each data type
+
+**2. Input Validation**
+```cpp
+bool DataMessage::validateInput(const QString& input, DataFormatType type) {
+    switch (type) {
+        case DataFormatType::JSON: {
+            QJsonParseError error;
+            QJsonDocument::fromJson(input.toUtf8(), &error);
+            return error.error == QJsonParseError::NoError;
+        }
+        case DataFormatType::HEX: {
+            QRegularExpression hexPattern("^[0-9A-Fa-f\\s]*$");
+            return hexPattern.match(input.trimmed()).hasMatch();
+        }
+        // ... other format validations
+    }
+    return true;
+}
+```
+
+**3. Display Formatting**
+```cpp
+QString DataMessage::toDisplayString() const {
+    switch (type) {
+        case DataFormatType::JSON: {
+            QJsonDocument doc = QJsonDocument::fromVariant(data);
+            return doc.toJson(QJsonDocument::Indented);
+        }
+        case DataFormatType::HEX: {
+            QByteArray hexData = data.toByteArray();
+            return hexData.toHex(' ').toUpper();
+        }
+        default:
+            return data.toString();
+    }
+}
+```
+
+---
+
 ## 🔌 **Connection Handling - onConnect() Method**
 
 This is what happens when you click the "Connect" button.

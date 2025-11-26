@@ -2,20 +2,21 @@
 
 ## What Is This Application?
 
-This is a **desktop application** that enables you to send and receive **JSON messages** (a common data format) over computer networks. Think of it as a specialized messaging app for computers to communicate with each other.
+This is a **desktop application** that enables you to send and receive **structured messages** in multiple formats (JSON, XML, CSV, TEXT, BINARY, HEX) over computer networks. Think of it as a specialized messaging app for computers to communicate with each other.
 
 ### Real-World Example
 Imagine you have two computers:
-- **Computer A** wants to send a message: `{"temperature": 25, "humidity": 60}`
-- **Computer B** wants to receive this weather data
-- CommLink makes this communication seamless and reliable!
+- **Computer A** wants to send weather data in JSON: `{"temperature": 25, "humidity": 60}`
+- **Computer B** wants to receive this data in CSV format: `temperature,humidity\n25,60`
+- CommLink handles the format conversion and makes this communication seamless and reliable!
 
 ## What You Can Do With This App
 
 ### 📤 **Sending Messages**
-- Choose how to send (TCP or UDP - different delivery methods)
+- Choose data format (JSON, XML, CSV, TEXT, BINARY, HEX)
+- Choose protocol (TCP or UDP - different delivery methods)
 - Enter the destination computer's address (like a postal address)
-- Type your JSON message
+- Type your message in the selected format
 - Click send and watch it go!
 
 ### 📥 **Receiving Messages**
@@ -29,11 +30,12 @@ Imagine you have two computers:
 - Spot any errors or connection problems
 
 ### 📁 **File Management**
-- Save JSON messages to files for reuse
-- Load JSON messages from files
+- Save messages in any supported format to files for reuse
+- Load messages from files with automatic format detection
 - Export application logs in TXT or CSV format
 - Export received messages in JSON, TXT, or CSV format
 - Clear received messages display
+- Format validation and conversion utilities
 
 ### 📚 **Message History**
 - Persistent storage of all sent and received messages
@@ -52,7 +54,8 @@ CommLink/
 │   ├── sender.cpp            # Outgoing message handling
 │   ├── receiver.cpp          # Incoming message handling
 │   ├── receiverthread.cpp    # Background message processing
-│   ├── filemanager.cpp       # JSON file operations
+│   ├── dataformat.cpp        # Multi-format message serialization
+│   ├── filemanager.cpp       # File operations for all formats
 │   ├── exportmanager.cpp     # Multi-format data export
 │   ├── messagehistorymanager.cpp  # Database operations
 │   └── historytab.cpp        # History interface
@@ -61,6 +64,7 @@ CommLink/
 │   ├── sender.h              # Sender class definition
 │   ├── receiver.h            # Receiver class definition
 │   ├── receiverthread.h      # Background thread definition
+│   ├── dataformat.h          # Multi-format message handling
 │   ├── filemanager.h         # File operations definition
 │   ├── exportmanager.h       # Export operations definition
 │   ├── messagehistorymanager.h    # Database operations definition
@@ -130,8 +134,9 @@ make
    - Host: `127.0.0.1` (your own computer for testing)
    - Port: `5000` (like a specific mailbox number)
 4. **Click "Connect"** - Should show green checkmark
-5. **Type JSON Message**: `{"hello": "world"}`
-6. **Click "Send JSON"** - Message sent!
+5. **Select Format**: Choose JSON, XML, CSV, TEXT, BINARY, or HEX
+6. **Type Message**: `{"hello": "world"}` for JSON or appropriate format
+7. **Click "Send Message"** - Message sent!
 
 ### Step 2: Receiving Messages
 1. **Open the "Receiving" tab**
@@ -145,11 +150,12 @@ make
 3. **Timestamps**: Know exactly when each event happened
 
 ### Step 4: Using File Features
-1. **Save JSON Messages**: Click "💾 Save JSON" to save current message
-2. **Load JSON Messages**: Click "📁 Load JSON" to load from file
+1. **Save Messages**: Click "💾 Save Message" to save in selected format
+2. **Load Messages**: Click "📁 Load Message" with automatic format detection
 3. **Export Logs**: Click "📋 Export Logs" to save activity log
 4. **Export Messages**: Click "📤 Export Messages" to save received data
-5. **Choose Formats**: Select TXT, CSV, or JSON based on your needs
+5. **Choose Formats**: Select from JSON, XML, CSV, TEXT, BINARY, HEX, TXT based on your needs
+6. **Format Validation**: Built-in validation for all supported formats
 
 ## Technical Details (For the Curious)
 

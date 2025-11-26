@@ -2,7 +2,7 @@
 
 ## What Is CommLink? (Simple Explanation)
 
-CommLink is like a **digital post office** for computers. Just like you send letters through the postal service, this application lets computers send **JSON messages** (structured data) to each other over the internet or local networks.
+CommLink is like a **digital post office** for computers. Just like you send letters through the postal service, this application lets computers send **structured messages** in multiple formats (JSON, XML, CSV, TEXT, BINARY, HEX) to each other over the internet or local networks.
 
 ### Think of It Like This:
 - **Your Computer** = Your house
@@ -69,34 +69,40 @@ CommLink is like a **digital post office** for computers. Just like you send let
 - **Files Involved**: `receiverthread.h`, `receiverthread.cpp`
 - **Real-World Analogy**: Like a dedicated mail sorter working behind the scenes
 
-#### 5. **Application Starter**
+#### 5. **Data Format Handler**
+- **What It Does**: Manages multiple data formats and message serialization
+- **Why Important**: Enables flexible communication with different data types
+- **Files Involved**: `dataformat.h`, `dataformat.cpp`
+- **Real-World Analogy**: Like a translator that can speak multiple languages
+
+#### 6. **Application Starter**
 - **What It Does**: Launches the entire application
 - **Why Important**: Entry point that starts everything
 - **Files Involved**: `main.cpp`
 - **Real-World Analogy**: Like opening the post office for business
 
-#### 6. **File Operations Manager**
+#### 7. **File Operations Manager**
 - **What It Does**: Handles saving/loading JSON messages and managing files
 - **Why Important**: Enables persistence of test data and configurations
 - **Files Involved**: `filemanager.h`, `filemanager.cpp`
 - **Key Features**: Load/Save JSON files, automatic directory creation, JSON validation
 - **Real-World Analogy**: Like a filing cabinet for storing important documents
 
-#### 7. **Export Manager**
+#### 8. **Export Manager**
 - **What It Does**: Exports logs and received messages in multiple formats (TXT, CSV, JSON)
 - **Why Important**: Allows data analysis and sharing of test results
 - **Files Involved**: `exportmanager.h`, `exportmanager.cpp`
 - **Key Features**: Multi-format export, automatic format detection, data validation
 - **Real-World Analogy**: Like a printer that creates reports from stored data in different formats
 
-#### 8. **Message History Manager**
+#### 9. **Message History Manager**
 - **What It Does**: Persistent storage and retrieval of all sent/received messages using SQLite database
 - **Why Important**: Provides complete audit trail and enables advanced search/filtering capabilities
 - **Files Involved**: `messagehistorymanager.h`, `messagehistorymanager.cpp`
 - **Key Features**: Thread-safe database operations, advanced search syntax, session tracking, automatic cleanup
 - **Real-World Analogy**: Like a detailed logbook that records every conversation with timestamps and searchable notes
 
-#### 9. **History Tab Interface**
+#### 10. **History Tab Interface**
 - **What It Does**: User interface for browsing, searching, and managing message history
 - **Why Important**: Makes historical data easily accessible and actionable
 - **Files Involved**: `historytab.h`, `historytab.cpp`

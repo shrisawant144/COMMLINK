@@ -613,7 +613,79 @@ public:
 - **Scalability**: Handles large amounts of data efficiently
 - **Professional Feel**: Behaves like commercial software
 
-### 15. 🎨 **Theme Management System** (Singleton Pattern in Practice)
+### 15. 📊 **Multi-Format Data Processing** (Strategy Pattern in Practice)
+
+The DataMessage system demonstrates the Strategy pattern for handling different data formats.
+
+#### **Format Strategy Implementation**
+```cpp
+enum class DataFormatType {
+    JSON, XML, CSV, TEXT, BINARY, HEX
+};
+
+class DataMessage {
+public:
+    DataMessage(DataFormatType t = DataFormatType::JSON, const QVariant& d = QVariant());
+    
+    // Strategy pattern: different serialization for each format
+    QByteArray serialize() const;
+    static DataMessage deserialize(const QByteArray& bytes, DataFormatType type);
+    
+    // Format-specific validation
+    static bool validateInput(const QString& input, DataFormatType type);
+    static QVariant parseInput(const QString& input, DataFormatType type);
+    
+    // Format-specific display
+    QString toDisplayString() const;
+    
+private:
+    DataFormatType type;
+    QVariant data;
+};
+```
+
+#### **Format-Specific Processing**
+```cpp
+QByteArray DataMessage::serialize() const {
+    QByteArray result;
+    QDataStream stream(&result, QIODevice::WriteOnly);
+    
+    // Write format type first
+    stream << static_cast<quint8>(type);
+    
+    switch (type) {
+        case DataFormatType::JSON: {
+            QJsonDocument doc = QJsonDocument::fromVariant(data);
+            QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+            stream << jsonData;
+            break;
+        }
+        case DataFormatType::XML: {
+            QString xmlString = data.toString();
+            stream << xmlString.toUtf8();
+            break;
+        }
+        case DataFormatType::HEX: {
+            QString hexString = data.toString();
+            QByteArray hexData = QByteArray::fromHex(hexString.toUtf8());
+            stream << hexData;
+            break;
+        }
+        // ... other formats
+    }
+    
+    return result;
+}
+```
+
+**Strategy Pattern Benefits**:
+- **Extensibility**: Easy to add new data formats
+- **Maintainability**: Each format handled independently
+- **Type Safety**: Enum ensures valid format selection
+- **Flexibility**: Same interface for different data types
+- **Performance**: Efficient format-specific processing
+
+### 16. 🎨 **Theme Management System** (Singleton Pattern in Practice)
 
 The application implements a sophisticated theme management system using advanced C++ patterns.
 
