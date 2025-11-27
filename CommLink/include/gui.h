@@ -19,6 +19,7 @@
 #include "exportmanager.h"
 #include "messagehistorymanager.h"
 #include "thememanager.h"
+#include "logger.h"
 
 class CommLinkGUI : public QWidget
 {
@@ -32,8 +33,8 @@ private slots:
     void onStartReceive();
     void onStopReceive();
     void onDataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo);
-    void onLoadJson();
-    void onSaveJson();
+    void onLoadMessage();
+    void onSaveMessage();
     void onExportLogs();
     void onExportMessages();
     void onClearMessages();
@@ -59,7 +60,7 @@ private:
     QComboBox *protocolCombo;
     QComboBox *dataFormatCombo;
     QComboBox *receiveProtocolCombo;
-    QLineEdit *hostEdit, *portEdit, *receiveHostEdit, *receivePortEdit;
+    QLineEdit *hostEdit, *portEdit, *receivePortEdit;
     QPushButton *connectBtn, *sendBtn, *startReceiveBtn, *stopReceiveBtn;
     QPushButton *loadJsonBtn, *saveJsonBtn, *exportLogsBtn, *exportMessagesBtn, *clearMessagesBtn;
     QTextEdit *jsonEdit, *logEdit, *receivedEdit;
@@ -68,6 +69,7 @@ private:
     QAction *lightModeAction;
     QAction *darkModeAction;
     QAction *autoModeAction;
+    LoggerWidget *logger;
 
     // Validators
     QIntValidator *portValidator;
@@ -76,6 +78,7 @@ private:
     Sender sender;
     Receiver receiver;
     MessageHistoryManager historyManager;
+    QList<DataMessage> receivedMessages;
     bool isConnected = false;
     bool isReceiving = false;
 };

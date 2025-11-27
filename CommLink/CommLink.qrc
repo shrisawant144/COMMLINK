@@ -1,0 +1,21 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource>
+        <!-- Logo assets -->
+        <file>assets/logo/CommLink_logo.svg</file>
+        <file>assets/logo/CommLink_icon.svg</file>
+        <file>assets/logo/CommLink_16.png</file>
+        <file>assets/logo/CommLink_32.png</file>
+        <file>assets/logo/CommLink_64.png</file>
+        <file>assets/logo/CommLink_128.png</file>
+        <file>assets/logo/CommLink_256.png</file>
+        
+        <!-- Control assets -->
+        <file>assets/controls/slider_thumb.svg</file>
+        <file>assets/controls/slider_thumb.png</file>
+        <file>assets/controls/slider_thumb_16.png</file>
+        <file>assets/controls/slider_thumb_24.png</file>
+        <file>assets/controls/slider_thumb_48.png</file>
+        <file>assets/controls/slider_thumb_64.png</file>
+    </qresource>
+</RCC>

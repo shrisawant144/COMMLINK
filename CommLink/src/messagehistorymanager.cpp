@@ -54,18 +54,41 @@ bool MessageHistoryManager::createTables()
             port INTEGER NOT NULL,
             content TEXT NOT NULL,
             sender_info TEXT,
-            session_id TEXT
+            session_id TEXT,
+            format_type INTEGER DEFAULT 0
         );
     )";
 
     QString createIndexTimestamp = "CREATE INDEX IF NOT EXISTS idx_timestamp ON messages(timestamp);";
     QString createIndexDirection = "CREATE INDEX IF NOT EXISTS idx_direction ON messages(direction);";
     QString createIndexSession = "CREATE INDEX IF NOT EXISTS idx_session ON messages(session_id);";
+    QString createIndexFormat = "CREATE INDEX IF NOT EXISTS idx_format ON messages(format_type);";
 
-    return executeQuery(createMessagesTable) &&
-           executeQuery(createIndexTimestamp) &&
-           executeQuery(createIndexDirection) &&
-           executeQuery(createIndexSession);
+    bool success = executeQuery(createMessagesTable) &&
+                   executeQuery(createIndexTimestamp) &&
+                   executeQuery(createIndexDirection) &&
+                   executeQuery(createIndexSession) &&
+                   executeQuery(createIndexFormat);
+
+    // Check if format_type column exists before adding it
+    QSqlQuery checkColumnQuery(db);
+    bool columnExists = false;
+    if (checkColumnQuery.exec("PRAGMA table_info(messages);")) {
+        while (checkColumnQuery.next()) {
+            if (checkColumnQuery.value("name").toString() == "format_type") {
+                columnExists = true;
+                break;
+            }
+        }
+    }
+
+    // Only add column if it doesn't already exist
+    if (!columnExists) {
+        QString addFormatColumn = "ALTER TABLE messages ADD COLUMN format_type INTEGER DEFAULT 0;";
+        executeQuery(addFormatColumn);
+    }
+
+    return success;
 }
 
 bool MessageHistoryManager::executeQuery(const QString &query)
@@ -79,32 +102,33 @@ bool MessageHistoryManager::executeQuery(const QString &query)
 }
 
 bool MessageHistoryManager::saveMessage(const QString &direction, const QString &protocol,
-                                       const QString &host, int port, const QJsonDocument &content,
+                                       const QString &host, int port, const DataMessage &message,
                                        const QString &senderInfo)
 {
     QMutexLocker locker(&dbMutex);
-    
+
     if (!db.isOpen()) {
         qWarning() << "Database not open, cannot save message";
         return false;
     }
 
     QSqlQuery query(db);
-    query.prepare("INSERT INTO messages (direction, protocol, host, port, content, sender_info, session_id) "
-                  "VALUES (?, ?, ?, ?, ?, ?, ?)");
+    query.prepare("INSERT INTO messages (direction, protocol, host, port, content, sender_info, session_id, format_type) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     query.addBindValue(direction);
     query.addBindValue(protocol);
     query.addBindValue(host);
     query.addBindValue(port);
-    query.addBindValue(content.toJson(QJsonDocument::Compact));
+    query.addBindValue(message.toDisplayString()); // Store display string for all formats
     query.addBindValue(senderInfo);
     query.addBindValue(currentSessionId);
+    query.addBindValue(static_cast<int>(message.type)); // Store format type
 
     if (!query.exec()) {
         qCritical() << "Failed to save message:" << query.lastError().text();
         return false;
     }
-    
+
     lastUpdateTime = QDateTime::currentDateTime();
     return true;
 }
@@ -191,6 +215,7 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
         message["content"] = query.value(6);
         message["sender_info"] = query.value(7);
         message["session_id"] = query.value(8);
+        message["format_type"] = query.value(9);
         messages.append(message);
     }
 
@@ -236,7 +261,7 @@ bool MessageHistoryManager::exportMessages(const QString &filePath, const QStrin
         out << doc.toJson(QJsonDocument::Indented);
     } else {
         // CSV format
-        out << "ID,Timestamp,Direction,Protocol,Host,Port,Content,Sender Info,Session ID\n";
+        out << "ID,Timestamp,Direction,Protocol,Host,Port,Content,Sender Info,Session ID,Format Type\n";
         for (const QVariantMap &msg : messages) {
             out << msg["id"].toString() << ",";
             out << msg["timestamp"].toString() << ",";
@@ -246,7 +271,8 @@ bool MessageHistoryManager::exportMessages(const QString &filePath, const QStrin
             out << msg["port"].toString() << ",";
             out << "\"" << msg["content"].toString().replace("\"", "\"\"") << "\",";
             out << "\"" << msg["sender_info"].toString().replace("\"", "\"\"") << "\",";
-            out << msg["session_id"].toString() << "\n";
+            out << msg["session_id"].toString() << ",";
+            out << msg["format_type"].toString() << "\n";
         }
     }
 

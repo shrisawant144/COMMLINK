@@ -34,6 +34,16 @@
 
 CommLinkGUI::CommLinkGUI() {
     setWindowTitle("CommLink - Network Communication Tool");
+    
+    // Set window icon for title bar and taskbar
+    QIcon appIcon;
+    appIcon.addFile(":/assets/logo/CommLink_16.png", QSize(16, 16));
+    appIcon.addFile(":/assets/logo/CommLink_32.png", QSize(32, 32));
+    appIcon.addFile(":/assets/logo/CommLink_64.png", QSize(64, 64));
+    appIcon.addFile(":/assets/logo/CommLink_128.png", QSize(128, 128));
+    appIcon.addFile(":/assets/logo/CommLink_256.png", QSize(256, 256));
+    setWindowIcon(appIcon);
+    
     resize(1000, 700);
     setMinimumSize(800, 600);
     
@@ -97,25 +107,50 @@ void CommLinkGUI::setupUI()
     auto *leftLayout = new QVBoxLayout(leftPanel);
     leftLayout->setSpacing(12);
 
+    // Logo and Title Panel
+    auto *logoPanel = new QWidget();
+    auto *logoLayout = new QHBoxLayout(logoPanel);
+    logoLayout->setContentsMargins(0, 0, 0, 0);
+
+    auto *logoLabel = new QLabel();
+    QPixmap logo(":/logo.svg");
+    if (logo.isNull()) {
+        // Fallback: create a simple colored placeholder if resource is missing
+        logo = QPixmap(64, 64);
+        logo.fill(QColor(0, 169, 157)); // CommLink teal color
+    }
+    logoLabel->setPixmap(logo.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    logoLabel->setFixedSize(64, 64);
+
+    auto *titleLabel = new QLabel("CommLink");
+    titleLabel->setStyleSheet("font-size: 24px; font-weight: bold; color: #007BFF;");
+    titleLabel->setAlignment(Qt::AlignVCenter);
+
+    logoLayout->addWidget(logoLabel);
+    logoLayout->addWidget(titleLabel);
+    logoLayout->addStretch();
+
+    leftLayout->addWidget(logoPanel);
+
     // Connection Status Panel
     auto *statusPanel = new QGroupBox("Connection Status");
     auto *statusLayout = new QGridLayout(statusPanel);
-    
+
     auto *sendStatusLabel = new QLabel("Send:");
     auto *sendStatusValue = new QLabel("Disconnected");
     sendStatusValue->setObjectName("sendStatus");
     sendStatusValue->setStyleSheet("color: red; font-weight: bold;");
-    
+
     auto *receiveStatusLabel = new QLabel("Receive:");
     auto *receiveStatusValue = new QLabel("Stopped");
     receiveStatusValue->setObjectName("receiveStatus");
     receiveStatusValue->setStyleSheet("color: red; font-weight: bold;");
-    
+
     statusLayout->addWidget(sendStatusLabel, 0, 0);
     statusLayout->addWidget(sendStatusValue, 0, 1);
     statusLayout->addWidget(receiveStatusLabel, 1, 0);
     statusLayout->addWidget(receiveStatusValue, 1, 1);
-    
+
     leftLayout->addWidget(statusPanel);
 
     // Send Configuration
@@ -156,9 +191,7 @@ void CommLinkGUI::setupUI()
     receiveProtocolCombo->addItems({"TCP", "UDP"});
     receiveProtocolCombo->setMinimumHeight(32);
     
-    receiveHostEdit = new QLineEdit("0.0.0.0");
-    receiveHostEdit->setMinimumHeight(32);
-    receiveHostEdit->setPlaceholderText("Bind address");
+
     
     receivePortEdit = new QLineEdit("5001");
     receivePortEdit->setMinimumHeight(32);
@@ -178,10 +211,8 @@ void CommLinkGUI::setupUI()
     
     receiveLayout->addWidget(new QLabel("Protocol:"), 0, 0);
     receiveLayout->addWidget(receiveProtocolCombo, 0, 1);
-    receiveLayout->addWidget(new QLabel("Bind Host:"), 1, 0);
-    receiveLayout->addWidget(receiveHostEdit, 1, 1);
-    receiveLayout->addWidget(new QLabel("Port:"), 2, 0);
-    receiveLayout->addWidget(receivePortEdit, 2, 1);
+    receiveLayout->addWidget(new QLabel("Port:"), 1, 0);
+    receiveLayout->addWidget(receivePortEdit, 1, 1);
     receiveLayout->addWidget(new QLabel("Controls:"), 3, 0);
     receiveLayout->addLayout(receiveButtonLayout, 3, 1);
     
@@ -208,7 +239,7 @@ void CommLinkGUI::setupUI()
     dataFormatCombo->addItem("XML", static_cast<int>(DataFormatType::XML));
     dataFormatCombo->addItem("CSV", static_cast<int>(DataFormatType::CSV));
     dataFormatCombo->addItem("Text", static_cast<int>(DataFormatType::TEXT));
-    dataFormatCombo->addItem("Binary (Hex)", static_cast<int>(DataFormatType::BINARY));
+    dataFormatCombo->addItem("Binary", static_cast<int>(DataFormatType::BINARY));
     dataFormatCombo->addItem("Hex", static_cast<int>(DataFormatType::HEX));
     dataFormatCombo->setMinimumHeight(32);
     
@@ -287,30 +318,32 @@ void CommLinkGUI::setupUI()
     auto *historyTab = new HistoryTab(&historyManager);
     tabWidget->addTab(historyTab, "History");
     
-    // Logs Tab
+    // Logs Tab with professional logger widget
     auto *logTab = new QWidget();
     auto *logTabLayout = new QVBoxLayout(logTab);
+    logTabLayout->setContentsMargins(0, 0, 0, 0);
     
-    auto *logGroup = new QGroupBox("Application Logs");
-    auto *logLayout = new QVBoxLayout(logGroup);
-    
-    logEdit = new QTextEdit();
-    logEdit->setReadOnly(true);
-    logEdit->setFont(QFont("Consolas, Monaco, monospace", 9));
+    logger = new LoggerWidget();
+    logger->setMaxLines(1000);
     
     auto *logButtonLayout = new QHBoxLayout();
     exportLogsBtn = new QPushButton("Export Logs");
     exportLogsBtn->setMinimumHeight(32);
     
+    auto *clearLogsBtn = new QPushButton("Clear Logs");
+    clearLogsBtn->setMinimumHeight(32);
+    
     logButtonLayout->addWidget(exportLogsBtn);
+    logButtonLayout->addWidget(clearLogsBtn);
     logButtonLayout->addStretch();
     
-    logLayout->addWidget(logEdit);
-    logLayout->addLayout(logButtonLayout);
-    
-    logTabLayout->addWidget(logGroup);
+    logTabLayout->addWidget(logger);
+    logTabLayout->addLayout(logButtonLayout);
     
     tabWidget->addTab(logTab, "Logs");
+    
+    // Connect clear logs button
+    connect(clearLogsBtn, &QPushButton::clicked, logger, &LoggerWidget::clear);
     
     splitter->addWidget(tabWidget);
     splitter->setSizes({400, 600});
@@ -341,7 +374,7 @@ void CommLinkGUI::setupUI()
             jsonEdit->setPlainText("Hello from GUI");
             break;
         case DataFormatType::BINARY:
-            messageLabel->setText("Binary Message (as Hex):");
+            messageLabel->setText("Binary Message:");
             jsonEdit->setPlainText("48656c6c6f");
             break;
         case DataFormatType::HEX:
@@ -357,8 +390,8 @@ void CommLinkGUI::setupUI()
     connect(startReceiveBtn, &QPushButton::clicked, this, &CommLinkGUI::onStartReceive);
     connect(stopReceiveBtn, &QPushButton::clicked, this, &CommLinkGUI::onStopReceive);
     connect(&receiver, &Receiver::dataReceived, this, &CommLinkGUI::onDataReceived);
-    connect(loadJsonBtn, &QPushButton::clicked, this, &CommLinkGUI::onLoadJson);
-    connect(saveJsonBtn, &QPushButton::clicked, this, &CommLinkGUI::onSaveJson);
+    connect(loadJsonBtn, &QPushButton::clicked, this, &CommLinkGUI::onLoadMessage);
+    connect(saveJsonBtn, &QPushButton::clicked, this, &CommLinkGUI::onSaveMessage);
     connect(exportLogsBtn, &QPushButton::clicked, this, &CommLinkGUI::onExportLogs);
     connect(exportMessagesBtn, &QPushButton::clicked, this, &CommLinkGUI::onExportMessages);
     connect(clearMessagesBtn, &QPushButton::clicked, this, &CommLinkGUI::onClearMessages);
@@ -382,7 +415,6 @@ void CommLinkGUI::setupValidators()
     hostEdit->setText(settings.value("sendHost", "127.0.0.1").toString());
     portEdit->setText(settings.value("sendPort", "5000").toString());
     protocolCombo->setCurrentText(settings.value("sendProtocol", "TCP").toString());
-    receiveHostEdit->setText(settings.value("receiveHost", "0.0.0.0").toString());
     receivePortEdit->setText(settings.value("receivePort", "5001").toString());
     receiveProtocolCombo->setCurrentText(settings.value("receiveProtocol", "TCP").toString());
 }
@@ -418,7 +450,7 @@ void CommLinkGUI::updateReceiveState(bool receiving)
     isReceiving = receiving;
     startReceiveBtn->setEnabled(!receiving);
     stopReceiveBtn->setEnabled(receiving);
-    receiveHostEdit->setEnabled(!receiving);
+    // receiveHostEdit removed - no need to enable/disable
     receivePortEdit->setEnabled(!receiving);
     receiveProtocolCombo->setEnabled(!receiving);
     
@@ -434,14 +466,30 @@ void CommLinkGUI::updateReceiveState(bool receiving)
         }
     }
 
+    // Clear received messages when stopping
+    if (!receiving) {
+        receivedMessages.clear();
+    }
+
     updateStatusBar();
 }
 
 void CommLinkGUI::logMessage(const QString &message, const QString &prefix)
 {
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    QString logEntry = QString("[%1] %2%3").arg(timestamp).arg(prefix).arg(message);
-    logEdit->append(logEntry);
+    if (!logger) return;
+    
+    // Determine log level based on prefix
+    if (prefix.contains("ERROR") || prefix.contains("FAIL")) {
+        logger->logError(message);
+    } else if (prefix.contains("WARN")) {
+        logger->logWarning(message);
+    } else if (prefix.contains("SUCCESS")) {
+        logger->logSuccess(message);
+    } else if (prefix.contains("DEBUG")) {
+        logger->logDebug(message);
+    } else {
+        logger->logInfo(message);
+    }
 }
 
 bool CommLinkGUI::validateInputs()
@@ -522,14 +570,11 @@ void CommLinkGUI::onSend() {
         sender.sendData(msg);
         logMessage("Sent: " + messageText, "[SEND] ");
 
-        // Save to history (only for JSON messages)
-        if (msg.type == DataFormatType::JSON && msg.data.canConvert<QJsonDocument>()) {
-            QString host = hostEdit->text().trimmed();
-            int port = portEdit->text().toInt();
-            QJsonDocument doc = msg.data.value<QJsonDocument>();
-            if (!historyManager.saveMessage("sent", protocolCombo->currentText(), host, port, doc)) {
-                logMessage("Failed to save sent message to history", "[WARN] ");
-            }
+        // Save to history (for all formats now)
+        QString host = hostEdit->text().trimmed();
+        int port = portEdit->text().toInt();
+        if (!historyManager.saveMessage("sent", protocolCombo->currentText(), host, port, msg)) {
+            logMessage("Failed to save sent message to history", "[WARN] ");
         }
     } else {
         logMessage("Send function not available", "[ERROR] ");
@@ -568,6 +613,9 @@ void CommLinkGUI::onStopReceive() {
 }
 
 void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo) {
+    // Store the message for proper export
+    receivedMessages.append(msg);
+
     QString displayText = msg.toDisplayString();
     QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
     QString message = QString("[%1] ← %2 from %3:\n%4\n")
@@ -575,14 +623,11 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &protocol
     receivedEdit->append(message);
     logMessage(QString("Received %1 message from %2").arg(protocol).arg(senderInfo), "[RECV] ");
 
-    // Save received message to history (only for JSON messages)
-    if (msg.type == DataFormatType::JSON && msg.data.canConvert<QJsonDocument>()) {
-        QString host = senderInfo.split(':').first(); // Extract host from senderInfo
-        int port = receivePortEdit->text().toInt();
-        QJsonDocument doc = msg.data.value<QJsonDocument>();
-        if (!historyManager.saveMessage("received", protocol, host, port, doc, senderInfo)) {
-            logMessage("Failed to save received message to history", "[WARN] ");
-        }
+    // Save received message to history (for all formats now)
+    QString host = senderInfo.split(':').first(); // Extract host from senderInfo
+    int port = receivePortEdit->text().toInt();
+    if (!historyManager.saveMessage("received", protocol, host, port, msg, senderInfo)) {
+        logMessage("Failed to save received message to history", "[WARN] ");
     }
 
     // Save settings on successful receive
@@ -602,38 +647,42 @@ void CommLinkGUI::saveSettings() {
     settings.setValue("sendHost", hostEdit->text());
     settings.setValue("sendPort", portEdit->text());
     settings.setValue("sendProtocol", protocolCombo->currentText());
-    settings.setValue("receiveHost", receiveHostEdit->text());
     settings.setValue("receivePort", receivePortEdit->text());
     settings.setValue("receiveProtocol", receiveProtocolCombo->currentText());
 }
 
-void CommLinkGUI::onLoadJson() {
-    QString filePath = QFileDialog::getOpenFileName(this, "Load JSON Message", FileManager::getDefaultSaveLocation(), "JSON Files (*.json);;All Files (*)");
+void CommLinkGUI::onLoadMessage() {
+    DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->currentData().toInt());
+    QString filter = QString("%1 Files (*.%2);;All Files (*)").arg(dataFormatCombo->currentText()).arg(FileManager::getFileExtension(format));
+    QString filePath = QFileDialog::getOpenFileName(this, "Load Message", FileManager::getDefaultSaveLocation(), filter);
     if (!filePath.isEmpty()) {
-        QString content = FileManager::loadJsonFromFile(filePath);
+        QString content = FileManager::loadMessageFromFile(filePath, format);
         if (!content.isEmpty()) {
             jsonEdit->setPlainText(content);
-            logMessage("Loaded JSON from " + filePath, "[FILE] ");
-            QMessageBox::information(this, "Success", "JSON file loaded successfully");
+            logMessage("Loaded " + dataFormatCombo->currentText() + " from " + filePath, "[FILE] ");
+            QMessageBox::information(this, "Success", dataFormatCombo->currentText() + " file loaded successfully");
         } else {
-            QMessageBox::warning(this, "Error", "Failed to load JSON file or file contains invalid JSON");
+            QMessageBox::warning(this, "Error", "Failed to load file or file contains invalid " + dataFormatCombo->currentText());
         }
     }
 }
 
-void CommLinkGUI::onSaveJson() {
+void CommLinkGUI::onSaveMessage() {
     QString content = jsonEdit->toPlainText();
     if (content.isEmpty()) {
-        QMessageBox::warning(this, "Error", "No JSON content to save");
+        QMessageBox::warning(this, "Error", "No content to save");
         return;
     }
-    QString filePath = QFileDialog::getSaveFileName(this, "Save JSON Message", FileManager::getDefaultSaveLocation() + "/message.json", "JSON Files (*.json);;All Files (*)");
+    DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->currentData().toInt());
+    QString defaultName = QString("/message.%1").arg(FileManager::getFileExtension(format));
+    QString filter = QString("%1 Files (*.%2);;All Files (*)").arg(dataFormatCombo->currentText()).arg(FileManager::getFileExtension(format));
+    QString filePath = QFileDialog::getSaveFileName(this, "Save Message", FileManager::getDefaultSaveLocation() + defaultName, filter);
     if (!filePath.isEmpty()) {
-        if (FileManager::saveJsonToFile(content, filePath)) {
-            logMessage("Saved JSON to " + filePath, "[FILE] ");
-            QMessageBox::information(this, "Success", "JSON file saved successfully");
+        if (FileManager::saveMessageToFile(content, filePath, format)) {
+            logMessage("Saved " + dataFormatCombo->currentText() + " to " + filePath, "[FILE] ");
+            QMessageBox::information(this, "Success", dataFormatCombo->currentText() + " file saved successfully");
         } else {
-            QMessageBox::warning(this, "Error", "Failed to save JSON file");
+            QMessageBox::warning(this, "Error", "Failed to save file");
         }
     }
 }
@@ -653,26 +702,8 @@ void CommLinkGUI::onExportLogs() {
 }
 
 void CommLinkGUI::onExportMessages() {
-    // Parse received messages into QJsonDocument list
-    QList<QJsonDocument> messages;
-    QString receivedText = receivedEdit->toPlainText();
-    QStringList lines = receivedText.split('\n');
-    for (const QString& line : lines) {
-        if (line.contains("{")) {
-            int start = line.indexOf('{');
-            int end = line.lastIndexOf('}');
-            if (start != -1 && end != -1 && end > start) {
-                QString jsonStr = line.mid(start, end - start + 1);
-                QJsonParseError error;
-                QJsonDocument doc = QJsonDocument::fromJson(jsonStr.toUtf8(), &error);
-                if (error.error == QJsonParseError::NoError) {
-                    messages.append(doc);
-                }
-            }
-        }
-    }
-    if (messages.isEmpty()) {
-        QMessageBox::warning(this, "Error", "No valid messages to export");
+    if (receivedMessages.isEmpty()) {
+        QMessageBox::warning(this, "Error", "No messages to export");
         return;
     }
     QString filePath = QFileDialog::getSaveFileName(this, "Export Messages", FileManager::getDefaultSaveLocation() + "/messages.json", "JSON Files (*.json);;Text Files (*.txt);;CSV Files (*.csv);;All Files (*)");
@@ -680,8 +711,8 @@ void CommLinkGUI::onExportMessages() {
         QString format = "json";
         if (filePath.endsWith(".txt")) format = "txt";
         else if (filePath.endsWith(".csv")) format = "csv";
-        
-        if (ExportManager::exportMessages(messages, format, filePath)) {
+
+        if (ExportManager::exportMessages(receivedMessages, format, filePath)) {
             logMessage("Exported messages to " + filePath, "[EXPORT] ");
             QMessageBox::information(this, "Success", "Messages exported successfully to: " + filePath);
         } else {

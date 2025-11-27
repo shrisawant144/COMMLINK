@@ -7,7 +7,7 @@
 #include <QtCore/QIODevice>
 #include <QtWidgets/QMessageBox>
 
-QString FileManager::loadJsonFromFile(const QString& filePath) {
+QString FileManager::loadMessageFromFile(const QString& filePath, DataFormatType format) {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return QString();
@@ -15,16 +15,16 @@ QString FileManager::loadJsonFromFile(const QString& filePath) {
     QString content = QString::fromUtf8(file.readAll());
     file.close();
 
-    // Validate JSON
-    QJsonDocument doc = QJsonDocument::fromJson(content.toUtf8());
-    if (doc.isNull()) {
+    // Validate based on format
+    if (!DataMessage::validateInput(content, format)) {
         return QString();
     }
 
     return content;
 }
 
-bool FileManager::saveJsonToFile(const QString& content, const QString& filePath) {
+bool FileManager::saveMessageToFile(const QString& content, const QString& filePath, DataFormatType format) {
+    Q_UNUSED(format);
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         return false;
@@ -36,6 +36,25 @@ bool FileManager::saveJsonToFile(const QString& content, const QString& filePath
     file.close();
     addToRecentFiles(filePath);
     return true;
+}
+
+QString FileManager::getFileExtension(DataFormatType format) {
+    switch (format) {
+    case DataFormatType::JSON:
+        return "json";
+    case DataFormatType::XML:
+        return "xml";
+    case DataFormatType::CSV:
+        return "csv";
+    case DataFormatType::TEXT:
+        return "txt";
+    case DataFormatType::BINARY:
+        return "bin";
+    case DataFormatType::HEX:
+        return "hex";
+    default:
+        return "txt";
+    }
 }
 
 QStringList FileManager::getRecentFiles() {

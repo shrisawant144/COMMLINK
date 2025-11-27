@@ -7,6 +7,7 @@
 #include <QtCore/QString>
 #include <QtCore/QUuid>
 #include <QtCore/QMutex>
+#include "dataformat.h"
 
 class MessageHistoryManager : public QObject
 {
@@ -18,7 +19,7 @@ public:
 
     bool initializeDatabase();
     bool saveMessage(const QString &direction, const QString &protocol,
-                     const QString &host, int port, const QJsonDocument &content,
+                     const QString &host, int port, const DataMessage &message,
                      const QString &senderInfo = QString());
     QList<QVariantMap> getMessages(const QString &filter = QString(),
                                    const QDateTime &startDate = QDateTime(),

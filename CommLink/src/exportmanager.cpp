@@ -29,7 +29,7 @@ bool ExportManager::exportLogs(const QStringList& logs, const QString& format, c
     return true;
 }
 
-bool ExportManager::exportMessages(const QList<QJsonDocument>& messages, const QString& format, const QString& filePath) {
+bool ExportManager::exportMessages(const QList<DataMessage>& messages, const QString& format, const QString& filePath) {
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         return false;
@@ -38,19 +38,48 @@ bool ExportManager::exportMessages(const QList<QJsonDocument>& messages, const Q
     QTextStream out(&file);
     if (format == "json") {
         QJsonArray array;
-        for (const QJsonDocument& doc : messages) {
-            array.append(doc.object());
+        for (const DataMessage& msg : messages) {
+            if (msg.type == DataFormatType::JSON && msg.data.canConvert<QJsonDocument>()) {
+                array.append(msg.data.value<QJsonDocument>().object());
+            } else {
+                // Convert other formats to JSON representation
+                QJsonObject obj;
+                // Convert enum type to string (formatTypeToString was not available)
+                QString typeStr;
+                switch (msg.type) {
+                case DataFormatType::JSON: typeStr = "JSON"; break;
+                case DataFormatType::XML: typeStr = "XML"; break;
+                case DataFormatType::CSV: typeStr = "CSV"; break;
+                case DataFormatType::TEXT: typeStr = "TEXT"; break;
+                case DataFormatType::BINARY: typeStr = "BINARY"; break;
+                case DataFormatType::HEX: typeStr = "HEX"; break;
+                default: typeStr = "UNKNOWN"; break;
+                }
+                obj["type"] = typeStr;
+                obj["data"] = msg.toDisplayString();
+                array.append(obj);
+            }
         }
         QJsonDocument exportDoc(array);
         out << exportDoc.toJson();
     } else if (format == "txt") {
-        for (const QJsonDocument& doc : messages) {
-            out << doc.toJson(QJsonDocument::Indented) << "\n";
+        for (const DataMessage& msg : messages) {
+            out << msg.toDisplayString() << "\n";
         }
     } else if (format == "csv") {
-        out << "Message\n";
-        for (const QJsonDocument& doc : messages) {
-            out << "\"" << doc.toJson(QJsonDocument::Compact) << "\"\n";
+        out << "Type,Data\n";
+        for (const DataMessage& msg : messages) {
+            QString typeStr;
+            switch (msg.type) {
+            case DataFormatType::JSON: typeStr = "JSON"; break;
+            case DataFormatType::XML: typeStr = "XML"; break;
+            case DataFormatType::CSV: typeStr = "CSV"; break;
+            case DataFormatType::TEXT: typeStr = "TEXT"; break;
+            case DataFormatType::BINARY: typeStr = "BINARY"; break;
+            case DataFormatType::HEX: typeStr = "HEX"; break;
+            }
+            QString dataStr = msg.toDisplayString().replace("\"", "\"\"");
+            out << "\"" << typeStr << "\",\"" << dataStr << "\"\n";
         }
     }
     return true;

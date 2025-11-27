@@ -45,8 +45,23 @@ ui_*.h
 *.app
 bin/
 lib/
-CommLink
 **/bin/
+# CommLink binary in build/bin, but not the source folder
+build/bin/CommLink
+
+# ============================================================================
+# Assets to Track (DO NOT IGNORE)
+# ============================================================================
+!assets/
+!assets/**/*.svg
+!assets/**/*.png
+!assets/**/*.jpg
+!assets/**/*.qrc
+!assets/**/.gitkeep
+
+# Ignore old/temporary resource files in root
+CommLink/logo.svg
+CommLink/resources.qrc
 
 # ============================================================================
 # IDE & Editor Configuration

@@ -38,6 +38,7 @@ set(SOURCES
     src/messagehistorymanager.cpp
     src/historytab.cpp
     src/thememanager.cpp
+    src/logger.cpp
 )
 
 set(HEADERS
@@ -53,10 +54,16 @@ set(HEADERS
     include/messagehistorymanager.h
     include/historytab.h
     include/thememanager.h
+    include/logger.h
+)
+
+# Resource files (icons, assets, etc.)
+set(RESOURCES
+    CommLink.qrc
 )
 
 # Create executable
-add_executable(CommLink ${SOURCES} ${HEADERS})
+add_executable(CommLink ${SOURCES} ${HEADERS} ${RESOURCES})
 
 # Link libraries
 target_link_libraries(CommLink
