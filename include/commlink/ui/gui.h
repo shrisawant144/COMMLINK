@@ -39,7 +39,7 @@ private slots:
     void onSend();
     void onStartReceive();
     void onStopReceive();
-    void onDataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo);
+    void onDataReceived(const DataMessage &msg, const QString &source, const QString &timestamp);
     void onLoadMessage();
     void onSaveMessage();
     void onExportLogs();

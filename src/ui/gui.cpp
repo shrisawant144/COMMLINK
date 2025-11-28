@@ -729,21 +729,46 @@ void CommLinkGUI::onStopReceive() {
     logMessage("Stopped server", "[INFO] ");
 }
 
-void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo) {
+void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, const QString &timestamp) {
     // Store the message for proper export
     receivedMessages.append(msg);
 
-    QString displayText = msg.toDisplayString();
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-    QString message = QString("[%1] ← %2 from %3:\n%4\n")
-                     .arg(timestamp).arg(protocol).arg(senderInfo).arg(displayText);
-    receivedEdit->append(message);
-    logMessage(QString("Received %1 message from %2").arg(protocol).arg(senderInfo), "[RECV] ");
+    // Determine protocol and direction
+    QString protocol = "Unknown";
+    QString direction = "received";
+    
+    // Check which client/server is active
+    if (tcpClient->isConnected()) {
+        protocol = "TCP";
+        direction = "received";
+    } else if (udpClient->isConnected()) {
+        protocol = "UDP";
+        direction = "received";
+    } else if (wsClient->isConnected()) {
+        protocol = "WebSocket";
+        direction = "received";
+    } else if (tcpServer->isListening()) {
+        protocol = "TCP";
+        direction = "received";
+    } else if (udpServer->isListening()) {
+        protocol = "UDP";
+        direction = "received";
+    } else if (wsServer->isListening()) {
+        protocol = "WebSocket";
+        direction = "received";
+    }
 
-    // Save received message to history (for all formats now)
-    QString host = senderInfo.split(':').first(); // Extract host from senderInfo
+    QString displayText = msg.toDisplayString();
+    QString message = QString("[%1] ← %2 from %3:\n%4\n")
+                     .arg(timestamp).arg(protocol).arg(source).arg(displayText);
+    receivedEdit->append(message);
+    logMessage(QString("Received %1 message from %2").arg(source).arg(timestamp), "[RECV] ");
+
+    // Save received message to history
+    QString host = source.split(':').first(); // Extract host from source
     int port = receivePortEdit->text().toInt();
-    if (!historyManager.saveMessage("received", protocol, host, port, msg, senderInfo)) {
+    
+    if (!historyManager.saveMessage(direction, protocol, host, port, msg, source)) {
         logMessage("Failed to save received message to history", "[WARN] ");
     }
 
