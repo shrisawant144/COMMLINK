@@ -47,14 +47,35 @@ CommLinkGUI::CommLinkGUI() {
     resize(1000, 700);
     setMinimumSize(800, 600);
     
-    // Initialize WebSocket client
+    // Initialize TCP client/server
+    tcpClient = new TcpClient(this);
+    connect(tcpClient, &TcpClient::connected, this, &CommLinkGUI::onWsConnected);
+    connect(tcpClient, &TcpClient::disconnected, this, &CommLinkGUI::onWsDisconnected);
+    connect(tcpClient, &TcpClient::messageReceived, this, &CommLinkGUI::onDataReceived);
+    connect(tcpClient, &TcpClient::errorOccurred, this, &CommLinkGUI::onWsError);
+    
+    tcpServer = new TcpServer(this);
+    connect(tcpServer, &TcpServer::messageReceived, this, &CommLinkGUI::onDataReceived);
+    connect(tcpServer, &TcpServer::errorOccurred, this, &CommLinkGUI::onWsError);
+    
+    // Initialize UDP client/server
+    udpClient = new UdpClient(this);
+    connect(udpClient, &UdpClient::connected, this, &CommLinkGUI::onWsConnected);
+    connect(udpClient, &UdpClient::disconnected, this, &CommLinkGUI::onWsDisconnected);
+    connect(udpClient, &UdpClient::messageReceived, this, &CommLinkGUI::onDataReceived);
+    connect(udpClient, &UdpClient::errorOccurred, this, &CommLinkGUI::onWsError);
+    
+    udpServer = new UdpServer(this);
+    connect(udpServer, &UdpServer::messageReceived, this, &CommLinkGUI::onDataReceived);
+    connect(udpServer, &UdpServer::errorOccurred, this, &CommLinkGUI::onWsError);
+    
+    // Initialize WebSocket client/server
     wsClient = new WebSocketClient(this);
     connect(wsClient, &WebSocketClient::connected, this, &CommLinkGUI::onWsConnected);
     connect(wsClient, &WebSocketClient::disconnected, this, &CommLinkGUI::onWsDisconnected);
     connect(wsClient, &WebSocketClient::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(wsClient, &WebSocketClient::errorOccurred, this, &CommLinkGUI::onWsError);
     
-    // Initialize WebSocket server
     wsServer = new WebSocketServer(this);
     connect(wsServer, &WebSocketServer::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(wsServer, &WebSocketServer::errorOccurred, this, &CommLinkGUI::onWsError);
@@ -544,48 +565,48 @@ void CommLinkGUI::onConnect() {
         return;
     }
     
-    // Handle TCP/UDP
-    if (isConnected) {
-        sender.disconnect();
-        updateConnectionState(false);
-        logMessage("Disconnected", "[INFO] ");
+    // Handle TCP
+    if (proto == "TCP") {
+        if (tcpClient->isConnected()) {
+            tcpClient->disconnect();
+            return;
+        }
+        
+        if (!validateInputs()) return;
+        QString host = hostEdit->text().trimmed();
+        int port = portEdit->text().toInt();
+        
+        if (tcpClient->connectToHost(host, static_cast<quint16>(port))) {
+            logMessage(QString("Connected to %1:%2 via TCP").arg(host).arg(port), "[INFO] ");
+        } else {
+            logMessage("TCP connection failed", "[ERROR] ");
+        }
         return;
     }
     
-    if (!validateInputs()) return;
-
-    QString host = hostEdit->text().trimmed();
-    bool ok;
-    int port = portEdit->text().toInt(&ok);
-
-    if (!ok) {
-        QMessageBox::warning(this, "Error", "Invalid port number");
+    // Handle UDP
+    if (proto == "UDP") {
+        if (udpClient->isConnected()) {
+            udpClient->disconnect();
+            return;
+        }
+        
+        if (!validateInputs()) return;
+        QString host = hostEdit->text().trimmed();
+        int port = portEdit->text().toInt();
+        
+        if (udpClient->connectToHost(host, static_cast<quint16>(port))) {
+            logMessage(QString("Connected to %1:%2 via UDP").arg(host).arg(port), "[INFO] ");
+        } else {
+            logMessage("UDP connection failed", "[ERROR] ");
+        }
         return;
-    }
-
-    bool connected = false;
-    if (proto == "TCP") {
-        connected = sender.connectTcp(host, static_cast<quint16>(port));
-    } else if (proto == "UDP") {
-        connected = sender.connectUdp(host, static_cast<quint16>(port));
-    }
-
-    updateConnectionState(connected);
-    if (connected) {
-        logMessage(QString("Connected to %1:%2 via %3").arg(host).arg(port).arg(proto), "[INFO] ");
-    } else {
-        logMessage(QString("Connection failed to %1:%2 via %3").arg(host).arg(port).arg(proto), "[ERROR] ");
     }
 }
 
 void CommLinkGUI::onSend() {
     QString proto = protocolCombo->currentText();
     
-    if (!isConnected && !wsClient->isConnected()) {
-        QMessageBox::warning(this, "Error", "Not connected");
-        return;
-    }
-
     QString messageText = jsonEdit->toPlainText().trimmed();
     if (messageText.isEmpty()) {
         QMessageBox::warning(this, "Error", "Message cannot be empty");
@@ -601,27 +622,24 @@ void CommLinkGUI::onSend() {
     QVariant data = DataMessage::parseInput(messageText, format);
     DataMessage msg(format, data);
 
-    // Send via WebSocket
+    // Send via appropriate client
     if (proto == "WebSocket" && wsClient->isConnected()) {
         wsClient->sendMessage(msg);
         logMessage("Sent via WebSocket: " + messageText, "[WS-SEND] ");
-        
-        if (!historyManager.saveMessage("sent", "WebSocket", hostEdit->text(), 0, msg)) {
-            logMessage("Failed to save sent message to history", "[WARN] ");
-        }
+        historyManager.saveMessage("sent", "WebSocket", hostEdit->text(), 0, msg);
     }
-    // Send via TCP/UDP
-    else if (isConnected && sender.sendData) {
-        sender.sendData(msg);
-        logMessage("Sent: " + messageText, "[SEND] ");
-
-        QString host = hostEdit->text().trimmed();
-        int port = portEdit->text().toInt();
-        if (!historyManager.saveMessage("sent", proto, host, port, msg)) {
-            logMessage("Failed to save sent message to history", "[WARN] ");
-        }
-    } else {
-        logMessage("Send function not available", "[ERROR] ");
+    else if (proto == "TCP" && tcpClient->isConnected()) {
+        tcpClient->sendMessage(msg);
+        logMessage("Sent via TCP: " + messageText, "[TCP-SEND] ");
+        historyManager.saveMessage("sent", "TCP", hostEdit->text(), portEdit->text().toInt(), msg);
+    }
+    else if (proto == "UDP" && udpClient->isConnected()) {
+        udpClient->sendMessage(msg);
+        logMessage("Sent via UDP: " + messageText, "[UDP-SEND] ");
+        historyManager.saveMessage("sent", "UDP", hostEdit->text(), portEdit->text().toInt(), msg);
+    }
+    else {
+        QMessageBox::warning(this, "Error", "Not connected");
     }
 }
 
@@ -638,9 +656,9 @@ void CommLinkGUI::onStartReceive() {
 
     bool started = false;
     if (proto == "TCP") {
-        started = receiver.connectTcp(static_cast<quint16>(port));
+        started = tcpServer->listen(static_cast<quint16>(port));
     } else if (proto == "UDP") {
-        started = receiver.connectUdp(static_cast<quint16>(port));
+        started = udpServer->listen(static_cast<quint16>(port));
     } else if (proto == "WebSocket") {
         started = wsServer->listen(static_cast<quint16>(port));
     }
@@ -654,7 +672,8 @@ void CommLinkGUI::onStartReceive() {
 }
 
 void CommLinkGUI::onStopReceive() {
-    receiver.disconnect();
+    tcpServer->close();
+    udpServer->close();
     wsServer->close();
     updateReceiveState(false);
     logMessage("Stopped receiving", "[INFO] ");
@@ -824,17 +843,15 @@ void CommLinkGUI::onWsError(const QString& error) {
 }
 
 void CommLinkGUI::closeEvent(QCloseEvent *event) {
-    // Disconnect all connections before closing
-    if (isConnected) {
-        sender.disconnect();
-    }
-    if (isReceiving) {
-        receiver.disconnect();
-        wsServer->close();
-    }
-    if (wsClient->isConnected()) {
-        wsClient->disconnect();
-    }
+    // Disconnect all clients
+    tcpClient->disconnect();
+    udpClient->disconnect();
+    wsClient->disconnect();
+    
+    // Close all servers
+    tcpServer->close();
+    udpServer->close();
+    wsServer->close();
     
     // Save settings
     saveSettings();

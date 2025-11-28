@@ -18,17 +18,25 @@ add_library(commlink_network STATIC
     network/senderthread.cpp
     network/receiverthread.cpp
     network/connectionstats.cpp
+    network/tcpclient.cpp
+    network/tcpserver.cpp
+    network/udpclient.cpp
+    network/udpserver.cpp
     network/websocketclient.cpp
     network/websocketserver.cpp
     ${CMAKE_SOURCE_DIR}/include/commlink/network/sender.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/receiver.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/senderthread.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/receiverthread.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/network/tcpclient.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/network/tcpserver.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/network/udpclient.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/network/udpserver.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/websocketclient.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/websocketserver.h
 )
 target_include_directories(commlink_network PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(commlink_network Qt5::Core Qt5::WebSockets commlink_core)
+target_link_libraries(commlink_network Qt5::Core Qt5::Network Qt5::WebSockets commlink_core)
 
 # UI library
 add_library(commlink_ui STATIC

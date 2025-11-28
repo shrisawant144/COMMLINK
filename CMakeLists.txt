@@ -26,7 +26,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt5 REQUIRED COMPONENTS Core Widgets Sql WebSockets)
+find_package(Qt5 REQUIRED COMPONENTS Core Widgets Sql WebSockets Network)
 
 # Compiler warnings
 if(ENABLE_WARNINGS)

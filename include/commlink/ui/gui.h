@@ -15,6 +15,10 @@
 #include "../core/dataformat.h"
 #include "../network/sender.h"
 #include "../network/receiver.h"
+#include "../network/tcpclient.h"
+#include "../network/tcpserver.h"
+#include "../network/udpclient.h"
+#include "../network/udpserver.h"
 #include "../network/websocketclient.h"
 #include "../network/websocketserver.h"
 #include "../core/filemanager.h"
@@ -82,6 +86,10 @@ private:
     // Business logic
     Sender sender;
     Receiver receiver;
+    TcpClient *tcpClient;
+    TcpServer *tcpServer;
+    UdpClient *udpClient;
+    UdpServer *udpServer;
     WebSocketClient *wsClient;
     WebSocketServer *wsServer;
     MessageHistoryManager historyManager;
