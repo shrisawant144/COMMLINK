@@ -72,6 +72,17 @@ commlink/
 
 MIT License - see [LICENSE](LICENSE) file
 
+Copyright (c) 2025 Shrikrishna Sawant
+
+## Third-Party Software
+
+This project uses the Qt Framework (LGPL v3) for GUI components. Qt is a trademark of The Qt Company Ltd. For more information, visit [qt.io](https://www.qt.io/).
+
+## Author
+
+**Shrikrishna Sawant**
+- GitHub: [@shrisawant144](https://github.com/shrisawant144)
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
