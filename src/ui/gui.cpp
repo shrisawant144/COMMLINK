@@ -987,23 +987,16 @@ void CommLinkGUI::updateSendButtonState() {
 }
 
 void CommLinkGUI::updateFieldVisibility() {
+    if (!protocolCombo || !hostEdit || !portEdit) return;
+    
     QString proto = protocolCombo->currentText();
     
     if (proto == "WebSocket") {
         hostEdit->setPlaceholderText("ws://host:port or wss://host:port");
         portEdit->setVisible(false);
-        findChild<QLabel*>("Port:")->setVisible(false);
     } else {
         hostEdit->setPlaceholderText("Host/IP address");
         portEdit->setVisible(true);
-        // Find and show port label
-        auto labels = findChildren<QLabel*>();
-        for (auto label : labels) {
-            if (label->text() == "Port:") {
-                label->setVisible(true);
-                break;
-            }
-        }
     }
 }
 
