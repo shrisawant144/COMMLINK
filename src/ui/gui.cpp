@@ -87,6 +87,14 @@ CommLinkGUI::CommLinkGUI() {
     httpClient = new HttpClient(this);
     connect(httpClient, &HttpClient::responseReceived, this, &CommLinkGUI::onDataReceived);
     connect(httpClient, &HttpClient::errorOccurred, this, &CommLinkGUI::onWsError);
+    connect(httpClient, &HttpClient::requestSent, this, &CommLinkGUI::onHttpRequestSent);
+    
+    // Initialize HTTP server
+    httpServer = new HttpServer(this);
+    connect(httpServer, &HttpServer::clientConnected, this, &CommLinkGUI::onClientConnected);
+    connect(httpServer, &HttpServer::clientDisconnected, this, &CommLinkGUI::onClientDisconnected);
+    connect(httpServer, &HttpServer::messageReceived, this, &CommLinkGUI::onDataReceived);
+    connect(httpServer, &HttpServer::errorOccurred, this, &CommLinkGUI::onWsError);
     
     // Initialize database with better error handling
     if (!historyManager.initializeDatabase()) {
@@ -200,6 +208,12 @@ void CommLinkGUI::setupUI()
     connect(protocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &CommLinkGUI::onClientProtocolChanged);
     
+    httpMethodCombo = new QComboBox();
+    httpMethodCombo->addItems({"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"});
+    httpMethodCombo->setCurrentText("POST");
+    httpMethodCombo->setMinimumHeight(32);
+    httpMethodCombo->setVisible(false);
+    
     auto *clientInfoLabel = new QLabel("TCP/UDP: Host + Port | WebSocket: ws://host:port | HTTP: http://host:port/path");
     clientInfoLabel->setStyleSheet("color: #6c757d; font-size: 10px; font-style: italic;");
     clientInfoLabel->setWordWrap(true);
@@ -223,12 +237,14 @@ void CommLinkGUI::setupUI()
     
     sendLayout->addWidget(new QLabel("Protocol:"), 0, 0);
     sendLayout->addWidget(protocolCombo, 0, 1);
-    sendLayout->addWidget(clientInfoLabel, 1, 0, 1, 2);
-    sendLayout->addWidget(hostLabel, 2, 0);
-    sendLayout->addWidget(hostEdit, 2, 1);
-    sendLayout->addWidget(portLabel, 3, 0);
-    sendLayout->addWidget(portEdit, 3, 1);
-    sendLayout->addWidget(connectBtn, 4, 0, 1, 2);
+    sendLayout->addWidget(new QLabel("HTTP Method:"), 1, 0);
+    sendLayout->addWidget(httpMethodCombo, 1, 1);
+    sendLayout->addWidget(clientInfoLabel, 2, 0, 1, 2);
+    sendLayout->addWidget(hostLabel, 3, 0);
+    sendLayout->addWidget(hostEdit, 3, 1);
+    sendLayout->addWidget(portLabel, 4, 0);
+    sendLayout->addWidget(portEdit, 4, 1);
+    sendLayout->addWidget(connectBtn, 5, 0, 1, 2);
     
     leftLayout->addWidget(sendGroup);
 
@@ -237,12 +253,12 @@ void CommLinkGUI::setupUI()
     auto *receiveLayout = new QGridLayout(receiveGroup);
     
     receiveProtocolCombo = new QComboBox();
-    receiveProtocolCombo->addItems({"TCP", "UDP", "WebSocket"});
+    receiveProtocolCombo->addItems({"TCP", "UDP", "WebSocket", "HTTP"});
     receiveProtocolCombo->setMinimumHeight(32);
     connect(receiveProtocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &CommLinkGUI::onServerProtocolChanged);
     
-    auto *serverInfoLabel = new QLabel("All protocols: Listen on port | TCP/WS: Multiple clients | UDP: Connectionless");
+    auto *serverInfoLabel = new QLabel("All protocols: Listen on port | TCP/WS/HTTP: Multiple clients | UDP: Connectionless");
     serverInfoLabel->setStyleSheet("color: #6c757d; font-size: 10px; font-style: italic;");
     serverInfoLabel->setWordWrap(true);
     
@@ -649,9 +665,20 @@ void CommLinkGUI::onSend() {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = "http://" + url;
         }
-        httpClient->sendRequest(url, HttpClient::POST, msg);
-        logMessage("Sent via HTTP POST: " + messageText, "[HTTP-SEND] ");
-        historyManager.saveMessage("sent", "HTTP", url, 0, msg);
+        
+        QString methodStr = httpMethodCombo->currentText();
+        HttpClient::Method method = HttpClient::POST;
+        if (methodStr == "GET") method = HttpClient::GET;
+        else if (methodStr == "POST") method = HttpClient::POST;
+        else if (methodStr == "PUT") method = HttpClient::PUT;
+        else if (methodStr == "DELETE") method = HttpClient::DELETE;
+        else if (methodStr == "PATCH") method = HttpClient::PATCH;
+        else if (methodStr == "HEAD") method = HttpClient::HEAD;
+        else if (methodStr == "OPTIONS") method = HttpClient::OPTIONS;
+        
+        httpClient->sendRequest(url, method, msg);
+        logMessage(QString("Sent via HTTP %1: %2").arg(methodStr).arg(messageText), "[HTTP-SEND] ");
+        historyManager.saveMessage("sent", "HTTP-" + methodStr, url, 0, msg);
     }
     else if (proto == "WebSocket" && wsClient->isConnected()) {
         wsClient->sendMessage(msg);
@@ -695,6 +722,9 @@ void CommLinkGUI::onStartReceive() {
     } else if (proto == "WebSocket") {
         wsServer->setFormat(format);
         started = wsServer->listen(static_cast<quint16>(port));
+    } else if (proto == "HTTP") {
+        httpServer->setFormat(format);
+        started = httpServer->startServer(static_cast<quint16>(port));
     }
 
     if (started) {
@@ -709,6 +739,7 @@ void CommLinkGUI::onStopReceive() {
     tcpServer->close();
     udpServer->close();
     wsServer->close();
+    httpServer->stopServer();
     connectedClientsList->clear();
     targetClientCombo->clear();
     updateServerStatus();
@@ -733,6 +764,9 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
     } else if (wsClient->isConnected()) {
         protocol = "WebSocket";
         direction = "received";
+    } else if (source.contains("HTTP")) {
+        protocol = "HTTP";
+        direction = "received";
     } else if (tcpServer->isListening()) {
         protocol = "TCP";
         direction = "received";
@@ -741,6 +775,9 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
         direction = "received";
     } else if (wsServer->isListening()) {
         protocol = "WebSocket";
+        direction = "received";
+    } else if (httpServer->isListening()) {
+        protocol = "HTTP";
         direction = "received";
     }
 
@@ -894,16 +931,24 @@ void CommLinkGUI::onClientProtocolChanged(int index) {
     auto *portLabel = findChild<QLabel*>("clientPortLabel");
     auto *portField = findChild<QLineEdit*>("clientPortEdit");
     
-    if (proto == "WebSocket") {
+    if (proto == "HTTP") {
+        // HTTP: URL only with method selector
+        hostEdit->setPlaceholderText("http://host:port/path or https://host:port/path");
+        if (portField) portField->setVisible(false);
+        if (portLabel) portLabel->setVisible(false);
+        if (httpMethodCombo) httpMethodCombo->setVisible(true);
+    } else if (proto == "WebSocket") {
         // WebSocket: URL only (port is in URL)
         hostEdit->setPlaceholderText("ws://host:port or wss://host:port");
         if (portField) portField->setVisible(false);
         if (portLabel) portLabel->setVisible(false);
+        if (httpMethodCombo) httpMethodCombo->setVisible(false);
     } else {
         // TCP/UDP: Separate host and port
         hostEdit->setPlaceholderText("Host/IP address");
         if (portField) portField->setVisible(true);
         if (portLabel) portLabel->setVisible(true);
+        if (httpMethodCombo) httpMethodCombo->setVisible(false);
     }
 }
 
@@ -1009,7 +1054,8 @@ void CommLinkGUI::updateClientStatus() {
 }
 
 void CommLinkGUI::updateServerStatus() {
-    bool anyListening = tcpServer->isListening() || udpServer->isListening() || wsServer->isListening();
+    bool anyListening = tcpServer->isListening() || udpServer->isListening() || 
+                        wsServer->isListening() || httpServer->isListening();
     
     if (anyListening) {
         QString proto = receiveProtocolCombo->currentText();
@@ -1086,8 +1132,12 @@ void CommLinkGUI::onWsDisconnected() {
 }
 
 void CommLinkGUI::onWsError(const QString& error) {
-    logMessage("WebSocket error: " + error, "[ERROR] ");
-    QMessageBox::critical(this, "WebSocket Error", error);
+    logMessage("Error: " + error, "[ERROR] ");
+    QMessageBox::critical(this, "Error", error);
+}
+
+void CommLinkGUI::onHttpRequestSent(const QString& method, const QString& url) {
+    logMessage(QString("HTTP %1 request sent to %2").arg(method).arg(url), "[HTTP] ");
 }
 
 void CommLinkGUI::closeEvent(QCloseEvent *event) {
@@ -1095,11 +1145,13 @@ void CommLinkGUI::closeEvent(QCloseEvent *event) {
     tcpClient->disconnect();
     udpClient->disconnect();
     wsClient->disconnect();
+    httpClient->disconnect();
     
     // Close all servers
     tcpServer->close();
     udpServer->close();
     wsServer->close();
+    httpServer->stopServer();
     
     // Save settings
     saveSettings();

@@ -21,6 +21,7 @@
 #include "../network/websocketclient.h"
 #include "../network/websocketserver.h"
 #include "../network/httpclient.h"
+#include "../network/httpserver.h"
 #include "../core/filemanager.h"
 #include "../core/exportmanager.h"
 #include "../core/messagehistorymanager.h"
@@ -57,6 +58,7 @@ private slots:
     void onFormatChanged(int index);
     void onClientConnected(const QString& clientInfo);
     void onClientDisconnected(const QString& clientInfo);
+    void onHttpRequestSent(const QString& method, const QString& url);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -77,6 +79,7 @@ private:
     QComboBox *protocolCombo;
     QComboBox *dataFormatCombo;
     QComboBox *receiveProtocolCombo;
+    QComboBox *httpMethodCombo;
     QLineEdit *hostEdit, *portEdit, *receivePortEdit;
     QPushButton *connectBtn, *sendBtn, *startReceiveBtn, *stopReceiveBtn;
     QPushButton *loadJsonBtn, *saveJsonBtn, *exportLogsBtn, *exportMessagesBtn, *clearMessagesBtn;
@@ -107,6 +110,7 @@ private:
     WebSocketClient *wsClient;
     WebSocketServer *wsServer;
     HttpClient *httpClient;
+    HttpServer *httpServer;
     MessageHistoryManager historyManager;
     QList<DataMessage> receivedMessages;
 };

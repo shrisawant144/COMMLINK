@@ -20,6 +20,7 @@ add_library(commlink_network STATIC
     network/websocketclient.cpp
     network/websocketserver.cpp
     network/httpclient.cpp
+    network/httpserver.cpp
     ${CMAKE_SOURCE_DIR}/include/commlink/network/tcpclient.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/tcpserver.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/udpclient.h
@@ -27,6 +28,7 @@ add_library(commlink_network STATIC
     ${CMAKE_SOURCE_DIR}/include/commlink/network/websocketclient.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/websocketserver.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/httpclient.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/network/httpserver.h
 )
 target_include_directories(commlink_network PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(commlink_network Qt5::Core Qt5::Network Qt5::WebSockets commlink_core)
