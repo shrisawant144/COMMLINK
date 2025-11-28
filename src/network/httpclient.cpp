@@ -1,16 +1,18 @@
-#include "commlink/http_client.h"
+#include "commlink/network/httpclient.h"
 #include <QNetworkRequest>
+#include <QDateTime>
 
-namespace commlink {
-
-HttpClient::HttpClient(QObject* parent)
-    : QObject(parent), m_manager(new QNetworkAccessManager(this)) {
+HttpClient::HttpClient(QObject *parent)
+    : QObject(parent), m_format(DataFormatType::JSON), m_method(POST) {
+    m_manager = new QNetworkAccessManager(this);
     connect(m_manager, &QNetworkAccessManager::finished, this, &HttpClient::onReplyFinished);
 }
 
-void HttpClient::sendRequest(const QString& url, Method method, const QByteArray& data) {
+void HttpClient::sendRequest(const QString& url, Method method, const DataMessage& message) {
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QByteArray data = message.serialize();
 
     switch (method) {
         case GET:
@@ -29,13 +31,15 @@ void HttpClient::sendRequest(const QString& url, Method method, const QByteArray
 }
 
 void HttpClient::onReplyFinished(QNetworkReply* reply) {
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    QString source = reply->url().toString();
+
     if (reply->error() == QNetworkReply::NoError) {
-        emit responseReceived(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
-                            reply->readAll());
+        QByteArray data = reply->readAll();
+        DataMessage msg = DataMessage::deserialize(data, m_format);
+        emit responseReceived(msg, source, timestamp);
     } else {
         emit errorOccurred(reply->errorString());
     }
     reply->deleteLater();
 }
-
-} // namespace commlink
