@@ -310,6 +310,8 @@ void CommLinkGUI::setupUI()
     dataFormatCombo->addItem("Binary", static_cast<int>(DataFormatType::BINARY));
     dataFormatCombo->addItem("Hex", static_cast<int>(DataFormatType::HEX));
     dataFormatCombo->setMinimumHeight(32);
+    connect(dataFormatCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
+            this, &CommLinkGUI::onFormatChanged);
     
     formatLayout->addWidget(new QLabel("Format:"));
     formatLayout->addWidget(dataFormatCombo);
@@ -700,11 +702,6 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
 
     QString displayText = msg.toDisplayString();
     
-    // Debug: check if displayText is empty
-    if (displayText.trimmed().isEmpty()) {
-        qDebug() << "Empty display text! Type:" << static_cast<int>(msg.type) << "Data valid:" << msg.data.isValid() << "Data:" << msg.data;
-    }
-    
     QString message = QString("[%1] ← %2 from %3:\n%4\n")
                      .arg(timestamp).arg(protocol).arg(source).arg(displayText);
     receivedEdit->append(message);
@@ -868,6 +865,21 @@ void CommLinkGUI::onSendModeChanged(int index) {
     // Enable target selector only for "Send to Selected Client"
     targetClientCombo->setEnabled(mode == 2);
     updateSendButtonState();
+}
+
+void CommLinkGUI::onFormatChanged(int index) {
+    Q_UNUSED(index);
+    DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->currentData().toInt());
+    
+    // Sync format to all active clients and servers
+    tcpClient->setFormat(format);
+    tcpServer->setFormat(format);
+    udpClient->setFormat(format);
+    udpServer->setFormat(format);
+    wsClient->setFormat(format);
+    wsServer->setFormat(format);
+    
+    logMessage(QString("Format changed to: %1").arg(dataFormatCombo->currentText()), "[INFO] ");
 }
 
 void CommLinkGUI::onClientConnected(const QString& clientInfo) {

@@ -53,6 +53,7 @@ private slots:
     void onClientProtocolChanged(int index);
     void onServerProtocolChanged(int index);
     void onSendModeChanged(int index);
+    void onFormatChanged(int index);
     void onClientConnected(const QString& clientInfo);
     void onClientDisconnected(const QString& clientInfo);
 
