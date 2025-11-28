@@ -195,6 +195,10 @@ void CommLinkGUI::setupUI()
     connect(protocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &CommLinkGUI::onClientProtocolChanged);
     
+    auto *clientInfoLabel = new QLabel("TCP/UDP: Host + Port | WebSocket: ws://host:port");
+    clientInfoLabel->setStyleSheet("color: #6c757d; font-size: 10px; font-style: italic;");
+    clientInfoLabel->setWordWrap(true);
+    
     hostEdit = new QLineEdit("127.0.0.1");
     hostEdit->setMinimumHeight(32);
     hostEdit->setPlaceholderText("Host/IP or ws://host:port");
@@ -202,6 +206,11 @@ void CommLinkGUI::setupUI()
     portEdit = new QLineEdit("5000");
     portEdit->setMinimumHeight(32);
     portEdit->setPlaceholderText("Port number");
+    portEdit->setObjectName("clientPortEdit");
+    
+    auto *hostLabel = new QLabel("Host:");
+    auto *portLabel = new QLabel("Port:");
+    portLabel->setObjectName("clientPortLabel");
     
     connectBtn = new QPushButton("Connect");
     connectBtn->setMinimumHeight(36);
@@ -209,11 +218,12 @@ void CommLinkGUI::setupUI()
     
     sendLayout->addWidget(new QLabel("Protocol:"), 0, 0);
     sendLayout->addWidget(protocolCombo, 0, 1);
-    sendLayout->addWidget(new QLabel("Host:"), 1, 0);
-    sendLayout->addWidget(hostEdit, 1, 1);
-    sendLayout->addWidget(new QLabel("Port:"), 2, 0);
-    sendLayout->addWidget(portEdit, 2, 1);
-    sendLayout->addWidget(connectBtn, 3, 0, 1, 2);
+    sendLayout->addWidget(clientInfoLabel, 1, 0, 1, 2);
+    sendLayout->addWidget(hostLabel, 2, 0);
+    sendLayout->addWidget(hostEdit, 2, 1);
+    sendLayout->addWidget(portLabel, 3, 0);
+    sendLayout->addWidget(portEdit, 3, 1);
+    sendLayout->addWidget(connectBtn, 4, 0, 1, 2);
     
     leftLayout->addWidget(sendGroup);
 
@@ -226,6 +236,10 @@ void CommLinkGUI::setupUI()
     receiveProtocolCombo->setMinimumHeight(32);
     connect(receiveProtocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &CommLinkGUI::onServerProtocolChanged);
+    
+    auto *serverInfoLabel = new QLabel("All protocols: Listen on port | TCP/WS: Multiple clients | UDP: Connectionless");
+    serverInfoLabel->setStyleSheet("color: #6c757d; font-size: 10px; font-style: italic;");
+    serverInfoLabel->setWordWrap(true);
     
     receivePortEdit = new QLineEdit("5001");
     receivePortEdit->setMinimumHeight(32);
@@ -844,7 +858,23 @@ void CommLinkGUI::onToggleAutoMode() {
 
 void CommLinkGUI::onClientProtocolChanged(int index) {
     Q_UNUSED(index);
-    updateFieldVisibility();
+    QString proto = protocolCombo->currentText();
+    
+    // Find port field and label by object name
+    auto *portLabel = findChild<QLabel*>("clientPortLabel");
+    auto *portField = findChild<QLineEdit*>("clientPortEdit");
+    
+    if (proto == "WebSocket") {
+        // WebSocket: URL only (port is in URL)
+        hostEdit->setPlaceholderText("ws://host:port or wss://host:port");
+        if (portField) portField->setVisible(false);
+        if (portLabel) portLabel->setVisible(false);
+    } else {
+        // TCP/UDP: Separate host and port
+        hostEdit->setPlaceholderText("Host/IP address");
+        if (portField) portField->setVisible(true);
+        if (portLabel) portLabel->setVisible(true);
+    }
 }
 
 void CommLinkGUI::onServerProtocolChanged(int index) {
@@ -852,18 +882,36 @@ void CommLinkGUI::onServerProtocolChanged(int index) {
     if (!connectedClientsList) return;
     
     QString proto = receiveProtocolCombo->currentText();
-    // Show/hide client list based on protocol
+    
+    // TCP and WebSocket support multiple clients, UDP doesn't
     bool showClientList = (proto == "TCP" || proto == "WebSocket");
     connectedClientsList->setVisible(showClientList);
     clientCountLabel->setVisible(showClientList);
+    
+    // Update label text based on protocol
+    if (proto == "UDP") {
+        clientCountLabel->setText("UDP: Connectionless (no client list)");
+    } else {
+        clientCountLabel->setText("Connected Clients: 0");
+    }
 }
 
 void CommLinkGUI::onSendModeChanged(int index) {
-    if (!targetClientCombo) return;
+    if (!targetClientCombo || !sendModeCombo) return;
     
     int mode = sendModeCombo->itemData(index).toInt();
-    // Enable target selector only for "Send to Selected Client"
-    targetClientCombo->setEnabled(mode == 2);
+    QString serverProto = receiveProtocolCombo->currentText();
+    
+    // Target selector only for TCP/WebSocket servers with "Send to Selected" mode
+    bool enableTarget = (mode == 2) && (serverProto == "TCP" || serverProto == "WebSocket");
+    targetClientCombo->setEnabled(enableTarget);
+    
+    // Update label based on mode
+    if (mode == 1 && serverProto == "UDP") {
+        // UDP broadcast is different
+        logMessage("UDP server will reply to last sender", "[INFO] ");
+    }
+    
     updateSendButtonState();
 }
 
@@ -975,14 +1023,20 @@ void CommLinkGUI::updateSendButtonState() {
 void CommLinkGUI::updateFieldVisibility() {
     if (!protocolCombo || !hostEdit || !portEdit) return;
     
-    QString proto = protocolCombo->currentText();
+    QString clientProto = protocolCombo->currentText();
     
-    if (proto == "WebSocket") {
+    // Find port label by object name
+    QLabel* portLabel = findChild<QLabel*>("clientPortLabel");
+    
+    // Client-side visibility
+    if (clientProto == "WebSocket") {
         hostEdit->setPlaceholderText("ws://host:port or wss://host:port");
         portEdit->setVisible(false);
+        if (portLabel) portLabel->setVisible(false);
     } else {
         hostEdit->setPlaceholderText("Host/IP address");
         portEdit->setVisible(true);
+        if (portLabel) portLabel->setVisible(true);
     }
 }
 
