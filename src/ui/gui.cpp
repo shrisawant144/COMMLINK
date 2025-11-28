@@ -15,6 +15,7 @@
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QSplitter>
+#include <QtWidgets/QListWidget>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonParseError>
 #include <QtGui/QIntValidator>
@@ -49,19 +50,21 @@ CommLinkGUI::CommLinkGUI() {
     
     // Initialize TCP client/server
     tcpClient = new TcpClient(this);
-    connect(tcpClient, &TcpClient::connected, this, &CommLinkGUI::onWsConnected);
-    connect(tcpClient, &TcpClient::disconnected, this, &CommLinkGUI::onWsDisconnected);
+    connect(tcpClient, &TcpClient::connected, this, &CommLinkGUI::updateClientStatus);
+    connect(tcpClient, &TcpClient::disconnected, this, &CommLinkGUI::updateClientStatus);
     connect(tcpClient, &TcpClient::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(tcpClient, &TcpClient::errorOccurred, this, &CommLinkGUI::onWsError);
     
     tcpServer = new TcpServer(this);
+    connect(tcpServer, &TcpServer::clientConnected, this, &CommLinkGUI::onClientConnected);
+    connect(tcpServer, &TcpServer::clientDisconnected, this, &CommLinkGUI::onClientDisconnected);
     connect(tcpServer, &TcpServer::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(tcpServer, &TcpServer::errorOccurred, this, &CommLinkGUI::onWsError);
     
     // Initialize UDP client/server
     udpClient = new UdpClient(this);
-    connect(udpClient, &UdpClient::connected, this, &CommLinkGUI::onWsConnected);
-    connect(udpClient, &UdpClient::disconnected, this, &CommLinkGUI::onWsDisconnected);
+    connect(udpClient, &UdpClient::connected, this, &CommLinkGUI::updateClientStatus);
+    connect(udpClient, &UdpClient::disconnected, this, &CommLinkGUI::updateClientStatus);
     connect(udpClient, &UdpClient::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(udpClient, &UdpClient::errorOccurred, this, &CommLinkGUI::onWsError);
     
@@ -71,12 +74,14 @@ CommLinkGUI::CommLinkGUI() {
     
     // Initialize WebSocket client/server
     wsClient = new WebSocketClient(this);
-    connect(wsClient, &WebSocketClient::connected, this, &CommLinkGUI::onWsConnected);
-    connect(wsClient, &WebSocketClient::disconnected, this, &CommLinkGUI::onWsDisconnected);
+    connect(wsClient, &WebSocketClient::connected, this, &CommLinkGUI::updateClientStatus);
+    connect(wsClient, &WebSocketClient::disconnected, this, &CommLinkGUI::updateClientStatus);
     connect(wsClient, &WebSocketClient::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(wsClient, &WebSocketClient::errorOccurred, this, &CommLinkGUI::onWsError);
     
     wsServer = new WebSocketServer(this);
+    connect(wsServer, &WebSocketServer::clientConnected, this, &CommLinkGUI::onClientConnected);
+    connect(wsServer, &WebSocketServer::clientDisconnected, this, &CommLinkGUI::onClientDisconnected);
     connect(wsServer, &WebSocketServer::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(wsServer, &WebSocketServer::errorOccurred, this, &CommLinkGUI::onWsError);
     
@@ -169,34 +174,34 @@ void CommLinkGUI::setupUI()
     auto *statusPanel = new QGroupBox("Connection Status");
     auto *statusLayout = new QGridLayout(statusPanel);
 
-    auto *sendStatusLabel = new QLabel("Send:");
-    auto *sendStatusValue = new QLabel("Disconnected");
-    sendStatusValue->setObjectName("sendStatus");
-    sendStatusValue->setStyleSheet("color: red; font-weight: bold;");
+    auto *clientLabel = new QLabel("Client:");
+    clientStatusLabel = new QLabel("Disconnected");
+    clientStatusLabel->setStyleSheet("color: #dc3545; font-weight: bold;");
 
-    auto *receiveStatusLabel = new QLabel("Receive:");
-    auto *receiveStatusValue = new QLabel("Stopped");
-    receiveStatusValue->setObjectName("receiveStatus");
-    receiveStatusValue->setStyleSheet("color: red; font-weight: bold;");
+    auto *serverLabel = new QLabel("Server:");
+    serverStatusLabel = new QLabel("Stopped");
+    serverStatusLabel->setStyleSheet("color: #dc3545; font-weight: bold;");
 
-    statusLayout->addWidget(sendStatusLabel, 0, 0);
-    statusLayout->addWidget(sendStatusValue, 0, 1);
-    statusLayout->addWidget(receiveStatusLabel, 1, 0);
-    statusLayout->addWidget(receiveStatusValue, 1, 1);
+    statusLayout->addWidget(clientLabel, 0, 0);
+    statusLayout->addWidget(clientStatusLabel, 0, 1);
+    statusLayout->addWidget(serverLabel, 1, 0);
+    statusLayout->addWidget(serverStatusLabel, 1, 1);
 
     leftLayout->addWidget(statusPanel);
 
-    // Send Configuration
-    auto *sendGroup = new QGroupBox("Send Configuration");
+    // Client Configuration
+    auto *sendGroup = new QGroupBox("Client Configuration");
     auto *sendLayout = new QGridLayout(sendGroup);
     
     protocolCombo = new QComboBox();
     protocolCombo->addItems({"TCP", "UDP", "WebSocket"});
     protocolCombo->setMinimumHeight(32);
+    connect(protocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
+            this, &CommLinkGUI::onClientProtocolChanged);
     
     hostEdit = new QLineEdit("127.0.0.1");
     hostEdit->setMinimumHeight(32);
-    hostEdit->setPlaceholderText("Host/IP or WebSocket URL");
+    hostEdit->setPlaceholderText("Host/IP or ws://host:port");
     
     portEdit = new QLineEdit("5000");
     portEdit->setMinimumHeight(32);
@@ -204,7 +209,7 @@ void CommLinkGUI::setupUI()
     
     connectBtn = new QPushButton("Connect");
     connectBtn->setMinimumHeight(36);
-    connectBtn->setStyleSheet("QPushButton { font-weight: bold; }");
+    connectBtn->setStyleSheet("QPushButton { font-weight: bold; background-color: #007bff; color: white; }");
     
     sendLayout->addWidget(new QLabel("Protocol:"), 0, 0);
     sendLayout->addWidget(protocolCombo, 0, 1);
@@ -216,38 +221,49 @@ void CommLinkGUI::setupUI()
     
     leftLayout->addWidget(sendGroup);
 
-    // Receive Configuration
-    auto *receiveGroup = new QGroupBox("Receive Configuration");
+    // Server Configuration
+    auto *receiveGroup = new QGroupBox("Server Configuration");
     auto *receiveLayout = new QGridLayout(receiveGroup);
     
     receiveProtocolCombo = new QComboBox();
     receiveProtocolCombo->addItems({"TCP", "UDP", "WebSocket"});
     receiveProtocolCombo->setMinimumHeight(32);
-    
-
+    connect(receiveProtocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
+            this, &CommLinkGUI::onServerProtocolChanged);
     
     receivePortEdit = new QLineEdit("5001");
     receivePortEdit->setMinimumHeight(32);
     receivePortEdit->setPlaceholderText("Listen port");
     
     auto *receiveButtonLayout = new QHBoxLayout();
-    startReceiveBtn = new QPushButton("Start");
+    startReceiveBtn = new QPushButton("Start Server");
     startReceiveBtn->setMinimumHeight(36);
-    startReceiveBtn->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }");
+    startReceiveBtn->setStyleSheet("QPushButton { background-color: #28a745; color: white; font-weight: bold; }");
     
-    stopReceiveBtn = new QPushButton("Stop");
+    stopReceiveBtn = new QPushButton("Stop Server");
     stopReceiveBtn->setMinimumHeight(36);
-    stopReceiveBtn->setStyleSheet("QPushButton { background-color: #f44336; color: white; font-weight: bold; }");
+    stopReceiveBtn->setStyleSheet("QPushButton { background-color: #dc3545; color: white; font-weight: bold; }");
+    stopReceiveBtn->setEnabled(false);
     
     receiveButtonLayout->addWidget(startReceiveBtn);
     receiveButtonLayout->addWidget(stopReceiveBtn);
+    
+    // Connected clients list
+    clientCountLabel = new QLabel("Connected Clients: 0");
+    clientCountLabel->setStyleSheet("font-weight: bold; color: #6c757d;");
+    
+    connectedClientsList = new QListWidget();
+    connectedClientsList->setMaximumHeight(80);
+    connectedClientsList->setStyleSheet("QListWidget { border: 1px solid #dee2e6; border-radius: 4px; }");
     
     receiveLayout->addWidget(new QLabel("Protocol:"), 0, 0);
     receiveLayout->addWidget(receiveProtocolCombo, 0, 1);
     receiveLayout->addWidget(new QLabel("Port:"), 1, 0);
     receiveLayout->addWidget(receivePortEdit, 1, 1);
-    receiveLayout->addWidget(new QLabel("Controls:"), 3, 0);
-    receiveLayout->addLayout(receiveButtonLayout, 3, 1);
+    receiveLayout->addWidget(new QLabel("Controls:"), 2, 0);
+    receiveLayout->addLayout(receiveButtonLayout, 2, 1);
+    receiveLayout->addWidget(clientCountLabel, 3, 0, 1, 2);
+    receiveLayout->addWidget(connectedClientsList, 4, 0, 1, 2);
     
     leftLayout->addWidget(receiveGroup);
     leftLayout->addStretch();
@@ -262,6 +278,29 @@ void CommLinkGUI::setupUI()
     auto *sendTab = new QWidget();
     auto *sendTabLayout = new QVBoxLayout(sendTab);
     sendTabLayout->setSpacing(12);
+    
+    // Send Mode and Target Selection
+    auto *sendControlGroup = new QGroupBox("Send Configuration");
+    auto *sendControlLayout = new QGridLayout(sendControlGroup);
+    
+    sendModeCombo = new QComboBox();
+    sendModeCombo->addItem("Send as Client", 0);
+    sendModeCombo->addItem("Send as Server (Broadcast)", 1);
+    sendModeCombo->addItem("Send as Server (To Selected)", 2);
+    sendModeCombo->setMinimumHeight(32);
+    connect(sendModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
+            this, &CommLinkGUI::onSendModeChanged);
+    
+    targetClientCombo = new QComboBox();
+    targetClientCombo->setMinimumHeight(32);
+    targetClientCombo->setEnabled(false);
+    
+    sendControlLayout->addWidget(new QLabel("Mode:"), 0, 0);
+    sendControlLayout->addWidget(sendModeCombo, 0, 1);
+    sendControlLayout->addWidget(new QLabel("Target:"), 1, 0);
+    sendControlLayout->addWidget(targetClientCombo, 1, 1);
+    
+    sendTabLayout->addWidget(sendControlGroup);
     
     // Format selector
     auto *formatGroup = new QGroupBox("Message Format");
@@ -286,7 +325,7 @@ void CommLinkGUI::setupUI()
     auto *messageGroup = new QGroupBox("Message Content");
     auto *messageLayout = new QVBoxLayout(messageGroup);
     
-    auto *messageLabel = new QLabel("JSON Message:");
+    auto *messageLabel = new QLabel("Message:");
     messageLabel->setObjectName("messageLabel");
     
     jsonEdit = new QTextEdit();
@@ -309,6 +348,7 @@ void CommLinkGUI::setupUI()
     sendBtn = new QPushButton("Send Message");
     sendBtn->setMinimumHeight(40);
     sendBtn->setStyleSheet("QPushButton { background-color: #2196F3; color: white; font-weight: bold; font-size: 14px; }");
+    sendBtn->setEnabled(false);
     
     messageLayout->addWidget(messageLabel);
     messageLayout->addWidget(jsonEdit);
@@ -544,6 +584,7 @@ bool CommLinkGUI::validateInputs()
 
 void CommLinkGUI::onConnect() {
     QString proto = protocolCombo->currentText();
+    DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->currentData().toInt());
     
     // Handle WebSocket
     if (proto == "WebSocket") {
@@ -560,6 +601,7 @@ void CommLinkGUI::onConnect() {
         if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
             url = "ws://" + url;
         }
+        wsClient->setFormat(format);
         wsClient->connectToServer(url);
         logMessage("Connecting to " + url + "...", "[WS] ");
         return;
@@ -576,6 +618,7 @@ void CommLinkGUI::onConnect() {
         QString host = hostEdit->text().trimmed();
         int port = portEdit->text().toInt();
         
+        tcpClient->setFormat(format);
         if (tcpClient->connectToHost(host, static_cast<quint16>(port))) {
             logMessage(QString("Connected to %1:%2 via TCP").arg(host).arg(port), "[INFO] ");
         } else {
@@ -595,6 +638,7 @@ void CommLinkGUI::onConnect() {
         QString host = hostEdit->text().trimmed();
         int port = portEdit->text().toInt();
         
+        udpClient->setFormat(format);
         if (udpClient->connectToHost(host, static_cast<quint16>(port))) {
             logMessage(QString("Connected to %1:%2 via UDP").arg(host).arg(port), "[INFO] ");
         } else {
@@ -645,6 +689,7 @@ void CommLinkGUI::onSend() {
 
 void CommLinkGUI::onStartReceive() {
     QString proto = receiveProtocolCombo->currentText();
+    DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->currentData().toInt());
     
     bool ok;
     int port = receivePortEdit->text().toInt(&ok);
@@ -656,18 +701,21 @@ void CommLinkGUI::onStartReceive() {
 
     bool started = false;
     if (proto == "TCP") {
+        tcpServer->setFormat(format);
         started = tcpServer->listen(static_cast<quint16>(port));
     } else if (proto == "UDP") {
+        udpServer->setFormat(format);
         started = udpServer->listen(static_cast<quint16>(port));
     } else if (proto == "WebSocket") {
+        wsServer->setFormat(format);
         started = wsServer->listen(static_cast<quint16>(port));
     }
 
-    updateReceiveState(started);
     if (started) {
-        logMessage(QString("Started receiving on port %1 via %2").arg(port).arg(proto), "[INFO] ");
+        updateServerStatus();
+        logMessage(QString("Started server on port %1 via %2").arg(port).arg(proto), "[INFO] ");
     } else {
-        logMessage("Failed to start receiver", "[ERROR] ");
+        logMessage("Failed to start server", "[ERROR] ");
     }
 }
 
@@ -675,8 +723,10 @@ void CommLinkGUI::onStopReceive() {
     tcpServer->close();
     udpServer->close();
     wsServer->close();
-    updateReceiveState(false);
-    logMessage("Stopped receiving", "[INFO] ");
+    connectedClientsList->clear();
+    targetClientCombo->clear();
+    updateServerStatus();
+    logMessage("Stopped server", "[INFO] ");
 }
 
 void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &protocol, const QString &senderInfo) {
@@ -821,9 +871,144 @@ void CommLinkGUI::onToggleAutoMode() {
     logMessage("Switched to Auto theme (follows system)", "[THEME] ");
 }
 
+void CommLinkGUI::onClientProtocolChanged(int index) {
+    Q_UNUSED(index);
+    updateFieldVisibility();
+}
+
+void CommLinkGUI::onServerProtocolChanged(int index) {
+    Q_UNUSED(index);
+    if (!connectedClientsList) return;
+    
+    QString proto = receiveProtocolCombo->currentText();
+    // Show/hide client list based on protocol
+    bool showClientList = (proto == "TCP" || proto == "WebSocket");
+    connectedClientsList->setVisible(showClientList);
+    clientCountLabel->setVisible(showClientList);
+}
+
+void CommLinkGUI::onSendModeChanged(int index) {
+    if (!targetClientCombo) return;
+    
+    int mode = sendModeCombo->itemData(index).toInt();
+    // Enable target selector only for "Send to Selected Client"
+    targetClientCombo->setEnabled(mode == 2);
+    updateSendButtonState();
+}
+
+void CommLinkGUI::onClientConnected(const QString& clientInfo) {
+    if (!connectedClientsList) return;
+    
+    connectedClientsList->addItem(clientInfo);
+    targetClientCombo->addItem(clientInfo);
+    clientCountLabel->setText(QString("Connected Clients: %1").arg(connectedClientsList->count()));
+    updateSendButtonState();
+    logMessage("Client connected: " + clientInfo, "[SERVER] ");
+}
+
+void CommLinkGUI::onClientDisconnected(const QString& clientInfo) {
+    if (!connectedClientsList) return;
+    
+    // Remove from list
+    auto items = connectedClientsList->findItems(clientInfo, Qt::MatchExactly);
+    for (auto item : items) {
+        delete connectedClientsList->takeItem(connectedClientsList->row(item));
+    }
+    
+    // Remove from target combo
+    int idx = targetClientCombo->findText(clientInfo);
+    if (idx >= 0) targetClientCombo->removeItem(idx);
+    
+    clientCountLabel->setText(QString("Connected Clients: %1").arg(connectedClientsList->count()));
+    updateSendButtonState();
+    logMessage("Client disconnected: " + clientInfo, "[SERVER] ");
+}
+
+void CommLinkGUI::updateClientStatus() {
+    bool anyConnected = tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected();
+    
+    if (anyConnected) {
+        QString proto = protocolCombo->currentText();
+        clientStatusLabel->setText("Connected (" + proto + ")");
+        clientStatusLabel->setStyleSheet("color: #28a745; font-weight: bold;");
+        connectBtn->setText("Disconnect");
+        connectBtn->setStyleSheet("QPushButton { font-weight: bold; background-color: #dc3545; color: white; }");
+    } else {
+        clientStatusLabel->setText("Disconnected");
+        clientStatusLabel->setStyleSheet("color: #dc3545; font-weight: bold;");
+        connectBtn->setText("Connect");
+        connectBtn->setStyleSheet("QPushButton { font-weight: bold; background-color: #007bff; color: white; }");
+    }
+    
+    updateSendButtonState();
+}
+
+void CommLinkGUI::updateServerStatus() {
+    bool anyListening = tcpServer->isListening() || udpServer->isListening() || wsServer->isListening();
+    
+    if (anyListening) {
+        QString proto = receiveProtocolCombo->currentText();
+        serverStatusLabel->setText("Listening (" + proto + ")");
+        serverStatusLabel->setStyleSheet("color: #28a745; font-weight: bold;");
+        startReceiveBtn->setEnabled(false);
+        stopReceiveBtn->setEnabled(true);
+    } else {
+        serverStatusLabel->setText("Stopped");
+        serverStatusLabel->setStyleSheet("color: #dc3545; font-weight: bold;");
+        startReceiveBtn->setEnabled(true);
+        stopReceiveBtn->setEnabled(false);
+    }
+    
+    updateSendButtonState();
+}
+
+void CommLinkGUI::updateSendButtonState() {
+    if (!sendBtn || !connectedClientsList) return;
+    
+    bool clientConnected = tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected();
+    bool serverHasClients = connectedClientsList->count() > 0;
+    bool serverListening = tcpServer->isListening() || udpServer->isListening() || wsServer->isListening();
+    
+    int sendMode = sendModeCombo->currentData().toInt();
+    
+    bool canSend = false;
+    if (sendMode == 0) {
+        // Send as client
+        canSend = clientConnected;
+    } else if (sendMode == 1) {
+        // Broadcast from server
+        canSend = serverListening && serverHasClients;
+    } else if (sendMode == 2) {
+        // Send to selected client
+        canSend = serverListening && targetClientCombo->currentIndex() >= 0;
+    }
+    
+    sendBtn->setEnabled(canSend);
+}
+
+void CommLinkGUI::updateFieldVisibility() {
+    QString proto = protocolCombo->currentText();
+    
+    if (proto == "WebSocket") {
+        hostEdit->setPlaceholderText("ws://host:port or wss://host:port");
+        portEdit->setVisible(false);
+        findChild<QLabel*>("Port:")->setVisible(false);
+    } else {
+        hostEdit->setPlaceholderText("Host/IP address");
+        portEdit->setVisible(true);
+        // Find and show port label
+        auto labels = findChildren<QLabel*>();
+        for (auto label : labels) {
+            if (label->text() == "Port:") {
+                label->setVisible(true);
+                break;
+            }
+        }
+    }
+}
+
 void CommLinkGUI::onWsConnected() {
-    connectBtn->setText("Disconnect");
-    connectBtn->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }");
+    updateClientStatus();
     logMessage("WebSocket connected successfully", "[WS] ");
     
     // Sync format with current selection
@@ -832,8 +1017,7 @@ void CommLinkGUI::onWsConnected() {
 }
 
 void CommLinkGUI::onWsDisconnected() {
-    connectBtn->setText("Connect");
-    connectBtn->setStyleSheet("QPushButton { font-weight: bold; }");
+    updateClientStatus();
     logMessage("WebSocket disconnected", "[WS] ");
 }
 

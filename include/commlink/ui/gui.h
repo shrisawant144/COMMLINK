@@ -8,6 +8,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QMenuBar>
+#include <QtWidgets/QListWidget>
 #include <QtGui/QIntValidator>
 #include <QtGui/QCloseEvent>
 #include <QtCore/QJsonDocument>
@@ -51,6 +52,11 @@ private slots:
     void onWsConnected();
     void onWsDisconnected();
     void onWsError(const QString& error);
+    void onClientProtocolChanged(int index);
+    void onServerProtocolChanged(int index);
+    void onSendModeChanged(int index);
+    void onClientConnected(const QString& clientInfo);
+    void onClientDisconnected(const QString& clientInfo);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -64,6 +70,10 @@ private:
     void saveSettings();
     void logMessage(const QString &message, const QString &prefix = "");
     bool validateInputs();
+    void updateClientStatus();
+    void updateServerStatus();
+    void updateSendButtonState();
+    void updateFieldVisibility();
 
     // UI Components
     QComboBox *protocolCombo;
@@ -79,6 +89,14 @@ private:
     QAction *darkModeAction;
     QAction *autoModeAction;
     LoggerWidget *logger;
+    
+    // Enhanced UI components
+    QLabel *clientStatusLabel;
+    QLabel *serverStatusLabel;
+    QComboBox *sendModeCombo;
+    QComboBox *targetClientCombo;
+    QListWidget *connectedClientsList;
+    QLabel *clientCountLabel;
 
     // Validators
     QIntValidator *portValidator;
