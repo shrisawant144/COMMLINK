@@ -43,7 +43,6 @@ private slots:
     void onToggleLightMode();
     void onToggleDarkMode();
     void onToggleAutoMode();
-    void onWsConnect();
     void onWsConnected();
     void onWsDisconnected();
     void onWsError(const QString& error);
@@ -75,10 +74,6 @@ private:
     QAction *darkModeAction;
     QAction *autoModeAction;
     LoggerWidget *logger;
-    
-    // WebSocket UI
-    QLineEdit *wsUrlEdit;
-    QPushButton *wsConnectBtn;
 
     // Validators
     QIntValidator *portValidator;
