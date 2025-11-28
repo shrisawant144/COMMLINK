@@ -15,6 +15,7 @@
 #include "../core/dataformat.h"
 #include "../network/sender.h"
 #include "../network/receiver.h"
+#include "../network/websocketclient.h"
 #include "../core/filemanager.h"
 #include "../core/exportmanager.h"
 #include "../core/messagehistorymanager.h"
@@ -42,6 +43,10 @@ private slots:
     void onToggleLightMode();
     void onToggleDarkMode();
     void onToggleAutoMode();
+    void onWsConnect();
+    void onWsConnected();
+    void onWsDisconnected();
+    void onWsError(const QString& error);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -70,6 +75,10 @@ private:
     QAction *darkModeAction;
     QAction *autoModeAction;
     LoggerWidget *logger;
+    
+    // WebSocket UI
+    QLineEdit *wsUrlEdit;
+    QPushButton *wsConnectBtn;
 
     // Validators
     QIntValidator *portValidator;
@@ -77,6 +86,7 @@ private:
     // Business logic
     Sender sender;
     Receiver receiver;
+    WebSocketClient *wsClient;
     MessageHistoryManager historyManager;
     QList<DataMessage> receivedMessages;
     bool isConnected = false;

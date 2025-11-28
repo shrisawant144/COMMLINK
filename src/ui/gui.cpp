@@ -47,6 +47,13 @@ CommLinkGUI::CommLinkGUI() {
     resize(1000, 700);
     setMinimumSize(800, 600);
     
+    // Initialize WebSocket client
+    wsClient = new WebSocketClient(this);
+    connect(wsClient, &WebSocketClient::connected, this, &CommLinkGUI::onWsConnected);
+    connect(wsClient, &WebSocketClient::disconnected, this, &CommLinkGUI::onWsDisconnected);
+    connect(wsClient, &WebSocketClient::messageReceived, this, &CommLinkGUI::onDataReceived);
+    connect(wsClient, &WebSocketClient::errorOccurred, this, &CommLinkGUI::onWsError);
+    
     // Initialize database with better error handling
     if (!historyManager.initializeDatabase()) {
         QMessageBox::critical(this, "Database Error", 
@@ -217,6 +224,24 @@ void CommLinkGUI::setupUI()
     receiveLayout->addLayout(receiveButtonLayout, 3, 1);
     
     leftLayout->addWidget(receiveGroup);
+    
+    // WebSocket Configuration
+    auto *wsGroup = new QGroupBox("WebSocket");
+    auto *wsLayout = new QGridLayout(wsGroup);
+    
+    wsUrlEdit = new QLineEdit("ws://localhost:8080");
+    wsUrlEdit->setMinimumHeight(32);
+    wsUrlEdit->setPlaceholderText("WebSocket URL");
+    
+    wsConnectBtn = new QPushButton("Connect WS");
+    wsConnectBtn->setMinimumHeight(36);
+    wsConnectBtn->setStyleSheet("QPushButton { font-weight: bold; }");
+    
+    wsLayout->addWidget(new QLabel("URL:"), 0, 0);
+    wsLayout->addWidget(wsUrlEdit, 0, 1);
+    wsLayout->addWidget(wsConnectBtn, 1, 0, 1, 2);
+    
+    leftLayout->addWidget(wsGroup);
     leftLayout->addStretch();
     
     splitter->addWidget(leftPanel);
@@ -395,6 +420,7 @@ void CommLinkGUI::setupUI()
     connect(exportLogsBtn, &QPushButton::clicked, this, &CommLinkGUI::onExportLogs);
     connect(exportMessagesBtn, &QPushButton::clicked, this, &CommLinkGUI::onExportMessages);
     connect(clearMessagesBtn, &QPushButton::clicked, this, &CommLinkGUI::onClearMessages);
+    connect(wsConnectBtn, &QPushButton::clicked, this, &CommLinkGUI::onWsConnect);
     
     // Connect theme actions
     connect(lightModeAction, &QAction::triggered, this, &CommLinkGUI::onToggleLightMode);
@@ -546,8 +572,8 @@ void CommLinkGUI::onConnect() {
 }
 
 void CommLinkGUI::onSend() {
-    if (!isConnected) {
-        QMessageBox::warning(this, "Error", "Not connected");
+    if (!isConnected && !wsClient->isConnected()) {
+        QMessageBox::warning(this, "Error", "Not connected (TCP/UDP or WebSocket)");
         return;
     }
 
@@ -566,11 +592,22 @@ void CommLinkGUI::onSend() {
     QVariant data = DataMessage::parseInput(messageText, format);
     DataMessage msg(format, data);
 
-    if (sender.sendData) {
+    // Send via WebSocket if connected
+    if (wsClient->isConnected()) {
+        wsClient->sendMessage(msg);
+        logMessage("Sent via WebSocket: " + messageText, "[WS-SEND] ");
+        
+        // Save to history
+        if (!historyManager.saveMessage("sent", "WebSocket", wsUrlEdit->text(), 0, msg)) {
+            logMessage("Failed to save sent message to history", "[WARN] ");
+        }
+    }
+    // Otherwise send via TCP/UDP
+    else if (isConnected && sender.sendData) {
         sender.sendData(msg);
         logMessage("Sent: " + messageText, "[SEND] ");
 
-        // Save to history (for all formats now)
+        // Save to history
         QString host = hostEdit->text().trimmed();
         int port = portEdit->text().toInt();
         if (!historyManager.saveMessage("sent", protocolCombo->currentText(), host, port, msg)) {
@@ -754,6 +791,43 @@ void CommLinkGUI::onToggleAutoMode() {
     logMessage("Switched to Auto theme (follows system)", "[THEME] ");
 }
 
+void CommLinkGUI::onWsConnect() {
+    if (wsClient->isConnected()) {
+        wsClient->disconnect();
+        wsConnectBtn->setText("Connect WS");
+        logMessage("Disconnecting WebSocket...", "[WS] ");
+    } else {
+        QString url = wsUrlEdit->text().trimmed();
+        if (url.isEmpty()) {
+            QMessageBox::warning(this, "Invalid URL", "Please enter a WebSocket URL");
+            return;
+        }
+        wsClient->connectToServer(url);
+        logMessage("Connecting to " + url + "...", "[WS] ");
+    }
+}
+
+void CommLinkGUI::onWsConnected() {
+    wsConnectBtn->setText("Disconnect WS");
+    wsConnectBtn->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }");
+    logMessage("WebSocket connected successfully", "[WS] ");
+    
+    // Sync format with current selection
+    DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->currentData().toInt());
+    wsClient->setFormat(format);
+}
+
+void CommLinkGUI::onWsDisconnected() {
+    wsConnectBtn->setText("Connect WS");
+    wsConnectBtn->setStyleSheet("QPushButton { font-weight: bold; }");
+    logMessage("WebSocket disconnected", "[WS] ");
+}
+
+void CommLinkGUI::onWsError(const QString& error) {
+    logMessage("WebSocket error: " + error, "[ERROR] ");
+    QMessageBox::critical(this, "WebSocket Error", error);
+}
+
 void CommLinkGUI::closeEvent(QCloseEvent *event) {
     // Disconnect all connections before closing
     if (isConnected) {
@@ -761,6 +835,9 @@ void CommLinkGUI::closeEvent(QCloseEvent *event) {
     }
     if (isReceiving) {
         receiver.disconnect();
+    }
+    if (wsClient->isConnected()) {
+        wsClient->disconnect();
     }
     
     // Save settings
