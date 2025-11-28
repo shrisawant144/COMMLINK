@@ -1,6 +1,6 @@
 # CommLink
 
-[![CI](https://github.com/username/commlink/workflows/CI/badge.svg)](https://github.com/username/commlink/actions)
+[![CI](https://github.com/shrisawant144/COMMLINK/workflows/CI/badge.svg)](https://github.com/shrisawant144/COMMLINK/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](VERSION)
 
