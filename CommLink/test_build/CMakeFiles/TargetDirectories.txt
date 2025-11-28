@@ -1,4 +1,0 @@
-/home/miko/qt_projects/CommLink/test_build/CMakeFiles/rebuild_cache.dir
-/home/miko/qt_projects/CommLink/test_build/CMakeFiles/edit_cache.dir
-/home/miko/qt_projects/CommLink/test_build/CMakeFiles/CommLink.dir
-/home/miko/qt_projects/CommLink/test_build/CMakeFiles/CommLink_autogen.dir
