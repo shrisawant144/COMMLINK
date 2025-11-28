@@ -44,12 +44,21 @@ bool MessageHistoryManager::initializeDatabase()
 
 bool MessageHistoryManager::createTables()
 {
+    // Check if we need to migrate (old table without WebSocket support)
+    QSqlQuery checkQuery(db);
+    if (checkQuery.exec("SELECT protocol FROM messages WHERE protocol = 'WebSocket' LIMIT 1")) {
+        // Table exists and supports WebSocket, no migration needed
+    } else {
+        // Drop old table if it exists (migration)
+        executeQuery("DROP TABLE IF EXISTS messages");
+    }
+    
     QString createMessagesTable = R"(
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             direction TEXT CHECK(direction IN ('sent', 'received')),
-            protocol TEXT CHECK(protocol IN ('TCP', 'UDP')),
+            protocol TEXT CHECK(protocol IN ('TCP', 'UDP', 'WebSocket')),
             host TEXT NOT NULL,
             port INTEGER NOT NULL,
             content TEXT NOT NULL,
