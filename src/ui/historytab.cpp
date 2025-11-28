@@ -1,4 +1,4 @@
-#include "commlink/historytab.h"
+#include "commlink/ui/historytab.h"
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>

@@ -10,6 +10,6 @@ mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ..
-cmake --build . -j$(nproc)
+cmake --build .
 
 echo "✓ Build complete: ${BUILD_DIR}/bin/commlink"

@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <atomic>
-#include "dataformat.h"
+#include "../core/dataformat.h"
 
 class ReceiverThread : public QThread
 {

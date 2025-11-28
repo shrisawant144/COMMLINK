@@ -1,4 +1,4 @@
-#include "commlink/logger.h"
+#include "commlink/core/logger.h"
 #include <QtWidgets/QVBoxLayout>
 #include <QtGui/QTextDocument>
 #include <QtCore/QDateTime>

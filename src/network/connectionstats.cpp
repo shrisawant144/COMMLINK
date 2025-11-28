@@ -1,4 +1,4 @@
-#include "commlink/connectionstats.h"
+#include "commlink/network/connectionstats.h"
 
 ConnectionStats::ConnectionStats(QObject *parent) : QObject(parent) {}
 

@@ -4,7 +4,7 @@
 #include <QMutex>
 #include <QWaitCondition>
 #include <atomic>
-#include "dataformat.h"
+#include "../core/dataformat.h"
 
 class SenderThread : public QThread
 {

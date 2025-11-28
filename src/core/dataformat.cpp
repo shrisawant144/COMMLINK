@@ -1,4 +1,4 @@
-#include "commlink/dataformat.h"
+#include "commlink/core/dataformat.h"
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QXmlStreamWriter>

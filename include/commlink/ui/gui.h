@@ -12,14 +12,14 @@
 #include <QtGui/QCloseEvent>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QSettings>
-#include "dataformat.h"
-#include "sender.h"
-#include "receiver.h"
-#include "filemanager.h"
-#include "exportmanager.h"
-#include "messagehistorymanager.h"
+#include "../core/dataformat.h"
+#include "../network/sender.h"
+#include "../network/receiver.h"
+#include "../core/filemanager.h"
+#include "../core/exportmanager.h"
+#include "../core/messagehistorymanager.h"
 #include "thememanager.h"
-#include "logger.h"
+#include "../core/logger.h"
 
 class CommLinkGUI : public QWidget
 {

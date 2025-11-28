@@ -1,4 +1,4 @@
-#include "commlink/thememanager.h"
+#include "commlink/ui/thememanager.h"
 #include <QTimer>
 #include <QStyleFactory>
 #include <QWidget>

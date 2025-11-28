@@ -1,4 +1,4 @@
-#include "commlink/messagehistorymanager.h"
+#include "commlink/core/messagehistorymanager.h"
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
 #include <QtCore/QVariant>

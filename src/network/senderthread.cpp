@@ -1,4 +1,4 @@
-#include "commlink/senderthread.h"
+#include "commlink/network/senderthread.h"
 #include <QDebug>
 
 SenderThread::SenderThread(QObject *parent) : QThread(parent) {}

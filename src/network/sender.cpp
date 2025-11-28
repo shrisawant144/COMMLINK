@@ -1,4 +1,4 @@
-#include "commlink/sender.h"
+#include "commlink/network/sender.h"
 #include <QtCore/QDebug>
 #include <arpa/inet.h>
 #include <unistd.h>

@@ -1,4 +1,4 @@
-#include "exportmanager.h"
+#include "commlink/core/exportmanager.h"
 #include <QFile>
 #include <QTextStream>
 #include <QJsonArray>
@@ -7,7 +7,6 @@
 #include <QStandardPaths>
 #include <QIODevice>
 #include <QDateTime>
-#include <QMessageBox>
 
 bool ExportManager::exportLogs(const QStringList& logs, const QString& format, const QString& filePath) {
     QFile file(filePath);

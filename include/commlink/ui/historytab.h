@@ -12,7 +12,7 @@
 #include <QtWidgets/QTableWidgetItem>
 #include <QtCore/QTimer>
 #include <QtCore/QDateTime>
-#include "messagehistorymanager.h"
+#include "../core/messagehistorymanager.h"
 
 class HistoryTab : public QWidget
 {

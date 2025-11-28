@@ -1,7 +1,7 @@
-#include "commlink/gui.h"
-#include "commlink/sender.h"
-#include "commlink/receiver.h"
-#include "commlink/historytab.h"
+#include "commlink/ui/gui.h"
+#include "commlink/network/sender.h"
+#include "commlink/network/receiver.h"
+#include "commlink/ui/historytab.h"
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QGridLayout>
@@ -30,7 +30,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QActionGroup>
 #include <QtGui/QIcon>
-#include "commlink/thememanager.h"
+#include "commlink/ui/thememanager.h"
 
 CommLinkGUI::CommLinkGUI() {
     setWindowTitle("CommLink - Network Communication Tool");

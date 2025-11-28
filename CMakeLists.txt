@@ -1,10 +1,6 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.8.2)
 
-project(CommLink 
-    VERSION 1.0.0
-    DESCRIPTION "Professional Network Communication Tool"
-    LANGUAGES CXX
-)
+project(CommLink VERSION 1.0.0 LANGUAGES CXX)
 
 # Project-wide settings
 set(CMAKE_CXX_STANDARD 17)
@@ -48,22 +44,16 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # Subdirectories
 add_subdirectory(src)
 
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
-
 # Installation
-install(TARGETS commlink
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-)
-
 install(DIRECTORY include/commlink
     DESTINATION include
     FILES_MATCHING PATTERN "*.h"
 )
+
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 # Package configuration
 set(CPACK_PACKAGE_NAME "CommLink")

@@ -1,4 +1,4 @@
-#include "filemanager.h"
+#include "commlink/core/filemanager.h"
 #include <QtCore/QFile>
 #include <QtCore/QDir>
 #include <QtCore/QStandardPaths>

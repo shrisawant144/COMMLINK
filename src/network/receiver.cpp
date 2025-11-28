@@ -1,5 +1,5 @@
-#include "commlink/receiver.h"
-#include "commlink/receiverthread.h"
+#include "commlink/network/receiver.h"
+#include "commlink/network/receiverthread.h"
 #include <QtCore/QDebug>
 #include <arpa/inet.h>
 #include <unistd.h>

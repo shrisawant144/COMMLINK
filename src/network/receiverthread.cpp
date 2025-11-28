@@ -1,4 +1,4 @@
-#include "commlink/receiverthread.h"
+#include "commlink/network/receiverthread.h"
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QDebug>

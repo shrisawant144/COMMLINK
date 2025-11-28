@@ -4,7 +4,7 @@
 #include <functional>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "dataformat.h"
+#include "../core/dataformat.h"
 
 class Sender : public QObject
 {
