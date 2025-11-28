@@ -195,7 +195,7 @@ void CommLinkGUI::setupUI()
     auto *receiveLayout = new QGridLayout(receiveGroup);
     
     receiveProtocolCombo = new QComboBox();
-    receiveProtocolCombo->addItems({"TCP", "UDP"});
+    receiveProtocolCombo->addItems({"TCP", "UDP", "WebSocket"});
     receiveProtocolCombo->setMinimumHeight(32);
     
 
@@ -621,7 +621,16 @@ void CommLinkGUI::onSend() {
 }
 
 void CommLinkGUI::onStartReceive() {
-    QString proto = receiveProtocolCombo->currentText().toLower();
+    QString proto = receiveProtocolCombo->currentText();
+    
+    // WebSocket uses client mode, not server
+    if (proto == "WebSocket") {
+        QMessageBox::information(this, "WebSocket", 
+            "WebSocket receiving is handled through the Send Configuration.\n"
+            "Select 'WebSocket' protocol in Send section and connect to a WebSocket server.");
+        return;
+    }
+    
     bool ok;
     int port = receivePortEdit->text().toInt(&ok);
 
@@ -631,15 +640,15 @@ void CommLinkGUI::onStartReceive() {
     }
 
     bool started = false;
-    if (proto == "tcp") {
+    if (proto == "TCP") {
         started = receiver.connectTcp(static_cast<quint16>(port));
-    } else {
+    } else if (proto == "UDP") {
         started = receiver.connectUdp(static_cast<quint16>(port));
     }
 
     updateReceiveState(started);
     if (started) {
-        logMessage(QString("Started receiving on port %1 via %2").arg(port).arg(proto.toUpper()), "[INFO] ");
+        logMessage(QString("Started receiving on port %1 via %2").arg(port).arg(proto), "[INFO] ");
     } else {
         logMessage("Failed to start receiver", "[ERROR] ");
     }
