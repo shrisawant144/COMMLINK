@@ -16,6 +16,7 @@
 #include "../network/sender.h"
 #include "../network/receiver.h"
 #include "../network/websocketclient.h"
+#include "../network/websocketserver.h"
 #include "../core/filemanager.h"
 #include "../core/exportmanager.h"
 #include "../core/messagehistorymanager.h"
@@ -82,6 +83,7 @@ private:
     Sender sender;
     Receiver receiver;
     WebSocketClient *wsClient;
+    WebSocketServer *wsServer;
     MessageHistoryManager historyManager;
     QList<DataMessage> receivedMessages;
     bool isConnected = false;

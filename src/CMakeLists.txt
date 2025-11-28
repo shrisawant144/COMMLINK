@@ -19,11 +19,13 @@ add_library(commlink_network STATIC
     network/receiverthread.cpp
     network/connectionstats.cpp
     network/websocketclient.cpp
+    network/websocketserver.cpp
     ${CMAKE_SOURCE_DIR}/include/commlink/network/sender.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/receiver.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/senderthread.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/receiverthread.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/websocketclient.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/network/websocketserver.h
 )
 target_include_directories(commlink_network PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(commlink_network Qt5::Core Qt5::WebSockets commlink_core)

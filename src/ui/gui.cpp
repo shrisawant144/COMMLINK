@@ -54,6 +54,11 @@ CommLinkGUI::CommLinkGUI() {
     connect(wsClient, &WebSocketClient::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(wsClient, &WebSocketClient::errorOccurred, this, &CommLinkGUI::onWsError);
     
+    // Initialize WebSocket server
+    wsServer = new WebSocketServer(this);
+    connect(wsServer, &WebSocketServer::messageReceived, this, &CommLinkGUI::onDataReceived);
+    connect(wsServer, &WebSocketServer::errorOccurred, this, &CommLinkGUI::onWsError);
+    
     // Initialize database with better error handling
     if (!historyManager.initializeDatabase()) {
         QMessageBox::critical(this, "Database Error", 
@@ -623,14 +628,6 @@ void CommLinkGUI::onSend() {
 void CommLinkGUI::onStartReceive() {
     QString proto = receiveProtocolCombo->currentText();
     
-    // WebSocket uses client mode, not server
-    if (proto == "WebSocket") {
-        QMessageBox::information(this, "WebSocket", 
-            "WebSocket receiving is handled through the Send Configuration.\n"
-            "Select 'WebSocket' protocol in Send section and connect to a WebSocket server.");
-        return;
-    }
-    
     bool ok;
     int port = receivePortEdit->text().toInt(&ok);
 
@@ -644,6 +641,8 @@ void CommLinkGUI::onStartReceive() {
         started = receiver.connectTcp(static_cast<quint16>(port));
     } else if (proto == "UDP") {
         started = receiver.connectUdp(static_cast<quint16>(port));
+    } else if (proto == "WebSocket") {
+        started = wsServer->listen(static_cast<quint16>(port));
     }
 
     updateReceiveState(started);
@@ -656,6 +655,7 @@ void CommLinkGUI::onStartReceive() {
 
 void CommLinkGUI::onStopReceive() {
     receiver.disconnect();
+    wsServer->close();
     updateReceiveState(false);
     logMessage("Stopped receiving", "[INFO] ");
 }
@@ -830,6 +830,7 @@ void CommLinkGUI::closeEvent(QCloseEvent *event) {
     }
     if (isReceiving) {
         receiver.disconnect();
+        wsServer->close();
     }
     if (wsClient->isConnected()) {
         wsClient->disconnect();
