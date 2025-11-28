@@ -14,8 +14,6 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QSettings>
 #include "../core/dataformat.h"
-#include "../network/sender.h"
-#include "../network/receiver.h"
 #include "../network/tcpclient.h"
 #include "../network/tcpserver.h"
 #include "../network/udpclient.h"
@@ -64,8 +62,6 @@ protected:
 private:
     void setupUI();
     void setupValidators();
-    void updateConnectionState(bool connected);
-    void updateReceiveState(bool receiving);
     void updateStatusBar();
     void saveSettings();
     void logMessage(const QString &message, const QString &prefix = "");
@@ -102,8 +98,6 @@ private:
     QIntValidator *portValidator;
 
     // Business logic
-    Sender sender;
-    Receiver receiver;
     TcpClient *tcpClient;
     TcpServer *tcpServer;
     UdpClient *udpClient;
@@ -112,6 +106,4 @@ private:
     WebSocketServer *wsServer;
     MessageHistoryManager historyManager;
     QList<DataMessage> receivedMessages;
-    bool isConnected = false;
-    bool isReceiving = false;
 };

@@ -13,21 +13,12 @@ target_link_libraries(commlink_core Qt5::Core Qt5::Widgets Qt5::Sql)
 
 # Network library
 add_library(commlink_network STATIC
-    network/sender.cpp
-    network/receiver.cpp
-    network/senderthread.cpp
-    network/receiverthread.cpp
-    network/connectionstats.cpp
     network/tcpclient.cpp
     network/tcpserver.cpp
     network/udpclient.cpp
     network/udpserver.cpp
     network/websocketclient.cpp
     network/websocketserver.cpp
-    ${CMAKE_SOURCE_DIR}/include/commlink/network/sender.h
-    ${CMAKE_SOURCE_DIR}/include/commlink/network/receiver.h
-    ${CMAKE_SOURCE_DIR}/include/commlink/network/senderthread.h
-    ${CMAKE_SOURCE_DIR}/include/commlink/network/receiverthread.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/tcpclient.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/tcpserver.h
     ${CMAKE_SOURCE_DIR}/include/commlink/network/udpclient.h

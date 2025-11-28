@@ -1,6 +1,4 @@
 #include "commlink/ui/gui.h"
-#include "commlink/network/sender.h"
-#include "commlink/network/receiver.h"
 #include "commlink/ui/historytab.h"
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QHBoxLayout>
@@ -95,8 +93,6 @@ CommLinkGUI::CommLinkGUI() {
     
     setupUI();
     setupValidators();
-    updateConnectionState(false);
-    updateReceiveState(false);
     
     // Initialize theme
     ThemeManager::instance().loadSettings();
@@ -462,7 +458,6 @@ void CommLinkGUI::setupUI()
     connect(sendBtn, &QPushButton::clicked, this, &CommLinkGUI::onSend);
     connect(startReceiveBtn, &QPushButton::clicked, this, &CommLinkGUI::onStartReceive);
     connect(stopReceiveBtn, &QPushButton::clicked, this, &CommLinkGUI::onStopReceive);
-    connect(&receiver, &Receiver::dataReceived, this, &CommLinkGUI::onDataReceived);
     connect(loadJsonBtn, &QPushButton::clicked, this, &CommLinkGUI::onLoadMessage);
     connect(saveJsonBtn, &QPushButton::clicked, this, &CommLinkGUI::onSaveMessage);
     connect(exportLogsBtn, &QPushButton::clicked, this, &CommLinkGUI::onExportLogs);
@@ -490,61 +485,6 @@ void CommLinkGUI::setupValidators()
     protocolCombo->setCurrentText(settings.value("sendProtocol", "TCP").toString());
     receivePortEdit->setText(settings.value("receivePort", "5001").toString());
     receiveProtocolCombo->setCurrentText(settings.value("receiveProtocol", "TCP").toString());
-}
-
-void CommLinkGUI::updateConnectionState(bool connected)
-{
-    isConnected = connected;
-    sendBtn->setEnabled(connected);
-    connectBtn->setText(connected ? "Disconnect" : "Connect");
-    
-    // Update visual status
-    auto *sendStatus = findChild<QLabel*>("sendStatus");
-    if (sendStatus) {
-        if (connected) {
-            sendStatus->setText(QString("Connected (%1:%2)").arg(hostEdit->text()).arg(portEdit->text()));
-            sendStatus->setStyleSheet("color: green; font-weight: bold;");
-        } else {
-            sendStatus->setText("Disconnected");
-            sendStatus->setStyleSheet("color: red; font-weight: bold;");
-        }
-    }
-
-    // Disable connection settings when connected
-    protocolCombo->setEnabled(!connected);
-    hostEdit->setEnabled(!connected);
-    portEdit->setEnabled(!connected);
-
-    updateStatusBar();
-}
-
-void CommLinkGUI::updateReceiveState(bool receiving)
-{
-    isReceiving = receiving;
-    startReceiveBtn->setEnabled(!receiving);
-    stopReceiveBtn->setEnabled(receiving);
-    // receiveHostEdit removed - no need to enable/disable
-    receivePortEdit->setEnabled(!receiving);
-    receiveProtocolCombo->setEnabled(!receiving);
-    
-    // Update visual status
-    auto *receiveStatus = findChild<QLabel*>("receiveStatus");
-    if (receiveStatus) {
-        if (receiving) {
-            receiveStatus->setText(QString("Listening on port %1").arg(receivePortEdit->text()));
-            receiveStatus->setStyleSheet("color: green; font-weight: bold;");
-        } else {
-            receiveStatus->setText("Stopped");
-            receiveStatus->setStyleSheet("color: red; font-weight: bold;");
-        }
-    }
-
-    // Clear received messages when stopping
-    if (!receiving) {
-        receivedMessages.clear();
-    }
-
-    updateStatusBar();
 }
 
 void CommLinkGUI::logMessage(const QString &message, const QString &prefix)
@@ -759,6 +699,12 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
     }
 
     QString displayText = msg.toDisplayString();
+    
+    // Debug: check if displayText is empty
+    if (displayText.trimmed().isEmpty()) {
+        qDebug() << "Empty display text! Type:" << static_cast<int>(msg.type) << "Data valid:" << msg.data.isValid() << "Data:" << msg.data;
+    }
+    
     QString message = QString("[%1] ← %2 from %3:\n%4\n")
                      .arg(timestamp).arg(protocol).arg(source).arg(displayText);
     receivedEdit->append(message);
@@ -777,8 +723,11 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
 }
 
 void CommLinkGUI::updateStatusBar() {
-    QString sendStatus = isConnected ? QString("TX: %1:%2").arg(hostEdit->text()).arg(portEdit->text()) : "TX: Idle";
-    QString recvStatus = isReceiving ? QString("RX: Port %1").arg(receivePortEdit->text()) : "RX: Idle";
+    bool anyClientConnected = tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected();
+    bool anyServerListening = tcpServer->isListening() || udpServer->isListening() || wsServer->isListening();
+    
+    QString sendStatus = anyClientConnected ? QString("TX: %1:%2").arg(hostEdit->text()).arg(portEdit->text()) : "TX: Idle";
+    QString recvStatus = anyServerListening ? QString("RX: Port %1").arg(receivePortEdit->text()) : "RX: Idle";
     QString themeStatus = QString("UI: %1").arg(ThemeManager::instance().getThemeName());
     QString status = QString("%1 | %2 | %3").arg(sendStatus).arg(recvStatus).arg(themeStatus);
     statusBar->showMessage(status);
