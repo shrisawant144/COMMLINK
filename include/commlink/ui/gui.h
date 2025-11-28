@@ -20,6 +20,7 @@
 #include "../network/udpserver.h"
 #include "../network/websocketclient.h"
 #include "../network/websocketserver.h"
+#include "../network/httpclient.h"
 #include "../core/filemanager.h"
 #include "../core/exportmanager.h"
 #include "../core/messagehistorymanager.h"
@@ -105,6 +106,7 @@ private:
     UdpServer *udpServer;
     WebSocketClient *wsClient;
     WebSocketServer *wsServer;
+    HttpClient *httpClient;
     MessageHistoryManager historyManager;
     QList<DataMessage> receivedMessages;
 };

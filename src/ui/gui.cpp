@@ -83,6 +83,11 @@ CommLinkGUI::CommLinkGUI() {
     connect(wsServer, &WebSocketServer::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(wsServer, &WebSocketServer::errorOccurred, this, &CommLinkGUI::onWsError);
     
+    // Initialize HTTP client
+    httpClient = new HttpClient(this);
+    connect(httpClient, &HttpClient::responseReceived, this, &CommLinkGUI::onDataReceived);
+    connect(httpClient, &HttpClient::errorOccurred, this, &CommLinkGUI::onWsError);
+    
     // Initialize database with better error handling
     if (!historyManager.initializeDatabase()) {
         QMessageBox::critical(this, "Database Error", 
@@ -190,18 +195,18 @@ void CommLinkGUI::setupUI()
     auto *sendLayout = new QGridLayout(sendGroup);
     
     protocolCombo = new QComboBox();
-    protocolCombo->addItems({"TCP", "UDP", "WebSocket"});
+    protocolCombo->addItems({"TCP", "UDP", "WebSocket", "HTTP"});
     protocolCombo->setMinimumHeight(32);
     connect(protocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
             this, &CommLinkGUI::onClientProtocolChanged);
     
-    auto *clientInfoLabel = new QLabel("TCP/UDP: Host + Port | WebSocket: ws://host:port");
+    auto *clientInfoLabel = new QLabel("TCP/UDP: Host + Port | WebSocket: ws://host:port | HTTP: http://host:port/path");
     clientInfoLabel->setStyleSheet("color: #6c757d; font-size: 10px; font-style: italic;");
     clientInfoLabel->setWordWrap(true);
     
     hostEdit = new QLineEdit("127.0.0.1");
     hostEdit->setMinimumHeight(32);
-    hostEdit->setPlaceholderText("Host/IP or ws://host:port");
+    hostEdit->setPlaceholderText("Host/IP, ws://host:port, or http://host:port/path");
     
     portEdit = new QLineEdit("5000");
     portEdit->setMinimumHeight(32);
@@ -542,6 +547,22 @@ void CommLinkGUI::onConnect() {
     QString proto = protocolCombo->currentText();
     DataFormatType format = static_cast<DataFormatType>(dataFormatCombo->currentData().toInt());
     
+    // Handle HTTP
+    if (proto == "HTTP") {
+        QString url = hostEdit->text().trimmed();
+        if (url.isEmpty()) {
+            QMessageBox::warning(this, "Invalid URL", "Please enter an HTTP URL");
+            return;
+        }
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "http://" + url;
+        }
+        httpClient->setFormat(format);
+        logMessage("HTTP client ready: " + url, "[HTTP] ");
+        updateClientStatus();
+        return;
+    }
+    
     // Handle WebSocket
     if (proto == "WebSocket") {
         if (wsClient->isConnected()) {
@@ -623,7 +644,16 @@ void CommLinkGUI::onSend() {
     DataMessage msg(format, data);
 
     // Send via appropriate client
-    if (proto == "WebSocket" && wsClient->isConnected()) {
+    if (proto == "HTTP") {
+        QString url = hostEdit->text().trimmed();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "http://" + url;
+        }
+        httpClient->sendRequest(url, HttpClient::POST, msg);
+        logMessage("Sent via HTTP POST: " + messageText, "[HTTP-SEND] ");
+        historyManager.saveMessage("sent", "HTTP", url, 0, msg);
+    }
+    else if (proto == "WebSocket" && wsClient->isConnected()) {
         wsClient->sendMessage(msg);
         logMessage("Sent via WebSocket: " + messageText, "[WS-SEND] ");
         historyManager.saveMessage("sent", "WebSocket", hostEdit->text(), 0, msg);
@@ -959,13 +989,14 @@ void CommLinkGUI::onClientDisconnected(const QString& clientInfo) {
 }
 
 void CommLinkGUI::updateClientStatus() {
-    bool anyConnected = tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected();
+    bool anyConnected = tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected() || 
+                        (protocolCombo->currentText() == "HTTP");
     
     if (anyConnected) {
         QString proto = protocolCombo->currentText();
         clientStatusLabel->setText("Connected (" + proto + ")");
         clientStatusLabel->setStyleSheet("color: #28a745; font-weight: bold;");
-        connectBtn->setText("Disconnect");
+        connectBtn->setText(proto == "HTTP" ? "Ready" : "Disconnect");
         connectBtn->setStyleSheet("QPushButton { font-weight: bold; background-color: #dc3545; color: white; }");
     } else {
         clientStatusLabel->setText("Disconnected");
