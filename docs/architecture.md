@@ -1,73 +1,123 @@
 # CommLink Architecture
 
-## Overview
+## System Overview
 
-CommLink follows a layered architecture with clear separation of concerns:
+CommLink follows a modular, event-driven architecture using Qt's signal-slot mechanism for component communication.
+
+## Component Diagram
 
 ```
-┌─────────────────────────────────────┐
-│         Presentation Layer          │
-│            (UI Module)              │
-├─────────────────────────────────────┤
-│         Business Logic Layer        │
-│      (Network + Core Modules)       │
-├─────────────────────────────────────┤
-│          Data Access Layer          │
-│     (SQLite + File Operations)      │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                         GUI (Main Window)                    │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │  Send    │  │ Receive  │  │   Logs   │  │ History  │   │
+│  │   Tab    │  │   Tab    │  │   Tab    │  │   Tab    │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+└─────────────────────────────────────────────────────────────┘
+         │              │              │              │
+         ▼              ▼              ▼              ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────┐ ┌──────────────┐
+│    Sender    │ │   Receiver   │ │  Logger  │ │   History    │
+│              │ │              │ │          │ │   Manager    │
+└──────────────┘ └──────────────┘ └──────────┘ └──────────────┘
+         │              │                             │
+         ▼              ▼                             ▼
+┌──────────────┐ ┌──────────────┐           ┌──────────────┐
+│ SenderThread │ │ReceiverThread│           │   SQLite DB  │
+└──────────────┘ └──────────────┘           └──────────────┘
+         │              │
+         └──────┬───────┘
+                ▼
+        ┌──────────────┐
+        │  DataFormat  │
+        │   Handler    │
+        └──────────────┘
+                │
+                ▼
+        ┌──────────────┐
+        │   Network    │
+        │  (TCP/UDP)   │
+        └──────────────┘
 ```
 
-## Module Structure
+## Class Relationships
 
-### Core Module (`commlink_core`)
-- **Purpose**: Data handling, serialization, file I/O
-- **Components**: DataFormat, FileManager, ExportManager, Logger
-- **Dependencies**: Qt5::Core
-
-### Network Module (`commlink_network`)
-- **Purpose**: Network communication, protocol handling
-- **Components**: Sender, Receiver, Threads, ConnectionStats
-- **Dependencies**: Qt5::Core, commlink_core
-
-### UI Module (`commlink_ui`)
-- **Purpose**: User interface, visualization
-- **Components**: GUI, HistoryTab, ThemeManager
-- **Dependencies**: Qt5::Widgets, Qt5::Sql, commlink_network, commlink_core
-
-## Design Patterns
-
-- **Layered Architecture**: Clear separation between UI, business logic, and data
-- **Observer Pattern**: Qt signals/slots for event-driven communication
-- **Strategy Pattern**: Multiple data format handlers
-- **Repository Pattern**: MessageHistoryManager for data persistence
-- **Factory Pattern**: DataFormat creation based on type
-
-## Threading Model
-
-- Main thread handles UI events
-- Separate threads for network I/O to prevent blocking
-- Thread-safe communication via Qt signals
+```
+GUI
+ ├── Sender
+ │    └── SenderThread
+ │         └── DataFormat
+ ├── Receiver
+ │    └── ReceiverThread
+ │         └── DataFormat
+ ├── Logger
+ ├── HistoryTab
+ │    └── MessageHistoryManager
+ ├── FileManager
+ ├── ExportManager
+ └── ThemeManager
+```
 
 ## Data Flow
 
+### Sending Message Flow
 ```
-User Input → GUI → Network Layer → DataFormat → Socket
+User Input → GUI → Sender → DataFormat → SenderThread → Network
                                                     ↓
-                                              Network
+                                            Logger ← ConnectionStats
                                                     ↓
-Socket → DataFormat → Network Layer → GUI → Display
+                                            MessageHistoryManager
 ```
 
-## Build System
+### Receiving Message Flow
+```
+Network → ReceiverThread → DataFormat → Receiver → GUI Display
+                                            ↓
+                                        Logger
+                                            ↓
+                                    MessageHistoryManager
+```
 
-CMake-based modular build:
-1. Core library (static)
-2. Network library (static)
-3. UI library (static)
-4. Main executable (links all libraries)
+## Key Design Patterns
 
-## Testing Strategy
+1. **Model-View-Controller (MVC)**: GUI separates presentation from logic
+2. **Observer Pattern**: Qt signals/slots for event handling
+3. **Strategy Pattern**: DataFormat supports multiple serialization strategies
+4. **Singleton Pattern**: Logger and ThemeManager (implicit)
+5. **Thread Pool**: Background threads for non-blocking I/O
 
-- Unit tests for individual components
-- Integration tests for module interactions
-- Fixtures for test data management
+## Threading Model
+
+- **Main Thread**: GUI event loop and user interactions
+- **Sender Thread**: Handles outgoing network connections
+- **Receiver Thread**: Listens for incoming messages without blocking UI
+
+## Database Schema
+
+```sql
+CREATE TABLE messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+    direction TEXT NOT NULL,  -- 'sent' or 'received'
+    protocol TEXT NOT NULL,   -- 'TCP' or 'UDP'
+    format TEXT NOT NULL,     -- 'JSON', 'XML', etc.
+    host TEXT NOT NULL,
+    port INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT NOT NULL      -- 'success' or 'error'
+);
+```
+
+## Performance Considerations
+
+- Asynchronous I/O prevents UI freezing
+- Database indexing on timestamp for fast queries
+- Message size limits to prevent memory issues
+- Connection pooling for repeated sends
+
+## Security Notes
+
+- No encryption implemented (plaintext transmission)
+- No authentication mechanism
+- Suitable for trusted networks only
+- Input validation prevents injection attacks
