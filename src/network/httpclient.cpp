@@ -61,6 +61,11 @@ QNetworkRequest HttpClient::buildRequest(const QString& url) {
     request.setHeader(QNetworkRequest::ContentTypeHeader, getContentType());
     request.setHeader(QNetworkRequest::UserAgentHeader, "CommLink/1.0");
     
+    // Add Accept header based on expected response format
+    if (!m_headers.contains("Accept")) {
+        request.setRawHeader("Accept", getContentType().toUtf8());
+    }
+    
     for (auto it = m_headers.constBegin(); it != m_headers.constEnd(); ++it) {
         request.setRawHeader(it.key().toUtf8(), it.value().toUtf8());
     }
@@ -100,8 +105,29 @@ void HttpClient::onReplyFinished(QNetworkReply* reply) {
 
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray data = reply->readAll();
-        // HTTP responses are always JSON from the server
-        DataMessage msg = DataMessage::deserialize(data, DataFormatType::JSON);
+        
+        // Detect format from Content-Type header
+        DataFormatType responseFormat = m_format;
+        QVariant contentTypeVar = reply->header(QNetworkRequest::ContentTypeHeader);
+        if (contentTypeVar.isValid()) {
+            QString contentType = contentTypeVar.toString().toLower();
+            // Remove charset and other parameters
+            contentType = contentType.split(';').first().trimmed();
+            
+            if (contentType == "application/json") {
+                responseFormat = DataFormatType::JSON;
+            } else if (contentType == "application/xml" || contentType == "text/xml") {
+                responseFormat = DataFormatType::XML;
+            } else if (contentType == "text/csv") {
+                responseFormat = DataFormatType::CSV;
+            } else if (contentType == "text/plain") {
+                responseFormat = DataFormatType::TEXT;
+            } else if (contentType == "application/octet-stream") {
+                responseFormat = DataFormatType::BINARY;
+            }
+        }
+        
+        DataMessage msg = DataMessage::deserialize(data, responseFormat);
         
         QString statusInfo = QString(" [HTTP %1]").arg(statusCode);
         emit responseReceived(msg, source + statusInfo, timestamp);

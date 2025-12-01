@@ -36,7 +36,8 @@ private:
         QByteArray body;
     };
     
-    QByteArray buildResponse(int statusCode, const QString& body);
+    QByteArray buildResponse(int statusCode, const QByteArray& body, DataFormatType format);
+    QByteArray buildCORSPreflightResponse();
     bool tryParseCompleteRequest(QTcpSocket* socket);
     
     QTcpServer *m_server;

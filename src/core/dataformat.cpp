@@ -55,19 +55,25 @@ DataMessage DataMessage::deserialize(const QByteArray& bytes, DataFormatType typ
         QJsonDocument doc = QJsonDocument::fromJson(bytes, &error);
         if (error.error == QJsonParseError::NoError) {
             msg.data = doc;
+        } else {
+            // If JSON parsing fails, store as text
+            msg.data = QString::fromUtf8(bytes);
         }
         break;
     }
     case DataFormatType::XML: {
-        msg.data = QString::fromUtf8(bytes);
+        QString xmlString = QString::fromUtf8(bytes);
+        msg.data = xmlString;
         break;
     }
     case DataFormatType::CSV: {
-        msg.data = QString::fromUtf8(bytes);
+        QString csvString = QString::fromUtf8(bytes);
+        msg.data = csvString;
         break;
     }
     case DataFormatType::TEXT: {
-        msg.data = QString::fromUtf8(bytes);
+        QString textString = QString::fromUtf8(bytes);
+        msg.data = textString;
         break;
     }
     case DataFormatType::BINARY: {
@@ -89,21 +95,40 @@ QString DataMessage::toDisplayString() const {
             QJsonDocument doc = data.value<QJsonDocument>();
             return doc.toJson(QJsonDocument::Indented);
         }
+        QString str = data.toString();
+        return str.isEmpty() ? "[Empty JSON]" : str;
+    }
+    case DataFormatType::XML: {
+        if (data.type() == QVariant::String) {
+            QString str = data.toString();
+            return str.isEmpty() ? "[Empty XML]" : str;
+        }
         return data.toString();
     }
-    case DataFormatType::XML:
-    case DataFormatType::CSV:
-    case DataFormatType::TEXT:
+    case DataFormatType::CSV: {
+        if (data.type() == QVariant::String) {
+            QString str = data.toString();
+            return str.isEmpty() ? "[Empty CSV]" : str;
+        }
         return data.toString();
+    }
+    case DataFormatType::TEXT: {
+        if (data.type() == QVariant::String) {
+            QString str = data.toString();
+            return str.isEmpty() ? "[Empty Text]" : str;
+        }
+        return data.toString();
+    }
     case DataFormatType::BINARY: {
         if (data.type() == QVariant::ByteArray) {
-            return QString("Binary data (%1 bytes)").arg(data.toByteArray().size());
+            QByteArray bytes = data.toByteArray();
+            return QString("Binary data (%1 bytes): %2").arg(bytes.size()).arg(QString::fromLatin1(bytes.toHex()));
         }
         return "Binary data";
     }
     case DataFormatType::HEX: {
         if (data.type() == QVariant::ByteArray) {
-            return data.toByteArray().toHex();
+            return QString::fromLatin1(data.toByteArray().toHex());
         }
         return "Hex data";
     }
