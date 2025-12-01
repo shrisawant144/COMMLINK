@@ -38,6 +38,7 @@ CommLinkGUI::CommLinkGUI()
       connectBtn(nullptr), sendBtn(nullptr), startReceiveBtn(nullptr), stopReceiveBtn(nullptr),
       loadJsonBtn(nullptr), saveJsonBtn(nullptr), exportLogsBtn(nullptr), exportMessagesBtn(nullptr),
       clearMessagesBtn(nullptr), jsonEdit(nullptr), logEdit(nullptr), receivedEdit(nullptr),
+      clientReceivedEdit(nullptr), serverReceivedEdit(nullptr), sentEdit(nullptr),
       statusBar(nullptr), menuBar(nullptr), lightModeAction(nullptr), darkModeAction(nullptr),
       autoModeAction(nullptr), logger(nullptr), clientStatusLabel(nullptr), serverStatusLabel(nullptr),
       sendModeCombo(nullptr), targetClientCombo(nullptr), connectedClientsList(nullptr),
@@ -411,16 +412,68 @@ void CommLinkGUI::setupUI()
     
     tabWidget->addTab(sendTab, "Send Message");
     
-    // Received Messages Tab
+    // Client Received Messages Tab
+    auto *clientReceiveTab = new QWidget();
+    auto *clientReceiveLayout = new QVBoxLayout(clientReceiveTab);
+    
+    auto *clientReceivedGroup = new QGroupBox("Client Received Messages");
+    auto *clientReceivedLayout = new QVBoxLayout(clientReceivedGroup);
+    
+    clientReceivedEdit = new QTextEdit();
+    clientReceivedEdit->setReadOnly(true);
+    clientReceivedEdit->setFont(QFont("Consolas, Monaco, monospace", 9));
+    clientReceivedEdit->setPlaceholderText("Messages received by client connections (TCP Client, UDP Client, WebSocket Client, HTTP Client) will appear here...");
+    
+    clientReceivedLayout->addWidget(clientReceivedEdit);
+    clientReceiveLayout->addWidget(clientReceivedGroup);
+    
+    tabWidget->addTab(clientReceiveTab, "📥 Client Received");
+    
+    // Server Received Messages Tab
+    auto *serverReceiveTab = new QWidget();
+    auto *serverReceiveLayout = new QVBoxLayout(serverReceiveTab);
+    
+    auto *serverReceivedGroup = new QGroupBox("Server Received Messages");
+    auto *serverReceivedLayout = new QVBoxLayout(serverReceivedGroup);
+    
+    serverReceivedEdit = new QTextEdit();
+    serverReceivedEdit->setReadOnly(true);
+    serverReceivedEdit->setFont(QFont("Consolas, Monaco, monospace", 9));
+    serverReceivedEdit->setPlaceholderText("Messages received by server connections (TCP Server, UDP Server, WebSocket Server, HTTP Server) will appear here...");
+    
+    serverReceivedLayout->addWidget(serverReceivedEdit);
+    serverReceiveLayout->addWidget(serverReceivedGroup);
+    
+    tabWidget->addTab(serverReceiveTab, "📨 Server Received");
+    
+    // Sent Messages Tab
+    auto *sentTab = new QWidget();
+    auto *sentLayout = new QVBoxLayout(sentTab);
+    
+    auto *sentGroup = new QGroupBox("Sent Messages");
+    auto *sentGroupLayout = new QVBoxLayout(sentGroup);
+    
+    sentEdit = new QTextEdit();
+    sentEdit->setReadOnly(true);
+    sentEdit->setFont(QFont("Consolas, Monaco, monospace", 9));
+    sentEdit->setPlaceholderText("Messages you send will appear here...");
+    
+    sentGroupLayout->addWidget(sentEdit);
+    sentLayout->addWidget(sentGroup);
+    
+    tabWidget->addTab(sentTab, "📤 Sent Messages");
+    
+    // All Messages Tab (legacy combined view)
     auto *receiveTab = new QWidget();
     auto *receiveTabLayout = new QVBoxLayout(receiveTab);
     
-    auto *receivedGroup = new QGroupBox("Received Messages");
+    auto *receivedGroup = new QGroupBox("All Received Messages");
     auto *receivedLayout = new QVBoxLayout(receivedGroup);
     
     receivedEdit = new QTextEdit();
     receivedEdit->setReadOnly(true);
     receivedEdit->setFont(QFont("Consolas, Monaco, monospace", 9));
+    receivedEdit->setPlaceholderText("All received messages (both client and server) will appear here...");
     
     auto *receivedButtonLayout = new QHBoxLayout();
     exportMessagesBtn = new QPushButton("Export Messages");
@@ -437,7 +490,7 @@ void CommLinkGUI::setupUI()
     
     receiveTabLayout->addWidget(receivedGroup);
     
-    tabWidget->addTab(receiveTab, "Received Messages");
+    tabWidget->addTab(receiveTab, "📬 All Messages");
     
     // History Tab
     auto *historyTab = new HistoryTab(&historyManager);
@@ -699,8 +752,86 @@ void CommLinkGUI::onSend() {
 
     QVariant parsedData = DataMessage::parseInput(messageText, format);
     DataMessage msg(format, parsedData);
-
-    // Send via appropriate client
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    
+    // Check send mode: 0=Client, 1=Server Broadcast, 2=Server To Selected
+    int sendMode = sendModeCombo->currentData().toInt();
+    
+    // SERVER-SIDE SENDING
+    if (sendMode == 1 || sendMode == 2) {
+        QString serverProto = receiveProtocolCombo->currentText();
+        
+        if (sendMode == 1) {
+            // BROADCAST TO ALL CLIENTS
+            if (serverProto == "TCP" && tcpServer->isListening()) {
+                tcpServer->sendToAll(msg);
+                QString sentMessage = QString("[%1] → TCP Server Broadcast to all clients:\n%2\n")
+                                     .arg(timestamp).arg(messageText);
+                sentEdit->append(sentMessage);
+                logger->logSuccess("TCP Server broadcast message to all clients");
+                historyManager.saveMessage("sent", "TCP", "broadcast", receivePortEdit->text().toInt(), msg);
+            } else if (serverProto == "WebSocket" && wsServer->isListening()) {
+                QMessageBox::information(this, "Info", "WebSocket broadcast coming soon! For now use TCP server.");
+            } else if (serverProto == "UDP" && udpServer->isListening()) {
+                QMessageBox::information(this, "Info", "UDP server replies automatically when it receives messages.");
+            } else {
+                QMessageBox::warning(this, "Error", "Server not listening");
+            }
+        } else if (sendMode == 2) {
+            // SEND TO SELECTED CLIENT
+            QString targetClient = targetClientCombo->currentText();
+            if (targetClient.isEmpty()) {
+                QMessageBox::warning(this, "Error", "No client selected");
+                return;
+            }
+            
+            if (serverProto == "TCP" && tcpServer->isListening()) {
+                QTcpSocket* client = tcpServer->findClientByAddress(targetClient);
+                if (client) {
+                    tcpServer->sendToClient(client, msg);
+                    QString sentMessage = QString("[%1] → TCP Server to %2:\n%3\n")
+                                         .arg(timestamp).arg(targetClient).arg(messageText);
+                    sentEdit->append(sentMessage);
+                    logger->logSuccess(QString("TCP Server sent to %1").arg(targetClient));
+                    historyManager.saveMessage("sent", "TCP", targetClient, receivePortEdit->text().toInt(), msg);
+                } else {
+                    QMessageBox::warning(this, "Error", "Client not found or disconnected");
+                }
+            } else if (serverProto == "WebSocket" && wsServer->isListening()) {
+                QWebSocket* client = wsServer->findClientByAddress(targetClient);
+                if (client) {
+                    wsServer->sendToClient(client, msg);
+                    QString sentMessage = QString("[%1] → WebSocket Server to %2:\n%3\n")
+                                         .arg(timestamp).arg(targetClient).arg(messageText);
+                    sentEdit->append(sentMessage);
+                    logger->logSuccess(QString("WebSocket Server sent to %1").arg(targetClient));
+                    historyManager.saveMessage("sent", "WebSocket", targetClient, receivePortEdit->text().toInt(), msg);
+                } else {
+                    QMessageBox::warning(this, "Error", "Client not found or disconnected");
+                }
+            } else if (serverProto == "UDP" && udpServer->isListening()) {
+                // Parse client address for UDP
+                QStringList parts = targetClient.split(":");
+                if (parts.size() == 2) {
+                    QHostAddress addr(parts[0]);
+                    quint16 port = parts[1].toUShort();
+                    udpServer->sendTo(addr, port, msg);
+                    QString sentMessage = QString("[%1] → UDP Server to %2:\n%3\n")
+                                         .arg(timestamp).arg(targetClient).arg(messageText);
+                    sentEdit->append(sentMessage);
+                    logger->logSuccess(QString("UDP Server sent to %1").arg(targetClient));
+                    historyManager.saveMessage("sent", "UDP", targetClient, receivePortEdit->text().toInt(), msg);
+                } else {
+                    QMessageBox::warning(this, "Error", "Invalid client address format");
+                }
+            } else {
+                QMessageBox::warning(this, "Error", "Server not listening");
+            }
+        }
+        return;
+    }
+    
+    // CLIENT-SIDE SENDING (sendMode == 0)
     if (proto == "HTTP") {
         QString url = hostEdit->text().trimmed();
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
@@ -718,21 +849,37 @@ void CommLinkGUI::onSend() {
         else if (methodStr == "OPTIONS") method = HttpClient::OPTIONS;
         
         httpClient->sendRequest(url, method, msg);
+        QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+        QString sentMessage = QString("[%1] → HTTP %2 to %3:\n%4\n")
+                             .arg(timestamp).arg(methodStr).arg(url).arg(messageText);
+        sentEdit->append(sentMessage);
         logMessage(QString("Sent via HTTP %1: %2").arg(methodStr).arg(messageText), "[HTTP-SEND] ");
         historyManager.saveMessage("sent", "HTTP", url, 0, msg);
     }
     else if (proto == "WebSocket" && wsClient->isConnected()) {
         wsClient->sendMessage(msg);
+        QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+        QString sentMessage = QString("[%1] → WebSocket to %2:\n%3\n")
+                             .arg(timestamp).arg(hostEdit->text()).arg(messageText);
+        sentEdit->append(sentMessage);
         logMessage("Sent via WebSocket: " + messageText, "[WS-SEND] ");
         historyManager.saveMessage("sent", "WebSocket", hostEdit->text(), 0, msg);
     }
     else if (proto == "TCP" && tcpClient->isConnected()) {
         tcpClient->sendMessage(msg);
+        QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+        QString sentMessage = QString("[%1] → TCP to %2:%3:\n%4\n")
+                             .arg(timestamp).arg(hostEdit->text()).arg(portEdit->text()).arg(messageText);
+        sentEdit->append(sentMessage);
         logMessage("Sent via TCP: " + messageText, "[TCP-SEND] ");
         historyManager.saveMessage("sent", "TCP", hostEdit->text(), portEdit->text().toInt(), msg);
     }
     else if (proto == "UDP" && udpClient->isConnected()) {
         udpClient->sendMessage(msg);
+        QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+        QString sentMessage = QString("[%1] → UDP to %2:%3:\n%4\n")
+                             .arg(timestamp).arg(hostEdit->text()).arg(portEdit->text()).arg(messageText);
+        sentEdit->append(sentMessage);
         logMessage("Sent via UDP: " + messageText, "[UDP-SEND] ");
         historyManager.saveMessage("sent", "UDP", hostEdit->text(), portEdit->text().toInt(), msg);
     }
@@ -811,6 +958,23 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
     
     QString message = QString("[%1] ← %2 from %3:\n%4\n")
                      .arg(timestamp).arg(protocol).arg(source).arg(displayText);
+    
+    // Determine if this is from a client or server
+    bool isClientMessage = (senderObj == tcpClient || senderObj == udpClient || 
+                           senderObj == wsClient || senderObj == httpClient);
+    bool isServerMessage = (senderObj == tcpServer || senderObj == udpServer || 
+                           senderObj == wsServer || senderObj == httpServer);
+    
+    // Add to appropriate tabs
+    if (isClientMessage) {
+        clientReceivedEdit->append(message);
+        logger->logInfo(QString("Client received %1 message from %2").arg(protocol).arg(source));
+    } else if (isServerMessage) {
+        serverReceivedEdit->append(message);
+        logger->logSuccess(QString("Server received %1 message from %2").arg(protocol).arg(source));
+    }
+    
+    // Also add to combined "All Messages" view
     receivedEdit->append(message);
     logMessage(QString("Received %1 message from %2").arg(source).arg(timestamp), "[RECV] ");
 
@@ -954,8 +1118,11 @@ void CommLinkGUI::onExportMessages() {
 }
 
 void CommLinkGUI::onClearMessages() {
+    clientReceivedEdit->clear();
+    serverReceivedEdit->clear();
+    sentEdit->clear();
     receivedEdit->clear();
-    logMessage("Cleared received messages", "[INFO] ");
+    logger->logInfo("Cleared all message displays");
 }
 
 void CommLinkGUI::onThemeChanged() {

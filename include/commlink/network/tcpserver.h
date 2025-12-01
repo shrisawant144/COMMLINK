@@ -20,6 +20,7 @@ public:
     bool isListening() const;
     void sendToAll(const DataMessage& message);
     void sendToClient(QTcpSocket* client, const DataMessage& message);
+    QTcpSocket* findClientByAddress(const QString& addressPort);
     void setFormat(DataFormatType format) { m_format = format; }
     void setSSLEnabled(bool enabled) { m_sslEnabled = enabled; }
     bool isSSLEnabled() const { return m_sslEnabled; }

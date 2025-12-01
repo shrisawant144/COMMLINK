@@ -47,6 +47,16 @@ void WebSocketServer::sendToClient(QWebSocket* client, const DataMessage& messag
     }
 }
 
+QWebSocket* WebSocketServer::findClientByAddress(const QString& addressPort) {
+    for (QWebSocket* client : m_clients) {
+        QString clientAddr = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
+        if (clientAddr == addressPort) {
+            return client;
+        }
+    }
+    return nullptr;
+}
+
 void WebSocketServer::onNewConnection() {
     if (m_clients.size() >= MAX_CLIENTS) {
         QWebSocket *client = m_server->nextPendingConnection();

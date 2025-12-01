@@ -65,6 +65,16 @@ void TcpServer::sendToClient(QTcpSocket* client, const DataMessage& message) {
     }
 }
 
+QTcpSocket* TcpServer::findClientByAddress(const QString& addressPort) {
+    for (QTcpSocket* client : m_clients) {
+        QString clientAddr = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
+        if (clientAddr == addressPort) {
+            return client;
+        }
+    }
+    return nullptr;
+}
+
 void TcpServer::onNewConnection() {
     if (m_clients.size() >= MAX_CLIENTS) {
         QTcpSocket *client = m_server->nextPendingConnection();

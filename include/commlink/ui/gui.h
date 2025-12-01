@@ -84,6 +84,7 @@ private:
     QPushButton *connectBtn, *sendBtn, *startReceiveBtn, *stopReceiveBtn;
     QPushButton *loadJsonBtn, *saveJsonBtn, *exportLogsBtn, *exportMessagesBtn, *clearMessagesBtn;
     QTextEdit *jsonEdit, *logEdit, *receivedEdit;
+    QTextEdit *clientReceivedEdit, *serverReceivedEdit, *sentEdit;  // NEW: Separate message displays
     QStatusBar *statusBar;
     QMenuBar *menuBar;
     QAction *lightModeAction;
