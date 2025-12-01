@@ -12,6 +12,25 @@
 #include <QtCore/QTextStream>
 #include <QtCore/QMutexLocker>
 
+// Constants for filter parsing
+static const int DIRECTION_PREFIX_LENGTH = 10; // "direction:"
+static const int PROTOCOL_PREFIX_LENGTH = 9;  // "protocol:"
+static const int HOST_PREFIX_LENGTH = 5;      // "host:"
+static const int DEFAULT_MESSAGE_LIMIT = 100;
+static const int EXPORT_MESSAGE_LIMIT = 10000; // For export operations
+
+// SQL column indices
+static const int COL_ID = 0;
+static const int COL_TIMESTAMP = 1;
+static const int COL_DIRECTION = 2;
+static const int COL_PROTOCOL = 3;
+static const int COL_HOST = 4;
+static const int COL_PORT = 5;
+static const int COL_CONTENT = 6;
+static const int COL_SENDER_INFO = 7;
+static const int COL_SESSION_ID = 8;
+static const int COL_FORMAT_TYPE = 9;
+
 MessageHistoryManager::MessageHistoryManager(QObject *parent)
     : QObject(parent)
 {
@@ -172,13 +191,13 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
         for (const QString &part : filterParts) {
             if (part.startsWith("direction:")) {
                 conditions << "direction = ?";
-                params << part.mid(10); // Remove "direction:"
+                params << part.mid(DIRECTION_PREFIX_LENGTH); // Remove "direction:"
             } else if (part.startsWith("protocol:")) {
                 conditions << "protocol = ?";
-                params << part.mid(9); // Remove "protocol:"
+                params << part.mid(PROTOCOL_PREFIX_LENGTH); // Remove "protocol:"
             } else if (part.startsWith("host:")) {
                 conditions << "host LIKE ?";
-                params << "%" + part.mid(5) + "%"; // Remove "host:"
+                params << "%" + part.mid(HOST_PREFIX_LENGTH) + "%"; // Remove "host:"
             } else {
                 // General text search
                 conditions << "(content LIKE ? OR sender_info LIKE ? OR host LIKE ?)";
@@ -221,16 +240,16 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
     messages.reserve(limit); // Pre-allocate for better performance
     while (query.next()) {
         QVariantMap message;
-        message["id"] = query.value(0);
-        message["timestamp"] = query.value(1);
-        message["direction"] = query.value(2);
-        message["protocol"] = query.value(3);
-        message["host"] = query.value(4);
-        message["port"] = query.value(5);
-        message["content"] = query.value(6);
-        message["sender_info"] = query.value(7);
-        message["session_id"] = query.value(8);
-        message["format_type"] = query.value(9);
+        message["id"] = query.value(COL_ID);
+        message["timestamp"] = query.value(COL_TIMESTAMP);
+        message["direction"] = query.value(COL_DIRECTION);
+        message["protocol"] = query.value(COL_PROTOCOL);
+        message["host"] = query.value(COL_HOST);
+        message["port"] = query.value(COL_PORT);
+        message["content"] = query.value(COL_CONTENT);
+        message["sender_info"] = query.value(COL_SENDER_INFO);
+        message["session_id"] = query.value(COL_SESSION_ID);
+        message["format_type"] = query.value(COL_FORMAT_TYPE);
         messages.append(message);
     }
 
@@ -254,7 +273,7 @@ bool MessageHistoryManager::deleteOldMessages(int daysToKeep)
 bool MessageHistoryManager::exportMessages(const QString &filePath, const QString &format)
 {
     // Implementation for export - simplified for now
-    QList<QVariantMap> messages = getMessages(QString(), QDateTime(), QDateTime(), 10000, 0);
+    QList<QVariantMap> messages = getMessages(QString(), QDateTime(), QDateTime(), EXPORT_MESSAGE_LIMIT, 0);
 
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {

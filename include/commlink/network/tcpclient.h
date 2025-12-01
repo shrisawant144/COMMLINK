@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTcpSocket>
 #include <QHostAddress>
+#include <QTimer>
 #include "../core/dataformat.h"
 
 class TcpClient : public QObject {
@@ -11,7 +12,7 @@ class TcpClient : public QObject {
 public:
     explicit TcpClient(QObject *parent = nullptr);
     
-    bool connectToHost(const QString& host, quint16 port);
+    void connectToHost(const QString& host, quint16 port);
     void disconnect();
     void sendMessage(const DataMessage& message);
     bool isConnected() const;
@@ -28,10 +29,13 @@ private slots:
     void onDisconnected();
     void onReadyRead();
     void onError(QAbstractSocket::SocketError error);
+    void onConnectionTimeout();
 
 private:
     QTcpSocket *m_socket;
+    QTimer *m_connectionTimer;
     DataFormatType m_format;
+    static const int CONNECTION_TIMEOUT_MS = 3000;
 };
 
 #endif

@@ -113,4 +113,18 @@ private:
     HttpServer *httpServer;
     MessageHistoryManager historyManager;
     QList<DataMessage> receivedMessages;
+
+    // Constants
+    static const int DEFAULT_WINDOW_WIDTH = 1000;
+    static const int DEFAULT_WINDOW_HEIGHT = 700;
+    static const int MIN_WINDOW_WIDTH = 800;
+    static const int MIN_WINDOW_HEIGHT = 600;
+    static const int ICON_SIZE_16 = 16;
+    static const int ICON_SIZE_32 = 32;
+    static const int ICON_SIZE_64 = 64;
+    static const int ICON_SIZE_128 = 128;
+    static const int ICON_SIZE_256 = 256;
+    static const int DEFAULT_HTTP_PORT = 80;
+    static const int MAX_PORT_NUMBER = 65535;
+    static const int MAIN_LAYOUT_SPACING = 8;
 };

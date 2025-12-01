@@ -4,19 +4,24 @@
 TcpClient::TcpClient(QObject *parent) 
     : QObject(parent), m_format(DataFormatType::JSON) {
     m_socket = new QTcpSocket(this);
+    m_connectionTimer = new QTimer(this);
+    m_connectionTimer->setSingleShot(true);
+    
     connect(m_socket, &QTcpSocket::connected, this, &TcpClient::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this, &TcpClient::onDisconnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpClient::onReadyRead);
     connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::error), 
             this, &TcpClient::onError);
+    connect(m_connectionTimer, &QTimer::timeout, this, &TcpClient::onConnectionTimeout);
 }
 
-bool TcpClient::connectToHost(const QString& host, quint16 port) {
+void TcpClient::connectToHost(const QString& host, quint16 port) {
     m_socket->connectToHost(host, port);
-    return m_socket->waitForConnected(3000);
+    m_connectionTimer->start(CONNECTION_TIMEOUT_MS);
 }
 
 void TcpClient::disconnect() {
+    m_connectionTimer->stop();
     m_socket->disconnectFromHost();
 }
 
@@ -31,10 +36,12 @@ bool TcpClient::isConnected() const {
 }
 
 void TcpClient::onConnected() {
+    m_connectionTimer->stop();
     emit connected();
 }
 
 void TcpClient::onDisconnected() {
+    m_connectionTimer->stop();
     emit disconnected();
 }
 
@@ -48,5 +55,13 @@ void TcpClient::onReadyRead() {
 
 void TcpClient::onError(QAbstractSocket::SocketError error) {
     Q_UNUSED(error);
+    m_connectionTimer->stop();
     emit errorOccurred(m_socket->errorString());
+}
+
+void TcpClient::onConnectionTimeout() {
+    if (m_socket->state() != QAbstractSocket::ConnectedState) {
+        m_socket->abort();
+        emit errorOccurred("Connection timeout");
+    }
 }

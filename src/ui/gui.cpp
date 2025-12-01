@@ -37,19 +37,22 @@ CommLinkGUI::CommLinkGUI() {
     
     // Set window icon for title bar and taskbar
     QIcon appIcon;
-    appIcon.addFile(":/assets/logo/CommLink_16.png", QSize(16, 16));
-    appIcon.addFile(":/assets/logo/CommLink_32.png", QSize(32, 32));
-    appIcon.addFile(":/assets/logo/CommLink_64.png", QSize(64, 64));
-    appIcon.addFile(":/assets/logo/CommLink_128.png", QSize(128, 128));
-    appIcon.addFile(":/assets/logo/CommLink_256.png", QSize(256, 256));
+    appIcon.addFile(":/assets/logo/CommLink_16.png", QSize(ICON_SIZE_16, ICON_SIZE_16));
+    appIcon.addFile(":/assets/logo/CommLink_32.png", QSize(ICON_SIZE_32, ICON_SIZE_32));
+    appIcon.addFile(":/assets/logo/CommLink_64.png", QSize(ICON_SIZE_64, ICON_SIZE_64));
+    appIcon.addFile(":/assets/logo/CommLink_128.png", QSize(ICON_SIZE_128, ICON_SIZE_128));
+    appIcon.addFile(":/assets/logo/CommLink_256.png", QSize(ICON_SIZE_256, ICON_SIZE_256));
     setWindowIcon(appIcon);
     
-    resize(1000, 700);
-    setMinimumSize(800, 600);
+    resize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+    setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT);
     
     // Initialize TCP client/server
     tcpClient = new TcpClient(this);
     connect(tcpClient, &TcpClient::connected, this, &CommLinkGUI::updateClientStatus);
+    connect(tcpClient, &TcpClient::connected, this, [this]() {
+        logMessage("TCP connection established", "[INFO] ");
+    });
     connect(tcpClient, &TcpClient::disconnected, this, &CommLinkGUI::updateClientStatus);
     connect(tcpClient, &TcpClient::messageReceived, this, &CommLinkGUI::onDataReceived);
     connect(tcpClient, &TcpClient::errorOccurred, this, &CommLinkGUI::onWsError);
@@ -117,8 +120,8 @@ CommLinkGUI::CommLinkGUI() {
 void CommLinkGUI::setupUI()
 {
     auto *mainLayout = new QVBoxLayout(this);
-    mainLayout->setSpacing(8);
-    mainLayout->setContentsMargins(8, 8, 8, 8);
+    mainLayout->setSpacing(MAIN_LAYOUT_SPACING);
+    mainLayout->setContentsMargins(MAIN_LAYOUT_SPACING, MAIN_LAYOUT_SPACING, MAIN_LAYOUT_SPACING, MAIN_LAYOUT_SPACING);
 
     // Create menu bar
     menuBar = new QMenuBar(this);
@@ -512,7 +515,7 @@ void CommLinkGUI::setupUI()
 
 void CommLinkGUI::setupValidators()
 {
-    portValidator = new QIntValidator(1, 65535, this);
+    portValidator = new QIntValidator(1, MAX_PORT_NUMBER, this);
     portEdit->setValidator(portValidator);
     receivePortEdit->setValidator(portValidator);
 
@@ -552,8 +555,8 @@ bool CommLinkGUI::validateInputs()
     
     bool ok;
     int port = portEdit->text().toInt(&ok);
-    if (!ok || port < 1 || port > 65535) {
-        QMessageBox::warning(this, "Invalid Input", "Port must be between 1 and 65535");
+    if (!ok || port < 1 || port > MAX_PORT_NUMBER) {
+        QMessageBox::warning(this, "Invalid Input", QString("Port must be between 1 and %1").arg(MAX_PORT_NUMBER));
         return false;
     }
     
@@ -632,11 +635,8 @@ void CommLinkGUI::onConnect() {
         int port = portEdit->text().toInt();
         
         tcpClient->setFormat(format);
-        if (tcpClient->connectToHost(host, static_cast<quint16>(port))) {
-            logMessage(QString("Connected to %1:%2 via TCP").arg(host).arg(port), "[INFO] ");
-        } else {
-            logMessage("TCP connection failed", "[ERROR] ");
-        }
+        tcpClient->connectToHost(host, static_cast<quint16>(port));
+        logMessage(QString("Connecting to %1:%2 via TCP...").arg(host).arg(port), "[INFO] ");
         return;
     }
     
@@ -698,7 +698,7 @@ void CommLinkGUI::onSend() {
         
         httpClient->sendRequest(url, method, msg);
         logMessage(QString("Sent via HTTP %1: %2").arg(methodStr).arg(messageText), "[HTTP-SEND] ");
-        historyManager.saveMessage("sent", "HTTP-" + methodStr, url, 0, msg);
+        historyManager.saveMessage("sent", "HTTP", url, 0, msg);
     }
     else if (proto == "WebSocket" && wsClient->isConnected()) {
         wsClient->sendMessage(msg);
@@ -727,8 +727,8 @@ void CommLinkGUI::onStartReceive() {
     bool ok;
     int port = receivePortEdit->text().toInt(&ok);
 
-    if (!ok || port < 1 || port > 65535) {
-        QMessageBox::warning(this, "Error", "Invalid receive port number");
+    if (!ok || port < 1 || port > MAX_PORT_NUMBER) {
+        QMessageBox::warning(this, "Error", QString("Invalid receive port number (must be 1-%1)").arg(MAX_PORT_NUMBER));
         return;
     }
 
@@ -770,36 +770,21 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
     // Store the message for proper export
     receivedMessages.append(msg);
 
-    // Determine protocol and direction
+    // Determine protocol based on sender
     QString protocol = "Unknown";
-    QString direction = "received";
+    QObject *senderObj = sender();
     
-    // Check which client/server is active
-    if (tcpClient->isConnected()) {
+    if (senderObj == tcpClient || senderObj == tcpServer) {
         protocol = "TCP";
-        direction = "received";
-    } else if (udpClient->isConnected()) {
+    } else if (senderObj == udpClient || senderObj == udpServer) {
         protocol = "UDP";
-        direction = "received";
-    } else if (wsClient->isConnected()) {
+    } else if (senderObj == wsClient || senderObj == wsServer) {
         protocol = "WebSocket";
-        direction = "received";
-    } else if (source.contains("HTTP")) {
+    } else if (senderObj == httpClient || senderObj == httpServer) {
         protocol = "HTTP";
-        direction = "received";
-    } else if (tcpServer->isListening()) {
-        protocol = "TCP";
-        direction = "received";
-    } else if (udpServer->isListening()) {
-        protocol = "UDP";
-        direction = "received";
-    } else if (wsServer->isListening()) {
-        protocol = "WebSocket";
-        direction = "received";
-    } else if (httpServer->isListening()) {
-        protocol = "HTTP";
-        direction = "received";
     }
+    
+    QString direction = "received";
 
     QString displayText = msg.toDisplayString();
     
@@ -819,7 +804,7 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
             // Client side: source is URL like "http://127.0.0.1:5000"
             QUrl url(source.split(" ").first()); // Remove any trailing info like [HTTP 200]
             host = url.host();
-            port = url.port(80);
+            port = url.port(DEFAULT_HTTP_PORT);
         } else {
             // Server side: source is like "::ffff:127.0.0.1:42966 [POST /]"
             QString cleanSource = source.split(" ").first(); // Remove method info
