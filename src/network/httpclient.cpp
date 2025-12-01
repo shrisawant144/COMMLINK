@@ -100,7 +100,8 @@ void HttpClient::onReplyFinished(QNetworkReply* reply) {
 
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray data = reply->readAll();
-        DataMessage msg = DataMessage::deserialize(data, m_format);
+        // HTTP responses are always JSON from the server
+        DataMessage msg = DataMessage::deserialize(data, DataFormatType::JSON);
         
         QString statusInfo = QString(" [HTTP %1]").arg(statusCode);
         emit responseReceived(msg, source + statusInfo, timestamp);

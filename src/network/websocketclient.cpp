@@ -2,7 +2,7 @@
 #include <QDateTime>
 
 WebSocketClient::WebSocketClient(QObject *parent) 
-    : QObject(parent), m_format(DataFormatType::JSON) {
+    : QObject(parent), m_format(DataFormatType::JSON), m_connected(false) {
     connect(&m_socket, &QWebSocket::connected, this, &WebSocketClient::onConnected);
     connect(&m_socket, &QWebSocket::disconnected, this, &WebSocketClient::onDisconnected);
     connect(&m_socket, &QWebSocket::textMessageReceived, this, &WebSocketClient::onTextMessageReceived);
@@ -16,6 +16,7 @@ void WebSocketClient::connectToServer(const QString& url) {
 }
 
 void WebSocketClient::disconnect() {
+    m_connected = false;
     m_socket.close();
 }
 
@@ -29,14 +30,16 @@ void WebSocketClient::sendMessage(const DataMessage& message) {
 }
 
 bool WebSocketClient::isConnected() const {
-    return m_socket.state() == QAbstractSocket::ConnectedState;
+    return m_connected;
 }
 
 void WebSocketClient::onConnected() {
+    m_connected = true;
     emit connected();
 }
 
 void WebSocketClient::onDisconnected() {
+    m_connected = false;
     emit disconnected();
 }
 

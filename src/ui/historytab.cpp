@@ -10,8 +10,8 @@
 #include <QtCore/QDateTime>
 #include <QtCore/QDebug>
 
-HistoryTab::HistoryTab(MessageHistoryManager *historyManager, QWidget *parent)
-    : QWidget(parent), historyManager(historyManager), currentMessageCount(0)
+HistoryTab::HistoryTab(MessageHistoryManager *msgHistoryManager, QWidget *parent)
+    : QWidget(parent), historyManager(msgHistoryManager), currentMessageCount(0)
 {
     setupUI();
     lastRefreshTime = QDateTime::currentDateTime();

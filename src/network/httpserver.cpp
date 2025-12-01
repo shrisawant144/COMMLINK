@@ -44,8 +44,80 @@ void HttpServer::onReadyRead() {
     if (!socket) return;
     
     QByteArray data = socket->readAll();
-    HttpRequest request = parseRequest(data);
+    m_requestBuffers[socket].append(data);
     
+    // Try to parse complete requests
+    while (tryParseCompleteRequest(socket)) {
+        // Continue processing if there are more complete requests
+    }
+}
+
+void HttpServer::onClientDisconnected() {
+    QTcpSocket *socket = qobject_cast<QTcpSocket*>(sender());
+    if (!socket) return;
+    
+    QString clientInfo = m_clients.take(socket);
+    m_requestBuffers.remove(socket);
+    emit clientDisconnected(clientInfo);
+    socket->deleteLater();
+}
+
+bool HttpServer::tryParseCompleteRequest(QTcpSocket* socket) {
+    QByteArray& buffer = m_requestBuffers[socket];
+    
+    // Find the end of headers (\r\n\r\n)
+    int headerEnd = buffer.indexOf("\r\n\r\n");
+    if (headerEnd == -1) {
+        return false; // Headers not complete yet
+    }
+    
+    // Parse headers
+    QString headerData = QString::fromUtf8(buffer.left(headerEnd));
+    QStringList lines = headerData.split("\r\n");
+    
+    if (lines.isEmpty()) {
+        return false;
+    }
+    
+    // Parse request line
+    QStringList requestLine = lines[0].split(" ");
+    if (requestLine.size() < 2) {
+        return false;
+    }
+    
+    HttpRequest request;
+    request.method = requestLine[0];
+    request.path = requestLine[1];
+    
+    // Parse headers
+    for (int i = 1; i < lines.size(); ++i) {
+        QString line = lines[i];
+        int colonIndex = line.indexOf(':');
+        if (colonIndex != -1) {
+            QString key = line.left(colonIndex).trimmed();
+            QString value = line.mid(colonIndex + 1).trimmed();
+            request.headers[key] = value;
+        }
+    }
+    
+    // Check for Content-Length
+    int contentLength = 0;
+    if (request.headers.contains("Content-Length")) {
+        contentLength = request.headers["Content-Length"].toInt();
+    }
+    
+    int bodyStart = headerEnd + 4; // After \r\n\r\n
+    if (buffer.size() < bodyStart + contentLength) {
+        return false; // Body not complete yet
+    }
+    
+    // Extract body
+    request.body = buffer.mid(bodyStart, contentLength);
+    
+    // Remove processed request from buffer
+    buffer.remove(0, bodyStart + contentLength);
+    
+    // Process the request
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
     QString source = m_clients[socket] + " [" + request.method + " " + request.path + "]";
     
@@ -57,40 +129,13 @@ void HttpServer::onReadyRead() {
     QByteArray response = buildResponse(200, responseBody);
     socket->write(response);
     socket->flush();
-}
-
-void HttpServer::onClientDisconnected() {
-    QTcpSocket *socket = qobject_cast<QTcpSocket*>(sender());
-    if (!socket) return;
     
-    QString clientInfo = m_clients.take(socket);
-    emit clientDisconnected(clientInfo);
-    socket->deleteLater();
-}
-
-HttpServer::HttpRequest HttpServer::parseRequest(const QByteArray& data) {
-    HttpRequest request;
-    QString dataStr = QString::fromUtf8(data);
-    QStringList lines = dataStr.split("\r\n");
-    
-    if (!lines.isEmpty()) {
-        QStringList requestLine = lines[0].split(" ");
-        if (requestLine.size() >= 2) {
-            request.method = requestLine[0];
-            request.path = requestLine[1];
-        }
-    }
-    
-    int bodyStart = dataStr.indexOf("\r\n\r\n");
-    if (bodyStart != -1) {
-        request.body = data.mid(bodyStart + 4);
-    }
-    
-    return request;
+    return true;
 }
 
 QByteArray HttpServer::buildResponse(int statusCode, const QString& body) {
-    QString statusText = (statusCode == 200) ? "OK" : "Error";
+    static const int HTTP_OK = 200;
+    QString statusText = (statusCode == HTTP_OK) ? "OK" : "Error";
     QByteArray response;
     response += "HTTP/1.1 " + QString::number(statusCode) + " " + statusText + "\r\n";
     response += "Content-Type: application/json\r\n";

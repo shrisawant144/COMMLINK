@@ -30,6 +30,7 @@ static const int COL_CONTENT = 6;
 static const int COL_SENDER_INFO = 7;
 static const int COL_SESSION_ID = 8;
 static const int COL_FORMAT_TYPE = 9;
+static const int COL_COUNT = 0; // For COUNT(*) queries
 
 MessageHistoryManager::MessageHistoryManager(QObject *parent)
     : QObject(parent)
@@ -69,7 +70,9 @@ bool MessageHistoryManager::createTables()
         // Table exists and supports WebSocket/HTTP, no migration needed
     } else {
         // Drop old table if it exists (migration)
-        executeQuery("DROP TABLE IF EXISTS messages");
+        if (!executeQuery("DROP TABLE IF EXISTS messages")) {
+            qWarning() << "Failed to drop old messages table during migration";
+        }
     }
     
     QString createMessagesTable = R"(
@@ -113,7 +116,10 @@ bool MessageHistoryManager::createTables()
     // Only add column if it doesn't already exist
     if (!columnExists) {
         QString addFormatColumn = "ALTER TABLE messages ADD COLUMN format_type INTEGER DEFAULT 0;";
-        executeQuery(addFormatColumn);
+        if (!executeQuery(addFormatColumn)) {
+            qWarning() << "Failed to add format_type column to messages table";
+            return false;
+        }
     }
 
     return success;
@@ -316,7 +322,7 @@ bool MessageHistoryManager::exportMessages(const QString &filePath, const QStrin
 
 void MessageHistoryManager::startNewSession()
 {
-    currentSessionId = generateSessionId();
+    currentSessionId = MessageHistoryManager::generateSessionId();
 }
 
 QString MessageHistoryManager::generateSessionId()
@@ -367,7 +373,7 @@ int MessageHistoryManager::getMessageCount(const QString &filter)
     }
 
     if (query.exec() && query.next()) {
-        return query.value(0).toInt();
+        return query.value(COL_COUNT).toInt();
     }
     
     return 0;

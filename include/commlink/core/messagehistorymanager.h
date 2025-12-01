@@ -34,6 +34,8 @@ public:
     QString getCurrentSessionId() const { return currentSessionId; }
     void startNewSession();
 
+    static QString generateSessionId();
+
 private:
     QSqlDatabase db;
     QString currentSessionId;
@@ -42,6 +44,5 @@ private:
 
     bool createTables();
     bool executeQuery(const QString &query);
-    QString generateSessionId();
     bool optimizeDatabase();
 };

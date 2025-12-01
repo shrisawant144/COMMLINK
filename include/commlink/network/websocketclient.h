@@ -32,6 +32,7 @@ private slots:
 private:
     QWebSocket m_socket;
     DataFormatType m_format;
+    bool m_connected;
 };
 
 #endif

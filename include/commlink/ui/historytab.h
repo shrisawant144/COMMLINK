@@ -19,7 +19,7 @@ class HistoryTab : public QWidget
     Q_OBJECT
 
 public:
-    explicit HistoryTab(MessageHistoryManager *historyManager, QWidget *parent = nullptr);
+    explicit HistoryTab(MessageHistoryManager *msgHistoryManager, QWidget *parent = nullptr);
     ~HistoryTab();
 
 private slots:

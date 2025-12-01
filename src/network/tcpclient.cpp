@@ -2,7 +2,7 @@
 #include <QDateTime>
 
 TcpClient::TcpClient(QObject *parent) 
-    : QObject(parent), m_format(DataFormatType::JSON) {
+    : QObject(parent), m_format(DataFormatType::JSON), m_connected(false) {
     m_socket = new QTcpSocket(this);
     m_connectionTimer = new QTimer(this);
     m_connectionTimer->setSingleShot(true);
@@ -22,6 +22,7 @@ void TcpClient::connectToHost(const QString& host, quint16 port) {
 
 void TcpClient::disconnect() {
     m_connectionTimer->stop();
+    m_connected = false;
     m_socket->disconnectFromHost();
 }
 
@@ -32,16 +33,18 @@ void TcpClient::sendMessage(const DataMessage& message) {
 }
 
 bool TcpClient::isConnected() const {
-    return m_socket->state() == QAbstractSocket::ConnectedState;
+    return m_connected;
 }
 
 void TcpClient::onConnected() {
     m_connectionTimer->stop();
+    m_connected = true;
     emit connected();
 }
 
 void TcpClient::onDisconnected() {
     m_connectionTimer->stop();
+    m_connected = false;
     emit disconnected();
 }
 

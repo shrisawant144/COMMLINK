@@ -36,12 +36,13 @@ private:
         QByteArray body;
     };
     
-    HttpRequest parseRequest(const QByteArray& data);
     QByteArray buildResponse(int statusCode, const QString& body);
+    bool tryParseCompleteRequest(QTcpSocket* socket);
     
     QTcpServer *m_server;
     DataFormatType m_format;
     QMap<QTcpSocket*, QString> m_clients;
+    QMap<QTcpSocket*, QByteArray> m_requestBuffers;
 };
 
 #endif

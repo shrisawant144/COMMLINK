@@ -32,7 +32,20 @@
 #include <QtGui/QIcon>
 #include "commlink/ui/thememanager.h"
 
-CommLinkGUI::CommLinkGUI() {
+CommLinkGUI::CommLinkGUI() 
+    : protocolCombo(nullptr), dataFormatCombo(nullptr), receiveProtocolCombo(nullptr),
+      httpMethodCombo(nullptr), hostEdit(nullptr), portEdit(nullptr), receivePortEdit(nullptr),
+      connectBtn(nullptr), sendBtn(nullptr), startReceiveBtn(nullptr), stopReceiveBtn(nullptr),
+      loadJsonBtn(nullptr), saveJsonBtn(nullptr), exportLogsBtn(nullptr), exportMessagesBtn(nullptr),
+      clearMessagesBtn(nullptr), jsonEdit(nullptr), logEdit(nullptr), receivedEdit(nullptr),
+      statusBar(nullptr), menuBar(nullptr), lightModeAction(nullptr), darkModeAction(nullptr),
+      autoModeAction(nullptr), logger(nullptr), clientStatusLabel(nullptr), serverStatusLabel(nullptr),
+      sendModeCombo(nullptr), targetClientCombo(nullptr), connectedClientsList(nullptr),
+      clientCountLabel(nullptr), portValidator(nullptr)
+{
+    // Note: Qt uses parent-child ownership for automatic memory management.
+    // Raw pointers are correct here - Qt will delete child objects when parent is destroyed.
+    // Linter warnings about "non-owner" pointers are false positives for Qt code.
     setWindowTitle("CommLink - Network Communication Tool");
     
     // Set window icon for title bar and taskbar
@@ -89,6 +102,8 @@ CommLinkGUI::CommLinkGUI() {
     
     // Initialize HTTP client
     httpClient = new HttpClient(this);
+    connect(httpClient, &HttpClient::connected, this, &CommLinkGUI::updateClientStatus);
+    connect(httpClient, &HttpClient::disconnected, this, &CommLinkGUI::updateClientStatus);
     connect(httpClient, &HttpClient::responseReceived, this, &CommLinkGUI::onDataReceived);
     connect(httpClient, &HttpClient::errorOccurred, this, &CommLinkGUI::onWsError);
     connect(httpClient, &HttpClient::requestSent, this, &CommLinkGUI::onHttpRequestSent);
@@ -606,6 +621,8 @@ void CommLinkGUI::onConnect() {
     if (proto == "WebSocket") {
         if (wsClient->isConnected()) {
             wsClient->disconnect();
+            updateClientStatus();
+            updateSendButtonState();
             return;
         }
         
@@ -627,6 +644,8 @@ void CommLinkGUI::onConnect() {
     if (proto == "TCP") {
         if (tcpClient->isConnected()) {
             tcpClient->disconnect();
+            updateClientStatus();
+            updateSendButtonState();
             return;
         }
         
@@ -644,6 +663,8 @@ void CommLinkGUI::onConnect() {
     if (proto == "UDP") {
         if (udpClient->isConnected()) {
             udpClient->disconnect();
+            updateClientStatus();
+            updateSendButtonState();
             return;
         }
         
@@ -676,8 +697,8 @@ void CommLinkGUI::onSend() {
         return;
     }
 
-    QVariant data = DataMessage::parseInput(messageText, format);
-    DataMessage msg(format, data);
+    QVariant parsedData = DataMessage::parseInput(messageText, format);
+    DataMessage msg(format, parsedData);
 
     // Send via appropriate client
     if (proto == "HTTP") {

@@ -35,6 +35,7 @@ private:
     QTcpSocket *m_socket;
     QTimer *m_connectionTimer;
     DataFormatType m_format;
+    bool m_connected;
     static const int CONNECTION_TIMEOUT_MS = 3000;
 };
 
