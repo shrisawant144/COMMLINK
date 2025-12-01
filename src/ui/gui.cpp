@@ -990,6 +990,24 @@ void CommLinkGUI::onClientProtocolChanged(int index) {
     Q_UNUSED(index);
     QString proto = protocolCombo->currentText();
     
+    // Disconnect all clients when switching protocols for smooth transition
+    if (tcpClient->isConnected()) {
+        tcpClient->disconnect();
+    }
+    if (udpClient->isConnected()) {
+        udpClient->disconnect();
+    }
+    if (wsClient->isConnected()) {
+        wsClient->disconnect();
+    }
+    if (httpClient->isConnected()) {
+        httpClient->disconnect();
+    }
+    
+    // Update UI status after disconnecting
+    updateClientStatus();
+    updateSendButtonState();
+    
     // Find port field and label by object name
     auto *portLabel = findChild<QLabel*>("clientPortLabel");
     auto *portField = findChild<QLineEdit*>("clientPortEdit");
@@ -1013,6 +1031,8 @@ void CommLinkGUI::onClientProtocolChanged(int index) {
         if (portLabel) portLabel->setVisible(true);
         if (httpMethodCombo) httpMethodCombo->setVisible(false);
     }
+    
+    logMessage(QString("Switched to %1 protocol").arg(proto), "[INFO] ");
 }
 
 void CommLinkGUI::onServerProtocolChanged(int index) {
@@ -1020,6 +1040,27 @@ void CommLinkGUI::onServerProtocolChanged(int index) {
     if (!connectedClientsList) return;
     
     QString proto = receiveProtocolCombo->currentText();
+    
+    // Stop all servers when switching protocols for smooth transition
+    if (tcpServer->isListening()) {
+        tcpServer->close();
+    }
+    if (udpServer->isListening()) {
+        udpServer->close();
+    }
+    if (wsServer->isListening()) {
+        wsServer->close();
+    }
+    if (httpServer->isListening()) {
+        httpServer->stopServer();
+    }
+    
+    // Clear client lists
+    connectedClientsList->clear();
+    targetClientCombo->clear();
+    
+    // Update UI status after stopping servers
+    updateServerStatus();
     
     // TCP, WebSocket and HTTP support multiple clients, UDP doesn't
     bool showClientList = (proto == "TCP" || proto == "WebSocket" || proto == "HTTP");
@@ -1032,6 +1073,8 @@ void CommLinkGUI::onServerProtocolChanged(int index) {
     } else {
         clientCountLabel->setText("Connected Clients: 0");
     }
+    
+    logMessage(QString("Switched server to %1 protocol").arg(proto), "[INFO] ");
 }
 
 void CommLinkGUI::onSendModeChanged(int index) {
