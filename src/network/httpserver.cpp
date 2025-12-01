@@ -3,7 +3,7 @@
 #include <QRegularExpression>
 
 HttpServer::HttpServer(QObject *parent)
-    : QObject(parent), m_format(DataFormatType::JSON) {
+    : QObject(parent), m_format(DataFormatType::JSON), m_sslEnabled(false) {
     m_server = new QTcpServer(this);
     connect(m_server, &QTcpServer::newConnection, this, &HttpServer::onNewConnection);
 }
@@ -19,6 +19,7 @@ bool HttpServer::startServer(quint16 port) {
 void HttpServer::stopServer() {
     for (auto socket : m_clients.keys()) {
         socket->disconnectFromHost();
+        socket->deleteLater();
     }
     m_clients.clear();
     m_server->close();
@@ -29,13 +30,18 @@ bool HttpServer::isListening() const {
 }
 
 void HttpServer::onNewConnection() {
+    if (m_clients.size() >= MAX_CLIENTS) {
+        QTcpSocket *socket = m_server->nextPendingConnection();
+        socket->disconnectFromHost();
+        socket->deleteLater();
+        emit errorOccurred("Max client limit reached. Connection refused.");
+        return;
+    }
     QTcpSocket *socket = m_server->nextPendingConnection();
     QString clientInfo = socket->peerAddress().toString() + ":" + QString::number(socket->peerPort());
     m_clients[socket] = clientInfo;
-    
     connect(socket, &QTcpSocket::readyRead, this, &HttpServer::onReadyRead);
     connect(socket, &QTcpSocket::disconnected, this, &HttpServer::onClientDisconnected);
-    
     emit clientConnected(clientInfo);
 }
 
@@ -44,8 +50,11 @@ void HttpServer::onReadyRead() {
     if (!socket) return;
     
     QByteArray data = socket->readAll();
+    if (data.isEmpty()) {
+        emit errorOccurred("Failed to read data from client: " + socket->peerAddress().toString());
+        return;
+    }
     m_requestBuffers[socket].append(data);
-    
     // Try to parse complete requests
     while (tryParseCompleteRequest(socket)) {
         // Continue processing if there are more complete requests
@@ -60,6 +69,57 @@ void HttpServer::onClientDisconnected() {
     m_requestBuffers.remove(socket);
     emit clientDisconnected(clientInfo);
     socket->deleteLater();
+}
+
+DataFormatType HttpServer::detectContentType(const QString& contentType) {
+    QString ct = contentType.toLower().split(';').first().trimmed();
+    
+    if (ct == "application/json") return DataFormatType::JSON;
+    if (ct == "application/xml" || ct == "text/xml") return DataFormatType::XML;
+    if (ct == "text/csv") return DataFormatType::CSV;
+    if (ct == "text/plain") return DataFormatType::TEXT;
+    if (ct == "application/octet-stream") return DataFormatType::BINARY;
+    
+    return m_format;
+}
+
+DataFormatType HttpServer::detectAcceptType(const QString& accept) {
+    QString acc = accept.toLower().split(';').first().split(',').first().trimmed();
+    
+    if (acc == "application/json") return DataFormatType::JSON;
+    if (acc == "application/xml" || acc == "text/xml") return DataFormatType::XML;
+    if (acc == "text/csv") return DataFormatType::CSV;
+    if (acc == "text/plain") return DataFormatType::TEXT;
+    if (acc == "application/octet-stream") return DataFormatType::BINARY;
+    if (acc == "*/*" || acc.isEmpty()) return m_format;
+    
+    return m_format;
+}
+
+QByteArray HttpServer::buildResponseBody(const HttpRequest& request, DataFormatType format) {
+    switch (format) {
+        case DataFormatType::JSON: {
+            QString jsonResponse = R"({"status":"received","method":")" + request.method + R"(","path":")" + request.path + R"("})";
+            return jsonResponse.toUtf8();
+        }
+        case DataFormatType::XML: {
+            QString xmlResponse = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<response>\n  <status>received</status>\n  <method>" + 
+                                 request.method + "</method>\n  <path>" + request.path + "</path>\n</response>";
+            return xmlResponse.toUtf8();
+        }
+        case DataFormatType::CSV: {
+            QString csvResponse = "status,method,path\nreceived," + request.method + "," + request.path;
+            return csvResponse.toUtf8();
+        }
+        case DataFormatType::TEXT: {
+            QString textResponse = "Status: received\nMethod: " + request.method + "\nPath: " + request.path;
+            return textResponse.toUtf8();
+        }
+        case DataFormatType::BINARY:
+        case DataFormatType::HEX:
+        default:
+            return request.body;
+    }
 }
 
 bool HttpServer::tryParseCompleteRequest(QTcpSocket* socket) {
@@ -126,28 +186,13 @@ bool HttpServer::tryParseCompleteRequest(QTcpSocket* socket) {
         QByteArray response = buildCORSPreflightResponse();
         socket->write(response);
         socket->flush();
-        // Remove processed request from buffer
         return true;
     }
     
     // Detect format from Content-Type header if available
     DataFormatType requestFormat = m_format;
     if (request.headers.contains("Content-Type")) {
-        QString contentType = request.headers["Content-Type"].toLower();
-        // Remove charset and other parameters
-        contentType = contentType.split(';').first().trimmed();
-        
-        if (contentType == "application/json") {
-            requestFormat = DataFormatType::JSON;
-        } else if (contentType == "application/xml" || contentType == "text/xml") {
-            requestFormat = DataFormatType::XML;
-        } else if (contentType == "text/csv") {
-            requestFormat = DataFormatType::CSV;
-        } else if (contentType == "text/plain") {
-            requestFormat = DataFormatType::TEXT;
-        } else if (contentType == "application/octet-stream") {
-            requestFormat = DataFormatType::BINARY;
-        }
+        requestFormat = detectContentType(request.headers["Content-Type"]);
     }
     
     DataMessage msg = DataMessage::deserialize(request.body, requestFormat);
@@ -156,57 +201,11 @@ bool HttpServer::tryParseCompleteRequest(QTcpSocket* socket) {
     // Create response in the same format as the request (or use Accept header if provided)
     DataFormatType responseFormat = requestFormat;
     if (request.headers.contains("Accept")) {
-        QString accept = request.headers["Accept"].toLower();
-        accept = accept.split(';').first().split(',').first().trimmed();
-        
-        if (accept == "application/json") {
-            responseFormat = DataFormatType::JSON;
-        } else if (accept == "application/xml" || accept == "text/xml") {
-            responseFormat = DataFormatType::XML;
-        } else if (accept == "text/csv") {
-            responseFormat = DataFormatType::CSV;
-        } else if (accept == "text/plain") {
-            responseFormat = DataFormatType::TEXT;
-        } else if (accept == "application/octet-stream") {
-            responseFormat = DataFormatType::BINARY;
-        } else if (accept != "*/*" && !accept.isEmpty()) {
-            // If a specific Accept header is provided but not recognized, still use it
-            // This allows for future extensibility
-        }
+        responseFormat = detectAcceptType(request.headers["Accept"]);
     }
     
     // Build response message based on format
-    QByteArray responseBody;
-    switch (responseFormat) {
-        case DataFormatType::JSON: {
-            QString jsonResponse = R"({"status":"received","method":")" + request.method + R"(","path":")" + request.path + R"("})";
-            responseBody = jsonResponse.toUtf8();
-            break;
-        }
-        case DataFormatType::XML: {
-            QString xmlResponse = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<response>\n  <status>received</status>\n  <method>" + 
-                                 request.method + "</method>\n  <path>" + request.path + "</path>\n</response>";
-            responseBody = xmlResponse.toUtf8();
-            break;
-        }
-        case DataFormatType::CSV: {
-            QString csvResponse = "status,method,path\nreceived," + request.method + "," + request.path;
-            responseBody = csvResponse.toUtf8();
-            break;
-        }
-        case DataFormatType::TEXT: {
-            QString textResponse = "Status: received\nMethod: " + request.method + "\nPath: " + request.path;
-            responseBody = textResponse.toUtf8();
-            break;
-        }
-        case DataFormatType::BINARY:
-        case DataFormatType::HEX:
-        default: {
-            // For binary/hex or unknown formats, echo back the received data
-            responseBody = request.body;
-            break;
-        }
-    }
+    QByteArray responseBody = buildResponseBody(request, responseFormat);
     
     static const int HTTP_OK = 200;
     QByteArray response = buildResponse(HTTP_OK, responseBody, responseFormat);

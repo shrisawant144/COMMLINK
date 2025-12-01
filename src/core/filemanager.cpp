@@ -30,7 +30,13 @@ bool FileManager::saveMessageToFile(const QString& content, const QString& fileP
         return false;
     }
     QByteArray data = content.toUtf8();
-    if (file.write(data) != data.size()) {
+    qint64 bytesWritten = file.write(data);
+    if (bytesWritten == -1 || bytesWritten != data.size()) {
+        file.close();
+        return false;
+    }
+    if (!file.flush()) {
+        file.close();
         return false;
     }
     file.close();

@@ -22,10 +22,14 @@ void WebSocketClient::disconnect() {
 
 void WebSocketClient::sendMessage(const DataMessage& message) {
     QByteArray data = message.serialize();
+    qint64 bytesSent = 0;
     if (m_format == DataFormatType::BINARY) {
-        m_socket.sendBinaryMessage(data);
+        bytesSent = m_socket.sendBinaryMessage(data);
     } else {
-        m_socket.sendTextMessage(QString::fromUtf8(data));
+        bytesSent = m_socket.sendTextMessage(QString::fromUtf8(data));
+    }
+    if (bytesSent == 0) {
+        emit errorOccurred("Failed to send WebSocket message");
     }
 }
 

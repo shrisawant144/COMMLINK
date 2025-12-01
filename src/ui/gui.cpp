@@ -756,13 +756,13 @@ void CommLinkGUI::onStartReceive() {
     bool started = false;
     if (proto == "TCP") {
         tcpServer->setFormat(format);
-        started = tcpServer->listen(static_cast<quint16>(port));
+        started = tcpServer->startServer(static_cast<quint16>(port));
     } else if (proto == "UDP") {
         udpServer->setFormat(format);
-        started = udpServer->listen(static_cast<quint16>(port));
+        started = udpServer->startServer(static_cast<quint16>(port));
     } else if (proto == "WebSocket") {
         wsServer->setFormat(format);
-        started = wsServer->listen(static_cast<quint16>(port));
+        started = wsServer->startServer(static_cast<quint16>(port));
     } else if (proto == "HTTP") {
         httpServer->setFormat(format);
         started = httpServer->startServer(static_cast<quint16>(port));
@@ -777,9 +777,9 @@ void CommLinkGUI::onStartReceive() {
 }
 
 void CommLinkGUI::onStopReceive() {
-    tcpServer->close();
-    udpServer->close();
-    wsServer->close();
+    tcpServer->stopServer();
+    udpServer->stopServer();
+    wsServer->stopServer();
     httpServer->stopServer();
     connectedClientsList->clear();
     targetClientCombo->clear();
@@ -1043,13 +1043,13 @@ void CommLinkGUI::onServerProtocolChanged(int index) {
     
     // Stop all servers when switching protocols for smooth transition
     if (tcpServer->isListening()) {
-        tcpServer->close();
+        tcpServer->stopServer();
     }
     if (udpServer->isListening()) {
-        udpServer->close();
+        udpServer->stopServer();
     }
     if (wsServer->isListening()) {
-        wsServer->close();
+        wsServer->stopServer();
     }
     if (httpServer->isListening()) {
         httpServer->stopServer();
@@ -1260,9 +1260,9 @@ void CommLinkGUI::closeEvent(QCloseEvent *event) {
     httpClient->disconnect();
     
     // Close all servers
-    tcpServer->close();
-    udpServer->close();
-    wsServer->close();
+    tcpServer->stopServer();
+    udpServer->stopServer();
+    wsServer->stopServer();
     httpServer->stopServer();
     
     // Save settings

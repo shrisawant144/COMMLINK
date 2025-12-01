@@ -12,11 +12,13 @@ class WebSocketServer : public QObject {
 public:
     explicit WebSocketServer(QObject *parent = nullptr);
     ~WebSocketServer();
-    
-    bool listen(quint16 port);
-    void close();
+    bool startServer(quint16 port);
+    void stopServer();
     bool isListening() const;
     void setFormat(DataFormatType format) { m_format = format; }
+    void sendToClient(QWebSocket* client, const DataMessage& message, bool binary = false);
+    void setSSLEnabled(bool enabled) { m_sslEnabled = enabled; }
+    bool isSSLEnabled() const { return m_sslEnabled; }
 
 signals:
     void clientConnected(const QString& clientInfo);
@@ -34,6 +36,9 @@ private:
     QWebSocketServer *m_server;
     QList<QWebSocket*> m_clients;
     DataFormatType m_format;
+    bool m_sslEnabled;
+         static constexpr int MAX_CLIENTS = 100;
+         static constexpr int MAX_BUFFER_SIZE = 8192;
 };
 
 #endif

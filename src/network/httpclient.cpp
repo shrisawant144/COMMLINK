@@ -5,7 +5,7 @@
 
 HttpClient::HttpClient(QObject *parent)
     : QObject(parent), m_format(DataFormatType::JSON), m_method(POST), 
-      m_timeout(30000), m_connected(false) {
+      m_timeout(DEFAULT_TIMEOUT_MS), m_connected(false) {
     m_manager = new QNetworkAccessManager(this);
     connect(m_manager, &QNetworkAccessManager::finished, this, &HttpClient::onReplyFinished);
 }
@@ -43,7 +43,7 @@ void HttpClient::sendRequest(const QString& url, Method method, const DataMessag
             break;
     }
 
-    if (reply && m_timeout > 0) {
+    if (reply != nullptr && m_timeout > 0) {
         QTimer::singleShot(m_timeout, reply, &QNetworkReply::abort);
     }
 }

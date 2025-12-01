@@ -47,6 +47,8 @@ private:
     QMap<QString, QString> m_headers;
     int m_timeout;
     bool m_connected;
+    
+    static constexpr int DEFAULT_TIMEOUT_MS = 30000;
 };
 
 #endif

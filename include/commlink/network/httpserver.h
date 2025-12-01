@@ -16,6 +16,8 @@ public:
     void stopServer();
     bool isListening() const;
     void setFormat(DataFormatType format) { m_format = format; }
+    void setSSLEnabled(bool enabled) { m_sslEnabled = enabled; }
+    bool isSSLEnabled() const { return m_sslEnabled; }
 
 signals:
     void clientConnected(const QString& clientInfo);
@@ -36,14 +38,20 @@ private:
         QByteArray body;
     };
     
-    QByteArray buildResponse(int statusCode, const QByteArray& body, DataFormatType format);
-    QByteArray buildCORSPreflightResponse();
+    static QByteArray buildResponse(int statusCode, const QByteArray& body, DataFormatType format);
+    static QByteArray buildCORSPreflightResponse();
     bool tryParseCompleteRequest(QTcpSocket* socket);
+    DataFormatType detectContentType(const QString& contentType);
+    DataFormatType detectAcceptType(const QString& accept);
+    QByteArray buildResponseBody(const HttpRequest& request, DataFormatType format);
     
     QTcpServer *m_server;
     DataFormatType m_format;
+    bool m_sslEnabled;
     QMap<QTcpSocket*, QString> m_clients;
     QMap<QTcpSocket*, QByteArray> m_requestBuffers;
+         static constexpr int MAX_CLIENTS = 100;
+         static constexpr int MAX_BUFFER_SIZE = 8192;
 };
 
 #endif

@@ -2,17 +2,17 @@
 #include <QDateTime>
 
 WebSocketServer::WebSocketServer(QObject *parent)
-    : QObject(parent), m_format(DataFormatType::JSON) {
+    : QObject(parent), m_format(DataFormatType::JSON), m_sslEnabled(false) {
     m_server = new QWebSocketServer("CommLink WebSocket Server", 
                                      QWebSocketServer::NonSecureMode, this);
     connect(m_server, &QWebSocketServer::newConnection, this, &WebSocketServer::onNewConnection);
 }
 
 WebSocketServer::~WebSocketServer() {
-    close();
+    stopServer();
 }
 
-bool WebSocketServer::listen(quint16 port) {
+bool WebSocketServer::startServer(quint16 port) {
     if (m_server->listen(QHostAddress::Any, port)) {
         return true;
     }
@@ -20,7 +20,7 @@ bool WebSocketServer::listen(quint16 port) {
     return false;
 }
 
-void WebSocketServer::close() {
+void WebSocketServer::stopServer() {
     for (QWebSocket *client : m_clients) {
         client->close();
         client->deleteLater();
@@ -33,15 +33,33 @@ bool WebSocketServer::isListening() const {
     return m_server->isListening();
 }
 
+void WebSocketServer::sendToClient(QWebSocket* client, const DataMessage& message, bool binary) {
+    if (!client || !m_clients.contains(client)) return;
+    QByteArray data = message.serialize();
+    bool success = false;
+    if (binary) {
+        success = client->sendBinaryMessage(data) >= 0;
+    } else {
+        success = client->sendTextMessage(QString::fromUtf8(data)) >= 0;
+    }
+    if (!success) {
+        emit errorOccurred("Failed to send message to client: " + client->peerAddress().toString());
+    }
+}
+
 void WebSocketServer::onNewConnection() {
+    if (m_clients.size() >= MAX_CLIENTS) {
+        QWebSocket *client = m_server->nextPendingConnection();
+        client->close();
+        client->deleteLater();
+        emit errorOccurred("Max client limit reached. Connection refused.");
+        return;
+    }
     QWebSocket *client = m_server->nextPendingConnection();
-    
     connect(client, &QWebSocket::textMessageReceived, this, &WebSocketServer::onTextMessageReceived);
     connect(client, &QWebSocket::binaryMessageReceived, this, &WebSocketServer::onBinaryMessageReceived);
     connect(client, &QWebSocket::disconnected, this, &WebSocketServer::onClientDisconnected);
-    
     m_clients.append(client);
-    
     QString clientInfo = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
     emit clientConnected(clientInfo);
 }

@@ -11,6 +11,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
 #include <QtCore/QMutexLocker>
+#include <QtCore/QUuid>
 
 // Constants for filter parsing
 static const int DIRECTION_PREFIX_LENGTH = 10; // "direction:"

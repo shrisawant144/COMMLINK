@@ -28,15 +28,19 @@ void UdpClient::disconnect() {
 
 void UdpClient::sendMessage(const DataMessage& message) {
     QByteArray data = message.serialize();
-    m_socket->writeDatagram(data, m_host, m_port);
+    qint64 bytesWritten = m_socket->writeDatagram(data, m_host, m_port);
+    if (bytesWritten == -1) {
+        emit errorOccurred("Failed to send datagram: " + m_socket->errorString());
+    }
 }
 
 void UdpClient::onReadyRead() {
     while (m_socket->hasPendingDatagrams()) {
         QByteArray buffer;
-        buffer.resize(m_socket->pendingDatagramSize());
+        qint64 datagramSize = m_socket->pendingDatagramSize();
+        buffer.resize(static_cast<int>(datagramSize));
         QHostAddress sender;
-        quint16 senderPort;
+        quint16 senderPort = 0;
         
         m_socket->readDatagram(buffer.data(), buffer.size(), &sender, &senderPort);
         

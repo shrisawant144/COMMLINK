@@ -28,8 +28,14 @@ void TcpClient::disconnect() {
 
 void TcpClient::sendMessage(const DataMessage& message) {
     QByteArray data = message.serialize();
-    m_socket->write(data);
-    m_socket->flush();
+    qint64 bytesWritten = m_socket->write(data);
+    if (bytesWritten == -1) {
+        emit errorOccurred("Failed to write data: " + m_socket->errorString());
+        return;
+    }
+    if (!m_socket->flush()) {
+        emit errorOccurred("Failed to flush socket");
+    }
 }
 
 bool TcpClient::isConnected() const {

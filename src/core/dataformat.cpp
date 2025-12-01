@@ -6,6 +6,7 @@
 #include <QTextStream>
 #include <QDebug>
 #include <QMetaType>
+#include <QRegularExpression>
 
 DataMessage::DataMessage(DataFormatType t, const QVariant& d) : type(t), data(d) {}
 
@@ -153,7 +154,8 @@ bool DataMessage::validateInput(const QString& input, DataFormatType type) {
     case DataFormatType::BINARY:
         return !input.isEmpty(); // Assume hex input
     case DataFormatType::HEX: {
-        return !input.isEmpty() && input.contains(QRegExp("^[0-9A-Fa-f\\s]*$"));
+        QRegularExpression hexPattern("^[0-9A-Fa-f\\s]*$");
+        return !input.isEmpty() && hexPattern.match(input).hasMatch();
     }
     default:
         return false;
