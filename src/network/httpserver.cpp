@@ -287,14 +287,9 @@ QByteArray HttpServer::buildCORSPreflightResponse() {
 }
 
 void HttpServer::sendToAll(const DataMessage& message) {
-    // Create a message with the server's format if needed
-    DataMessage msg = message;
-    if (msg.type != m_format) {
-        msg.type = m_format;
-    }
-    
-    QByteArray serialized = msg.serialize();
-    QByteArray response = buildResponse(200, serialized, m_format);
+    // Use the message's original format
+    QByteArray serialized = message.serialize();
+    QByteArray response = buildResponse(200, serialized, message.type);
     
     for (QTcpSocket* client : m_clients.keys()) {
         if (client && client->isValid() && client->state() == QAbstractSocket::ConnectedState) {
@@ -310,14 +305,9 @@ void HttpServer::sendToClient(QTcpSocket* client, const DataMessage& message) {
         return;
     }
     
-    // Create a message with the server's format if needed
-    DataMessage msg = message;
-    if (msg.type != m_format) {
-        msg.type = m_format;
-    }
-    
-    QByteArray serialized = msg.serialize();
-    QByteArray response = buildResponse(200, serialized, m_format);
+    // Use the message's original format
+    QByteArray serialized = message.serialize();
+    QByteArray response = buildResponse(200, serialized, message.type);
     client->write(response);
     client->flush();
 }
@@ -336,22 +326,14 @@ void HttpServer::queueMessageForClient(QTcpSocket* client, const DataMessage& me
         return;
     }
     
-    DataMessage msg = message;
-    if (msg.type != m_format) {
-        msg.type = m_format;
-    }
-    
-    m_messageQueue[client].append(msg);
+    // Keep the message in its original format
+    m_messageQueue[client].append(message);
 }
 
 void HttpServer::queueMessageForAll(const DataMessage& message) {
-    DataMessage msg = message;
-    if (msg.type != m_format) {
-        msg.type = m_format;
-    }
-    
+    // Keep the message in its original format
     for (QTcpSocket* client : m_clients.keys()) {
-        m_messageQueue[client].append(msg);
+        m_messageQueue[client].append(message);
     }
 }
 
