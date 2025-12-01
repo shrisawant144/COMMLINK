@@ -109,6 +109,25 @@ void HttpClient::onReplyFinished(QNetworkReply* reply) {
         emit errorOccurred(error);
     }
     
-    emit disconnected();
+    // Don't auto-disconnect after each request - HTTP can send multiple requests
+    // Only disconnect when explicitly called via disconnect()
     reply->deleteLater();
+}
+
+void HttpClient::disconnect() {
+    if (m_connected) {
+        m_connected = false;
+        emit disconnected();
+    }
+}
+
+void HttpClient::setConnected(bool connected) {
+    if (m_connected != connected) {
+        m_connected = connected;
+        if (connected) {
+            emit this->connected();
+        } else {
+            emit disconnected();
+        }
+    }
 }

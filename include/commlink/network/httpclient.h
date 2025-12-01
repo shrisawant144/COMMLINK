@@ -22,7 +22,8 @@ public:
     void clearHeaders();
     void setTimeout(int msecs) { m_timeout = msecs; }
     bool isConnected() const { return m_connected; }
-    void disconnect() { m_connected = false; }
+    void setConnected(bool connected);
+    void disconnect();
     
     static QString methodToString(Method method);
 

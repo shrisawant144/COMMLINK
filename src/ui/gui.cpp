@@ -16,6 +16,7 @@
 #include <QtWidgets/QListWidget>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonParseError>
+#include <QtCore/QUrl>
 #include <QtGui/QIntValidator>
 #include <QtWidgets/QMessageBox>
 #include <QtCore/QDateTime>
@@ -565,6 +566,13 @@ void CommLinkGUI::onConnect() {
     
     // Handle HTTP
     if (proto == "HTTP") {
+        if (httpClient->isConnected()) {
+            httpClient->disconnect();
+            updateClientStatus();
+            updateSendButtonState();
+            return;
+        }
+        
         QString url = hostEdit->text().trimmed();
         if (url.isEmpty()) {
             QMessageBox::warning(this, "Invalid URL", "Please enter an HTTP URL");
@@ -573,9 +581,21 @@ void CommLinkGUI::onConnect() {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = "http://" + url;
         }
+        
+        // Set HTTP client as "connected" (ready to send)
         httpClient->setFormat(format);
+        // Manually trigger connected state for HTTP
+        connect(httpClient, &HttpClient::connected, this, [this]() {
+            updateClientStatus();
+            updateSendButtonState();
+        }, Qt::UniqueConnection);
+        
+        // Simulate connection by emitting the signal
+        QMetaObject::invokeMethod(httpClient, [this]() {
+            httpClient->setConnected(true);
+        }, Qt::QueuedConnection);
+        
         logMessage("HTTP client ready: " + url, "[HTTP] ");
-        updateClientStatus();
         return;
     }
     
@@ -789,8 +809,43 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
     logMessage(QString("Received %1 message from %2").arg(source).arg(timestamp), "[RECV] ");
 
     // Save received message to history
-    QString host = source.split(':').first(); // Extract host from source
-    int port = receivePortEdit->text().toInt();
+    QString host;
+    int port = 0;
+    
+    // Parse host and port based on protocol and source format
+    if (protocol == "HTTP") {
+        // For HTTP, source can be a URL (http://host:port) or IP:port [method]
+        if (source.startsWith("http://") || source.startsWith("https://")) {
+            // Client side: source is URL like "http://127.0.0.1:5000"
+            QUrl url(source.split(" ").first()); // Remove any trailing info like [HTTP 200]
+            host = url.host();
+            port = url.port(80);
+        } else {
+            // Server side: source is like "::ffff:127.0.0.1:42966 [POST /]"
+            QString cleanSource = source.split(" ").first(); // Remove method info
+            QStringList parts = cleanSource.split(":");
+            if (parts.size() >= 2) {
+                // Handle IPv6 format like ::ffff:127.0.0.1:42966
+                port = parts.last().toInt();
+                parts.removeLast();
+                host = parts.join(":");
+            } else {
+                host = cleanSource;
+                port = receivePortEdit->text().toInt();
+            }
+        }
+    } else {
+        // For TCP/UDP/WebSocket: source format is typically "host:port"
+        QStringList parts = source.split(":");
+        if (parts.size() >= 2) {
+            port = parts.last().toInt();
+            parts.removeLast();
+            host = parts.join(":");
+        } else {
+            host = source;
+            port = receivePortEdit->text().toInt();
+        }
+    }
     
     if (!historyManager.saveMessage(direction, protocol, host, port, msg, source)) {
         logMessage("Failed to save received message to history", "[WARN] ");
@@ -801,8 +856,10 @@ void CommLinkGUI::onDataReceived(const DataMessage &msg, const QString &source, 
 }
 
 void CommLinkGUI::updateStatusBar() {
-    bool anyClientConnected = tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected();
-    bool anyServerListening = tcpServer->isListening() || udpServer->isListening() || wsServer->isListening();
+    bool anyClientConnected = tcpClient->isConnected() || udpClient->isConnected() || 
+                              wsClient->isConnected() || httpClient->isConnected();
+    bool anyServerListening = tcpServer->isListening() || udpServer->isListening() || 
+                              wsServer->isListening() || httpServer->isListening();
     
     QString sendStatus = anyClientConnected ? QString("TX: %1:%2").arg(hostEdit->text()).arg(portEdit->text()) : "TX: Idle";
     QString recvStatus = anyServerListening ? QString("RX: Port %1").arg(receivePortEdit->text()) : "RX: Idle";
@@ -958,8 +1015,8 @@ void CommLinkGUI::onServerProtocolChanged(int index) {
     
     QString proto = receiveProtocolCombo->currentText();
     
-    // TCP and WebSocket support multiple clients, UDP doesn't
-    bool showClientList = (proto == "TCP" || proto == "WebSocket");
+    // TCP, WebSocket and HTTP support multiple clients, UDP doesn't
+    bool showClientList = (proto == "TCP" || proto == "WebSocket" || proto == "HTTP");
     connectedClientsList->setVisible(showClientList);
     clientCountLabel->setVisible(showClientList);
     
@@ -1034,8 +1091,8 @@ void CommLinkGUI::onClientDisconnected(const QString& clientInfo) {
 }
 
 void CommLinkGUI::updateClientStatus() {
-    bool anyConnected = tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected() || 
-                        (protocolCombo->currentText() == "HTTP");
+    bool anyConnected = tcpClient->isConnected() || udpClient->isConnected() || 
+                        wsClient->isConnected() || httpClient->isConnected();
     
     if (anyConnected) {
         QString proto = protocolCombo->currentText();
@@ -1076,16 +1133,22 @@ void CommLinkGUI::updateServerStatus() {
 void CommLinkGUI::updateSendButtonState() {
     if (!sendBtn || !connectedClientsList) return;
     
-    bool clientConnected = tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected();
+    bool clientConnected = tcpClient->isConnected() || udpClient->isConnected() || 
+                          wsClient->isConnected() || httpClient->isConnected();
     bool serverHasClients = connectedClientsList->count() > 0;
-    bool serverListening = tcpServer->isListening() || udpServer->isListening() || wsServer->isListening();
+    bool serverListening = tcpServer->isListening() || udpServer->isListening() || 
+                          wsServer->isListening() || httpServer->isListening();
     
     int sendMode = sendModeCombo->currentData().toInt();
     
     bool canSend = false;
     if (sendMode == 0) {
-        // Send as client
-        canSend = clientConnected;
+        // Send as client (HTTP is always ready if selected)
+        if (protocolCombo->currentText() == "HTTP") {
+            canSend = true; // HTTP doesn't need persistent connection
+        } else {
+            canSend = clientConnected;
+        }
     } else if (sendMode == 1) {
         // Broadcast from server
         canSend = serverListening && serverHasClients;
