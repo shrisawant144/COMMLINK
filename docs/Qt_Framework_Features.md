@@ -1,875 +1,756 @@
-# Qt Framework Features - Making Desktop Apps Easy
+# Qt Framework Features in CommLink
 
-## What Is Qt? (The Simple Explanation)
+## Introduction
 
-Qt (pronounced "cute") is like a **comprehensive toolbox** for building desktop applications. Instead of building everything from scratch, Qt provides pre-made components like windows, buttons, and text boxes that you can use to create professional-looking applications.
+Qt is a comprehensive C++ framework that makes desktop application development productive and enjoyable. This guide explains how CommLink leverages Qt's features to create a professional, cross-platform network testing tool.
 
-### Think of Qt Like This:
-- **Building a House from Scratch**: You'd need to make your own bricks, windows, doors
-- **Building with Qt**: You get pre-made, high-quality components and simply assemble them
-- **Result**: Faster development, better quality, cross-platform compatibility
+---
 
-## Why Qt for This Project?
+## Why Qt?
 
-### ✅ **Cross-Platform Magic**
-- **Write Once, Run Everywhere**: Same code works on Windows, Mac, and Linux
-- **Native Look**: App looks like it belongs on each operating system
-- **No Extra Work**: Qt handles the differences between operating systems
+### Cross-Platform Development
 
-### ✅ **Rich Component Library**
-- **Ready-Made Widgets**: Buttons, text boxes, menus, dialogs
-- **Advanced Features**: Networking, JSON handling, threading
-- **Professional Quality**: Used by major companies worldwide
-
-### ✅ **Event-Driven Programming**
-- **Reactive**: App responds to user actions (clicks, typing)
-- **Non-Blocking**: Multiple things can happen at the same time
-- **Clean Code**: Separates what happens from when it happens
-
-## Core Qt Concepts Used in Our Project
-
-### 1. 🏠 **QApplication** (The Foundation)
-
-Every Qt application needs exactly one QApplication - it's like the foundation of a house.
+**Write Once, Run Everywhere**: Single codebase for Linux, Windows, and macOS
 
 ```cpp
-// From main.cpp
-int main(int argc, char *argv[])
-{
-    QApplication app(argc, argv);  // Create the foundation
+// Same code works on all platforms
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);  // Platform-specific initialization
+    GUI window;                     // Native-looking GUI
+    window.show();
+    return app.exec();
+}
+```
+
+Qt handles:
+- File path separators (`/` vs `\`)
+- Native look and feel
+- Platform-specific quirks
+- System integration
+
+### Rich Component Library
+
+Qt provides everything needed for CommLink:
+- **Qt Widgets**: GUI components (buttons, text boxes, tabs)
+- **Qt Network**: TCP, UDP, HTTP, WebSocket support
+- **Qt Sql**: SQLite database integration
+- **Qt Core**: Utilities, containers, file I/O
+
+### Professional Quality
+
+- Used by: Adobe, Autodesk, LG, Mercedes-Benz, Samsung
+- Battle-tested in production applications
+- Comprehensive documentation
+- Active community support
+
+---
+
+## Core Qt Modules Used
+
+### 1. Qt Core (Foundation)
+
+Every Qt application uses Qt Core for fundamental functionality.
+
+#### QObject - Base of Everything
+
+```cpp
+class HTTPClient : public QObject {
+    Q_OBJECT  // Enable Qt meta-object features
     
-    CommLinkGUI window;          // Build our house on the foundation
-    window.show();                 // Open the front door
-    
-    return app.exec();             // Keep the house "alive" and responsive
-}
-```
-
-**What QApplication Does**:
-- **Event Loop**: Continuously checks for user interactions (clicks, key presses)
-- **System Integration**: Connects your app to the operating system
-- **Resource Management**: Handles fonts, colors, system settings
-- **Message Processing**: Routes events to the right parts of your app
-
-**Real-World Analogy**: Like the electrical system in your house - you don't see it, but everything depends on it.
-
-### 2. 🪟 **QWidget** (Building Blocks)
-
-QWidget is the base class for all visual elements - like LEGO blocks for user interfaces.
-
-```cpp
-class CommLinkGUI : public QWidget  // Our main window IS A widget
-{
-    // Our custom functionality
-private:
-    QPushButton *sendBtn;    // Button IS A widget
-    QTextEdit *jsonEdit;     // Text editor IS A widget  
-    QComboBox *protocolCombo; // Dropdown IS A widget
-};
-```
-
-**Widget Hierarchy** (Like Russian Dolls):
-```
-Main Window (QWidget)
-├── Tab Widget (QTabWidget)
-│   ├── Send Tab (QWidget)
-│   │   ├── Protocol Dropdown (QComboBox)
-│   │   ├── Host Input (QLineEdit)
-│   │   └── Send Button (QPushButton)
-│   └── Receive Tab (QWidget)
-│       ├── Port Input (QLineEdit)
-│       └── Start Button (QPushButton)
-```
-
-**Why This Matters**: Each widget can contain other widgets, creating complex interfaces from simple building blocks.
-
-### 3. 📐 **Layout Management** (Automatic Organization)
-
-Instead of manually positioning every button and text box, Qt's layouts automatically arrange things for you.
-
-#### **QVBoxLayout** (Vertical Stack)
-```cpp
-auto *layout = new QVBoxLayout(this);
-layout->addWidget(connectionGroup);    // Top
-layout->addWidget(messageGroup);       // Middle  
-layout->addWidget(logGroup);          // Bottom
-```
-**Result**: Items stack vertically, automatically resize when window changes.
-
-#### **QHBoxLayout** (Horizontal Row)
-```cpp
-auto *connLayout = new QHBoxLayout();
-connLayout->addWidget(new QLabel("Host:"));     // Left
-connLayout->addWidget(hostEdit);                // Middle
-connLayout->addWidget(new QLabel("Port:"));     // Right-ish
-connLayout->addWidget(portEdit);                // Right
-```
-**Result**: Items line up horizontally, share available space.
-
-#### **QFormLayout** (Label-Input Pairs)
-```cpp
-auto *formLayout = new QFormLayout();
-formLayout->addRow("Protocol:", protocolCombo);
-formLayout->addRow("Host:", hostEdit);
-formLayout->addRow("Port:", portEdit);
-```
-**Result**: Professional-looking forms with aligned labels and inputs.
-
-**Why Layouts Are Amazing**:
-- **Responsive**: Automatically adjust when window is resized
-- **Consistent**: Everything lines up perfectly
-- **Less Code**: No manual positioning calculations
-- **Professional**: Looks like commercial software
-
-### 4. 🎛️ **Common Widgets Explained**
-
-#### **QComboBox** (Dropdown Menu)
-```cpp
-protocolCombo = new QComboBox();
-protocolCombo->addItems({"TCP", "UDP"});  // Add options
-QString selected = protocolCombo->currentText();  // Get selection
-```
-**Use Case**: Choose between TCP and UDP protocols.
-
-#### **QLineEdit** (Single-Line Text Input)
-```cpp
-hostEdit = new QLineEdit("127.0.0.1");  // Default value
-QString host = hostEdit->text();         // Get what user typed
-hostEdit->setValidator(portValidator);   // Only allow valid input
-```
-**Use Case**: Enter IP addresses and port numbers.
-
-#### **QPushButton** (Clickable Button)
-```cpp
-connectBtn = new QPushButton("🔗 Connect");
-connectBtn->setEnabled(false);           // Disable until ready
-connect(connectBtn, &QPushButton::clicked, this, &CommLinkGUI::onConnect);
-```
-**Use Case**: Trigger actions like connecting or sending messages.
-
-#### **QTextEdit** (Multi-Line Text Area)
-```cpp
-jsonEdit = new QTextEdit();
-jsonEdit->setPlainText(R"({"type":"hello","value":42})");  // Default JSON
-QString json = jsonEdit->toPlainText();  // Get user's JSON
-```
-**Use Case**: Enter JSON messages and display logs.
-
-#### **QTabWidget** (Tabbed Interface)
-```cpp
-auto *tabWidget = new QTabWidget();
-tabWidget->addTab(sendTab, "📤 Sending");
-tabWidget->addTab(receiveTab, "📥 Receiving");
-tabWidget->addTab(logTab, "📋 Logs");
-```
-**Use Case**: Organize different functions into separate tabs.
-
-### 5. ⚡ **Signals and Slots** (Event Handling Made Easy)
-
-Qt's signature feature - connecting user actions to your code responses.
-
-#### **How It Works**
-```cpp
-// When this happens...        ...call this function
-connect(sendBtn, &QPushButton::clicked, this, &CommLinkGUI::onSend);
-```
-
-#### **Real-World Examples**
-```cpp
-// Button clicks
-connect(connectBtn, &QPushButton::clicked, this, &CommLinkGUI::onConnect);
-
-// Text changes
-connect(hostEdit, &QLineEdit::textChanged, this, &CommLinkGUI::validateInput);
-
-// Custom signals from our networking code
-connect(&receiver, &Receiver::jsonReceived, this, &CommLinkGUI::onJsonReceived);
-```
-
-#### **Why Signals and Slots Are Powerful**
-- **Decoupled**: The button doesn't need to know what happens when clicked
-- **Flexible**: One signal can connect to multiple slots
-- **Thread-Safe**: Works across different threads automatically
-- **Type-Safe**: Compiler checks that signal and slot match
-
-**Real-World Analogy**: Like a doorbell system - when someone presses the button (signal), the bell rings inside (slot). The button doesn't need to know how the bell works.
-
-### 6. 📊 **Multi-Format Data Processing** (Advanced Data Handling)
-
-Qt provides excellent support for various data formats, and our application extends this with a comprehensive multi-format system.
-
-#### **DataMessage System Integration**
-```cpp
-// Multi-format message creation
-DataFormatType currentFormat = static_cast<DataFormatType>(formatCombo->currentIndex());
-QString messageText = messageEdit->toPlainText().trimmed();
-
-// Format-specific validation
-if (!DataMessage::validateInput(messageText, currentFormat)) {
-    QMessageBox::warning(this, "Invalid Format", 
-        QString("Message validation failed for %1 format").arg(formatCombo->currentText()));
-    return;
-}
-
-// Create and serialize message
-QVariant parsedData = DataMessage::parseInput(messageText, currentFormat);
-DataMessage dataMsg(currentFormat, parsedData);
-QByteArray serializedData = dataMsg.serialize();
-```
-
-#### **Format-Specific Processing**
-```cpp
-// Handle different formats with Qt's built-in classes
-switch (format) {
-    case DataFormatType::JSON: {
-        QJsonParseError error;
-        QJsonDocument doc = QJsonDocument::fromJson(input.toUtf8(), &error);
-        return error.error == QJsonParseError::NoError;
-    }
-    case DataFormatType::XML: {
-        QXmlStreamReader reader(input);
-        while (!reader.atEnd()) {
-            reader.readNext();
-            if (reader.hasError()) return false;
-        }
-        return true;
-    }
-    case DataFormatType::HEX: {
-        QRegularExpression hexPattern("^[0-9A-Fa-f\\s]*$");
-        return hexPattern.match(input.trimmed()).hasMatch();
-    }
-}
-```
-
-### 7. 📊 **JSON Handling** (Specific Data Processing)
-
-Qt makes working with JSON data incredibly easy.
-
-#### **Parsing JSON** (Text → Data Structure)
-```cpp
-QString jsonText = jsonEdit->toPlainText();
-QJsonParseError error;
-QJsonDocument doc = QJsonDocument::fromJson(jsonText.toUtf8(), &error);
-
-if (error.error != QJsonParseError::NoError) {
-    // Show user-friendly error message
-    QMessageBox::warning(this, "Invalid JSON", error.errorString());
-    return;
-}
-```
-
-#### **Creating JSON** (Data Structure → Text)
-```cpp
-QJsonObject obj;
-obj["type"] = "message";
-obj["timestamp"] = QDateTime::currentDateTime().toString();
-obj["data"] = userInput;
-
-QJsonDocument doc(obj);
-QString jsonText = doc.toJson(QJsonDocument::Compact);
-```
-
-**Why Qt's Multi-Format Support is Great**:
-- **Comprehensive**: Built-in support for JSON, XML, regular expressions
-- **Error Handling**: Detailed error reporting for each format type
-- **Flexible**: Works with objects, arrays, and primitive types across formats
-- **Efficient**: Fast parsing and generation for all supported formats
-- **Unicode Safe**: Handles international characters correctly
-- **Extensible**: Easy to add support for new formats
-
-### 7. 🔤 **String Handling** (Text Processing)
-
-Qt's QString class is much more powerful than basic C++ strings.
-
-#### **QString Features**
-```cpp
-QString host = hostEdit->text();
-int port = portEdit->text().toInt();        // Convert to number
-QString upper = protocol.toUpper();         // "tcp" → "TCP"
-QString trimmed = input.trimmed();          // Remove spaces
-bool empty = text.isEmpty();                // Check if empty
-```
-
-#### **Internationalization Support**
-```cpp
-QString message = QString("Connected to %1:%2").arg(host).arg(port);
-// Safe formatting that works in any language
-```
-
-#### **Conversion Between Types**
-```cpp
-// Qt string to C string (for POSIX functions)
-const char* cString = host.toUtf8().constData();
-
-// Qt string to byte array (for network transmission)
-QByteArray data = jsonDoc.toJson(QJsonDocument::Compact);
-```
-
-**Why QString Matters**:
-- **Unicode**: Handles all languages and special characters
-- **Safe**: No buffer overflows like C strings
-- **Convenient**: Many built-in methods for common operations
-- **Efficient**: Optimized for performance
-
-### 8. ✅ **Input Validation** (Preventing Errors)
-
-Qt provides built-in validators to ensure users enter valid data.
-
-#### **QIntValidator** (Numbers Only)
-```cpp
-portValidator = new QIntValidator(1, 65535, this);  // Valid port range
-portEdit->setValidator(portValidator);
-receivePortEdit->setValidator(portValidator);
-```
-**Result**: Users can only type numbers between 1 and 65535.
-
-#### **Custom Validation**
-```cpp
-bool CommLinkGUI::validateInputs()
-{
-    if (hostEdit->text().trimmed().isEmpty()) {
-        QMessageBox::warning(this, "Invalid Input", "Host cannot be empty");
-        return false;
-    }
-    
-    bool ok;
-    int port = portEdit->text().toInt(&ok);
-    if (!ok || port < 1 || port > 65535) {
-        QMessageBox::warning(this, "Invalid Input", "Port must be between 1 and 65535");
-        return false;
-    }
-    
-    return true;
-}
-```
-
-**Benefits of Validation**:
-- **User-Friendly**: Clear error messages
-- **Prevents Crashes**: Invalid data caught before it causes problems
-- **Professional**: Behaves like commercial software
-- **Real-Time**: Validation happens as user types
-
-### 9. 🎨 **Theme Management and Styling** (Professional Appearance System)
-
-Qt provides powerful styling capabilities that enable sophisticated theme management systems.
-
-#### **Advanced Theme Architecture**
-Our application implements a comprehensive theme management system using the Singleton pattern:
-
-```cpp
-class ThemeManager : public QObject {
-    Q_OBJECT
 public:
-    static ThemeManager& instance() {
-        static ThemeManager instance;  // Thread-safe singleton
-        return instance;
-    }
-    
-    void setTheme(Theme theme);
-    QString getStyleSheet() const;
-    bool isDarkMode() const;
+    explicit HTTPClient(QObject *parent = nullptr);
     
 signals:
-    void themeChanged();
+    void requestComplete(int statusCode, const QByteArray &response);
     
-private:
-    ThemeManager();  // Private constructor
-    Theme currentThemeMode = Light;
+private slots:
+    void handleNetworkReply(QNetworkReply *reply);
 };
 ```
 
-#### **Dynamic Theme Switching**
+**QObject Provides**:
+- Signal-slot mechanism
+- Parent-child memory management
+- Runtime type information
+- Property system
+- Event handling
+
+#### QString - Unicode String Class
+
 ```cpp
-// Theme application with signal-slot communication
-connect(&ThemeManager::instance(), &ThemeManager::themeChanged, 
-        this, [this]() {
-    setStyleSheet(ThemeManager::instance().getStyleSheet());
-    update();  // Redraw interface
+// Automatic encoding handling
+QString message = "Hello 世界 🌍";  // Unicode support
+
+// Rich API
+QString url = "http://example.com/api";
+if (url.startsWith("http://")) {
+    url.replace("http://", "https://");  // Use HTTPS
+}
+
+// Conversion utilities
+QByteArray utf8 = message.toUtf8();
+std::string stdStr = message.toStdString();
+```
+
+**Advantages over std::string**:
+- Full Unicode support
+- Implicit sharing (copy-on-write)
+- Rich API (split, replace, trim, etc.)
+- Qt integration
+
+#### QByteArray - Binary Data
+
+```cpp
+// Network data handling
+QByteArray request = "GET / HTTP/1.1\r\n";
+request.append("Host: example.com\r\n\r\n");
+
+// Encoding utilities
+QByteArray base64 = data.toBase64();
+QByteArray hex = data.toHex();
+
+// Size and capacity
+qDebug() << "Size:" << request.size() << "bytes";
+```
+
+#### Qt Containers
+
+```cpp
+// QList - Dynamic array
+QList<QString> protocols = {"TCP", "UDP", "HTTP", "WebSocket"};
+protocols.append("MQTT");  // Add more
+
+// QMap - Key-value pairs
+QMap<QString, int> portMap;
+portMap["HTTP"] = 80;
+portMap["HTTPS"] = 443;
+portMap["FTP"] = 21;
+
+// QSet - Unique values
+QSet<QString> connectedHosts;
+connectedHosts.insert("127.0.0.1");
+connectedHosts.insert("192.168.1.1");
+```
+
+---
+
+### 2. Qt Widgets (GUI Components)
+
+#### QWidget - Base Widget Class
+
+All visual elements inherit from QWidget:
+
+```cpp
+class GUI : public QWidget {
+    Q_OBJECT
+    
+public:
+    GUI(QWidget *parent = nullptr) : QWidget(parent) {
+        setWindowTitle("CommLink - Network Communication Tool");
+        resize(900, 600);
+    }
+};
+```
+
+**Widget Hierarchy in CommLink**:
+```
+GUI (Main Window - QWidget)
+├── QTabWidget (Tab Container)
+│   ├── TCP/UDP Tab (QWidget)
+│   │   ├── QComboBox (Protocol selector)
+│   │   ├── QLineEdit (Host/Port inputs)
+│   │   ├── QPushButton (Connect button)
+│   │   └── QTextEdit (Message editor)
+│   ├── HTTP Tab (QWidget)
+│   ├── WebSocket Tab (QWidget)
+│   ├── History Tab (Custom HistoryTab)
+│   └── Logs Tab (QWidget)
+└── QStatusBar (Status information)
+```
+
+#### Common Widgets in CommLink
+
+**QPushButton - Clickable Buttons**:
+```cpp
+QPushButton *sendBtn = new QPushButton("📤 Send Message", this);
+sendBtn->setToolTip("Send the message to the server");
+connect(sendBtn, &QPushButton::clicked, this, &GUI::onSendMessage);
+```
+
+**QLineEdit - Single-Line Input**:
+```cpp
+QLineEdit *hostEdit = new QLineEdit("127.0.0.1", this);
+hostEdit->setPlaceholderText("Enter IP address");
+
+// Input validation
+QIntValidator *portValidator = new QIntValidator(1, 65535, this);
+portEdit->setValidator(portValidator);  // Only accept valid ports
+```
+
+**QTextEdit - Multi-Line Text Editor**:
+```cpp
+QTextEdit *messageEdit = new QTextEdit(this);
+messageEdit->setPlainText(R"({"message": "Hello"})");
+messageEdit->setAcceptRichText(false);  // Plain text only
+
+// Read content
+QString message = messageEdit->toPlainText();
+```
+
+**QComboBox - Dropdown Selection**:
+```cpp
+QComboBox *protocolCombo = new QComboBox(this);
+protocolCombo->addItems({"TCP", "UDP", "HTTP", "WebSocket"});
+
+// Get selection
+QString protocol = protocolCombo->currentText();
+
+// React to changes
+connect(protocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+        this, &GUI::onProtocolChanged);
+```
+
+**QTabWidget - Tabbed Interface**:
+```cpp
+QTabWidget *tabs = new QTabWidget(this);
+tabs->addTab(createTcpUdpTab(), "TCP/UDP");
+tabs->addTab(createHttpTab(), "HTTP");
+tabs->addTab(createWebSocketTab(), "WebSocket");
+tabs->addTab(createHistoryTab(), "History");
+tabs->addTab(createLogsTab(), "Logs");
+
+// Detect tab changes
+connect(tabs, &QTabWidget::currentChanged, 
+        this, &GUI::onTabChanged);
+```
+
+**QTableWidget - Data Tables**:
+```cpp
+QTableWidget *historyTable = new QTableWidget(this);
+historyTable->setColumnCount(6);
+historyTable->setHorizontalHeaderLabels({
+    "Timestamp", "Protocol", "Direction", "Format", "Host:Port", "Message"
 });
 
-// System theme detection
-bool ThemeManager::isSystemDark() const {
-    QPalette palette = QApplication::palette();
-    return palette.color(QPalette::Window).lightness() < 128;
-}
+// Add row
+int row = historyTable->rowCount();
+historyTable->insertRow(row);
+historyTable->setItem(row, 0, new QTableWidgetItem("2024-12-01 14:30:22"));
+historyTable->setItem(row, 1, new QTableWidgetItem("HTTP"));
 ```
 
-#### **Comprehensive Stylesheet System**
+---
+
+### 3. Qt Layouts (Automatic Arrangement)
+
+Layouts automatically arrange and resize widgets.
+
+#### QVBoxLayout - Vertical Stack
+
 ```cpp
-QString ThemeManager::getLightStyleSheet() const {
-    return R"(
-        QWidget { background-color: #ffffff; color: #000000; }
-        QPushButton { 
-            background-color: #f0f0f0;
-            border: 1px solid #cccccc;
-            padding: 8px 16px;
-            border-radius: 4px;
-        }
-        QPushButton:hover { background-color: #e0e0e0; }
-        QGroupBox {
-            font-weight: bold;
-            border: 2px solid #cccccc;
-            border-radius: 5px;
-            margin-top: 1ex;
-        }
-    )";
-}
+QVBoxLayout *layout = new QVBoxLayout(this);
+layout->addWidget(connectionGroup);   // Top
+layout->addWidget(messageGroup);      // Middle
+layout->addWidget(logsGroup);         // Bottom
+// Widgets stack vertically, auto-resize
 ```
 
-**Advanced Theme Features**:
-- **Singleton Pattern**: Global theme management with single instance
-- **Observer Pattern**: Automatic UI updates via signals and slots
-- **System Integration**: Automatic detection of OS theme preferences
-- **Persistent Settings**: Theme choices saved between sessions
-- **Type Safety**: Enum classes prevent theme-related errors
-- **Performance**: Efficient stylesheet generation and application
+#### QHBoxLayout - Horizontal Row
 
-### 10. 🔧 **Settings and Persistence** (Advanced Configuration Management)
-
-Qt provides sophisticated settings management that integrates seamlessly with theme systems and user preferences.
-
-#### **Comprehensive Settings Architecture**
 ```cpp
-class SettingsManager {
-public:
-    static void loadApplicationSettings() {
-        QSettings settings("CommLink", "CommLinkApp");
-        
-        // Network settings
-        QString host = settings.value("sendHost", "127.0.0.1").toString();
-        int port = settings.value("sendPort", 5000).toInt();
-        QString protocol = settings.value("sendProtocol", "TCP").toString();
-        
-        // Theme settings with type safety
-        int themeValue = settings.value("theme", static_cast<int>(Theme::Light)).toInt();
-        Theme savedTheme = static_cast<Theme>(themeValue);
-        ThemeManager::instance().setTheme(savedTheme);
-        
-        // Window geometry and state
-        QByteArray geometry = settings.value("geometry").toByteArray();
-        QByteArray windowState = settings.value("windowState").toByteArray();
-    }
-    
-    static void saveApplicationSettings() {
-        QSettings settings("CommLink", "CommLinkApp");
-        
-        // Save theme with proper type conversion
-        settings.setValue("theme", static_cast<int>(ThemeManager::instance().currentTheme()));
-        
-        // Save other application state...
-    }
-};
+QHBoxLayout *buttonLayout = new QHBoxLayout();
+buttonLayout->addWidget(connectBtn);
+buttonLayout->addStretch();  // Flexible space
+buttonLayout->addWidget(disconnectBtn);
 ```
 
-#### **Theme-Aware Settings Integration**
-```cpp
-// Theme manager with persistent settings
-ThemeManager::ThemeManager() {
-    settings = new QSettings("CommLink", "CommLinkApp", this);
-    
-    // Load saved theme with validation
-    int themeValue = settings->value("theme", static_cast<int>(Light)).toInt();
-    if (themeValue >= 0 && themeValue <= static_cast<int>(Auto)) {
-        currentThemeMode = static_cast<Theme>(themeValue);
-    } else {
-        currentThemeMode = Light;  // Fallback to safe default
-    }
-}
+#### QFormLayout - Label-Input Pairs
 
-void ThemeManager::setTheme(Theme theme) {
-    if (currentThemeMode != theme) {
-        currentThemeMode = theme;
-        settings->setValue("theme", static_cast<int>(theme));
-        settings->sync();  // Force immediate write
-        emit themeChanged();
-    }
-}
+```cpp
+QFormLayout *form = new QFormLayout();
+form->addRow("Protocol:", protocolCombo);
+form->addRow("Host:", hostEdit);
+form->addRow("Port:", portEdit);
+// Creates aligned form with labels
 ```
 
-**Advanced Settings Features**:
-- **Type Safety**: Proper enum conversion with validation
-- **Immediate Persistence**: Settings saved instantly on change
-- **Cross-Platform Storage**: Automatic platform-appropriate locations
-- **Hierarchical Organization**: Grouped settings for better management
-- **Default Value Handling**: Graceful fallbacks for missing settings
-- **Integration**: Seamless connection with theme and UI systems
+#### QGridLayout - Grid Arrangement
 
-## How Qt Features Work Together in Our App
-
-### 🔄 **The Complete Integration Flow**
-
-1. **QApplication** starts the event loop and initializes theme detection
-2. **ThemeManager Singleton** loads saved theme preferences
-3. **QWidget hierarchy** creates the user interface structure
-4. **Layouts** automatically arrange components with theme-aware spacing
-5. **Theme System** applies comprehensive styling to all widgets
-6. **Input validators** ensure data quality with theme-appropriate feedback
-7. **Signals and slots** connect user actions to responses and theme updates
-8. **QString** handles all text processing with proper encoding
-9. **QJsonDocument** processes data with theme-aware error display
-10. **QSettings** manages both user preferences and theme persistence
-11. **Observer Pattern** ensures all UI components update when theme changes
-12. **Cross-platform integration** adapts to system theme preferences
-
-### 🎯 **Example User Interaction with Theme Integration**
-
-1. **Application Startup**: ThemeManager loads saved theme preference
-2. **UI Initialization**: All widgets styled according to current theme
-3. **User Input**: Types in host field (QLineEdit with theme-appropriate colors)
-4. **Validation**: Validator checks input with theme-aware error styling
-5. **Theme Change**: User switches to dark mode via menu
-6. **Signal Propagation**: ThemeManager emits themeChanged signal
-7. **UI Update**: All widgets automatically re-style via connected slots
-8. **User Action**: Clicks Connect button (QPushButton with updated theme)
-9. **Response**: Signal fired and slot method called
-10. **Data Processing**: JSON processed with theme-appropriate status display
-11. **Network Operation**: Connection made with themed progress indicators
-12. **Persistence**: Both connection settings and theme choice saved
-13. **Status Update**: Success/error messages displayed with theme colors
-
-## Why Qt Is Perfect for This Project
-
-### 🎓 **For Learning**
-- **Gentle Learning Curve**: Start simple, add complexity gradually
-- **Visual Feedback**: See results immediately
-- **Industry Standard**: Used in professional applications
-- **Great Documentation**: Extensive examples and tutorials
-
-### 🔧 **For Development**
-- **Rapid Prototyping**: Get working GUI quickly
-- **Cross-Platform**: One codebase, multiple operating systems
-- **Rich Features**: Everything needed for modern applications
-- **Active Community**: Large community for support
-
-### 🚀 **For This Application**
-- **Network Integration**: Built-in networking classes with theme-aware status display
-- **JSON Support**: Native JSON parsing with themed error reporting
-- **Threading**: Easy background processing with themed progress indicators
-- **Professional UI**: Comprehensive theme system creates commercial-quality appearance
-- **Design Patterns**: Real-world implementation of Singleton, Observer, and Strategy patterns
-- **System Integration**: Automatic adaptation to OS theme preferences
-- **User Experience**: Smooth theme transitions and persistent user preferences
-
-### 11. 📁 **File Management and Dialogs** (Working with Files)
-
-Qt provides powerful file handling capabilities and native file dialogs.
-
-#### **QFileDialog** (Native File Picker)
 ```cpp
-// Open file dialog
-QString filePath = QFileDialog::getOpenFileName(
-    this,                                    // Parent widget
-    "Load JSON Message",                     // Dialog title
-    FileManager::getDefaultSaveLocation(),   // Starting directory
-    "JSON Files (*.json);;All Files (*)"    // File filters
-);
-
-// Save file dialog
-QString filePath = QFileDialog::getSaveFileName(
-    this, 
-    "Save JSON Message", 
-    FileManager::getDefaultSaveLocation() + "/message.json",
-    "JSON Files (*.json);;All Files (*)"
-);
+QGridLayout *grid = new QGridLayout();
+grid->addWidget(label, 0, 0);      // Row 0, Col 0
+grid->addWidget(hostEdit, 0, 1);   // Row 0, Col 1
+grid->addWidget(portLabel, 1, 0);  // Row 1, Col 0
+grid->addWidget(portEdit, 1, 1);   // Row 1, Col 1
 ```
 
-**Benefits**:
-- **Native Look**: Uses OS-standard file dialogs
-- **User Familiar**: Everyone knows how to use these
-- **File Filtering**: Only show relevant file types
-- **Path Validation**: Handles invalid paths gracefully
+**Layout Advantages**:
+- Automatic resizing when window resized
+- Consistent spacing and alignment
+- Handles different screen DPI
+- No manual pixel positioning needed
 
-#### **QFile and QTextStream** (File Operations)
+---
+
+### 4. Qt Network (Communication)
+
+#### QTcpSocket - TCP Client
+
 ```cpp
-// Reading files safely
-QFile file(filePath);
-if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    QTextStream in(&file);
-    QString content = in.readAll();
-    // File automatically closed when QFile destructor runs
-}
-
-// Writing files with proper encoding
-QFile file(filePath);
-if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-    QTextStream out(&file);
-    out.setCodec("UTF-8");  // Ensure proper encoding
-    out << jsonContent;
-}
-```
-
-#### **QStandardPaths** (System Directories)
-```cpp
-// Get appropriate directories for different purposes
-QString documentsPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
-QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-
-// Create application-specific directory
-QString appDataPath = documentsPath + "/CommLink";
-QDir().mkpath(appDataPath);  // Create directory if it doesn't exist
-```
-
-**Cross-Platform Benefits**:
-- **Windows**: Uses Documents, AppData, etc.
-- **macOS**: Uses ~/Documents, ~/Library, etc.
-- **Linux**: Uses ~/Documents, ~/.config, etc.
-- **Automatic**: Qt handles all the differences
-
-#### **File Format Support**
-```cpp
-// Multi-format export based on file extension
-QString format = "json";
-if (filePath.endsWith(".txt")) {
-    format = "txt";
-} else if (filePath.endsWith(".csv")) {
-    format = "csv";
-}
-
-// Export in the chosen format
-ExportManager::exportMessages(messages, format, filePath);
-```
-
-**Why Qt File Management is Excellent**:
-- **Cross-Platform**: Same code works everywhere
-- **Error Handling**: Built-in error checking and reporting
-- **Encoding Support**: Proper Unicode handling
-- **Resource Management**: Automatic cleanup prevents leaks
-- **User Experience**: Native dialogs feel familiar to users
-
-### 12. 📢 **User Feedback and Messaging** (Communication with Users)
-
-Qt provides various ways to communicate with users about file operations.
-
-#### **QMessageBox** (Dialog Messages)
-```cpp
-// Success message
-QMessageBox::information(this, "Success", "JSON file loaded successfully");
-
-// Warning message
-QMessageBox::warning(this, "Error", "Failed to load JSON file or file contains invalid JSON");
-
-// Critical error
-QMessageBox::critical(this, "Critical Error", "Cannot write to file: permission denied");
-```
-
-#### **Status Updates in Logs**
-```cpp
-// Log file operations with emojis for visual clarity
-logMessage("Loaded JSON from " + filePath, "📁 ");
-logMessage("Saved JSON to " + filePath, "💾 ");
-logMessage("Exported logs to " + filePath, "📋 ");
-```
-
-**User Experience Benefits**:
-- **Immediate Feedback**: Users know if operations succeeded
-- **Clear Messages**: Specific information about what happened
-- **Visual Cues**: Emojis make logs easier to scan
-- **Professional Feel**: Behaves like commercial software
-
-### 13. 🎨 **Advanced Theme Management System** (Design Patterns in Action)
-
-Our application showcases sophisticated C++ design patterns through its comprehensive theme management system.
-
-#### **Singleton Pattern Implementation**
-```cpp
-class ThemeManager : public QObject {
+class TCPClient : public QObject {
     Q_OBJECT
-
+    
 public:
-    // Thread-safe singleton access
-    static ThemeManager& instance() {
-        static ThemeManager instance;  // C++11 guarantees thread safety
-        return instance;
+    void connectToHost(const QString &host, quint16 port) {
+        socket = new QTcpSocket(this);
+        
+        connect(socket, &QTcpSocket::connected, this, [=]() {
+            emit connectionEstablished();
+        });
+        
+        connect(socket, &QTcpSocket::readyRead, this, [=]() {
+            QByteArray data = socket->readAll();
+            emit dataReceived(data);
+        });
+        
+        connect(socket, &QTcpSocket::errorOccurred, this, [=]() {
+            emit errorOccurred(socket->errorString());
+        });
+        
+        socket->connectToHost(host, port);
     }
     
-    // Prevent copying (Rule of Five)
-    ThemeManager(const ThemeManager&) = delete;
-    ThemeManager& operator=(const ThemeManager&) = delete;
-    ThemeManager(ThemeManager&&) = delete;
-    ThemeManager& operator=(ThemeManager&&) = delete;
+    void sendData(const QByteArray &data) {
+        if (socket && socket->state() == QTcpSocket::ConnectedState) {
+            socket->write(data);
+            socket->flush();
+        }
+    }
     
-private:
-    ThemeManager();  // Private constructor ensures singleton
-    ~ThemeManager() = default;
-};
-```
-
-**Why Singleton for Theme Management**:
-- **Global State**: Theme affects entire application uniformly
-- **Resource Efficiency**: Single stylesheet cache and settings manager
-- **Consistency**: Prevents conflicting theme states
-- **Easy Access**: Available from any part of the application
-
-#### **Type-Safe Theme Enumeration**
-```cpp
-enum class Theme { Light, Dark, Auto };
-
-// Usage demonstrates type safety
-void setApplicationTheme(Theme theme) {  // Can't pass wrong type
-    ThemeManager::instance().setTheme(theme);
-}
-
-// Compiler prevents this error:
-// setApplicationTheme(5);  // Error: cannot convert int to Theme
-```
-
-#### **Observer Pattern with Qt Signals**
-```cpp
-class ThemeManager : public QObject {
 signals:
-    void themeChanged();  // Notification to all observers
+    void connectionEstablished();
+    void dataReceived(const QByteArray &data);
+    void errorOccurred(const QString &error);
     
-public slots:
-    void setTheme(Theme theme) {
-        if (currentThemeMode != theme) {
-            currentThemeMode = theme;
-            saveSettings();
-            emit themeChanged();  // Notify all listeners
-        }
-    }
+private:
+    QTcpSocket *socket;
 };
-
-// Multiple widgets can observe theme changes
-connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
-        mainWindow, &MainWindow::updateTheme);
-connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
-        settingsDialog, &SettingsDialog::refreshAppearance);
 ```
 
-**Observer Pattern Benefits**:
-- **Loose Coupling**: Theme manager doesn't know about specific UI components
-- **Extensibility**: New components can easily subscribe to theme changes
-- **Automatic Updates**: All UI elements update simultaneously
-- **Thread Safety**: Qt's signal-slot system handles cross-thread communication
+#### QTcpServer - TCP Server
 
-#### **Strategy Pattern for Theme Rendering**
 ```cpp
-class ThemeManager {
-private:
-    // Different strategies for different themes
-    QString getLightStyleSheet() const;
-    QString getDarkStyleSheet() const;
-    QString getAutoStyleSheet() const;  // Adapts to system
+class TCPServer : public QObject {
+    Q_OBJECT
     
 public:
-    QString getStyleSheet() const {
-        switch (currentThemeMode) {
-            case Theme::Light: return getLightStyleSheet();
-            case Theme::Dark:  return getDarkStyleSheet();
-            case Theme::Auto:  return getAutoStyleSheet();
-        }
-        return getLightStyleSheet();  // Safe fallback
-    }
-};
-```
-
-#### **System Integration and Auto-Detection**
-```cpp
-bool ThemeManager::isSystemDark() const {
-    // Cross-platform system theme detection
-    QPalette palette = QApplication::palette();
-    QColor windowColor = palette.color(QPalette::Window);
-    
-    // HSL lightness calculation
-    return windowColor.lightness() < 128;
-}
-
-QString ThemeManager::getAutoStyleSheet() const {
-    // Automatically adapt to system preference
-    return isSystemDark() ? getDarkStyleSheet() : getLightStyleSheet();
-}
-```
-
-#### **Persistent Configuration Management**
-```cpp
-class ThemeManager {
-private:
-    QSettings* settings;
-    
-    void loadSettings() {
-        int themeValue = settings->value("theme", static_cast<int>(Theme::Light)).toInt();
+    void startListening(quint16 port) {
+        server = new QTcpServer(this);
         
-        // Validate loaded value
-        if (themeValue >= 0 && themeValue <= static_cast<int>(Theme::Auto)) {
-            currentThemeMode = static_cast<Theme>(themeValue);
+        connect(server, &QTcpServer::newConnection, this, [=]() {
+            QTcpSocket *clientSocket = server->nextPendingConnection();
+            
+            connect(clientSocket, &QTcpSocket::readyRead, this, [=]() {
+                QByteArray data = clientSocket->readAll();
+                QString clientInfo = clientSocket->peerAddress().toString();
+                emit dataReceived(data, clientInfo);
+            });
+        });
+        
+        if (server->listen(QHostAddress::Any, port)) {
+            emit serverStarted(port);
         } else {
-            currentThemeMode = Theme::Light;  // Safe fallback
-            qWarning() << "Invalid theme value loaded, using Light theme";
+            emit errorOccurred(server->errorString());
         }
     }
     
-    void saveSettings() {
-        settings->setValue("theme", static_cast<int>(currentThemeMode));
-        settings->sync();  // Force immediate write to disk
-    }
+signals:
+    void serverStarted(quint16 port);
+    void dataReceived(const QByteArray &data, const QString &from);
+    void errorOccurred(const QString &error);
+    
+private:
+    QTcpServer *server;
 };
 ```
 
-#### **Comprehensive Widget Styling**
+#### QUdpSocket - UDP Communication
+
 ```cpp
-QString ThemeManager::getDarkStyleSheet() const {
-    return R"(
-        /* Base widget styling */
-        QWidget {
-            background-color: #2b2b2b;
-            color: #ffffff;
-            selection-background-color: #3d3d3d;
-        }
+class UDPClient : public QObject {
+    Q_OBJECT
+    
+public:
+    void sendDatagram(const QByteArray &data, const QString &host, quint16 port) {
+        socket = new QUdpSocket(this);
+        socket->writeDatagram(data, QHostAddress(host), port);
+    }
+    
+    void startListening(quint16 port) {
+        socket = new QUdpSocket(this);
+        socket->bind(QHostAddress::Any, port);
         
-        /* Button styling with hover effects */
-        QPushButton {
-            background-color: #404040;
-            border: 1px solid #555555;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        QPushButton:hover {
-            background-color: #4a4a4a;
-            border-color: #666666;
-        }
-        QPushButton:pressed {
-            background-color: #353535;
-        }
-        
-        /* Input field styling */
-        QLineEdit, QTextEdit {
-            background-color: #3a3a3a;
-            border: 2px solid #555555;
-            border-radius: 4px;
-            padding: 4px;
-        }
-        QLineEdit:focus, QTextEdit:focus {
-            border-color: #0078d4;
-        }
-        
-        /* Group box styling */
-        QGroupBox {
-            font-weight: bold;
-            border: 2px solid #555555;
-            border-radius: 5px;
-            margin-top: 1ex;
-            padding-top: 10px;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 5px 0 5px;
-        }
-    )";
-}
+        connect(socket, &QUdpSocket::readyRead, this, [=]() {
+            while (socket->hasPendingDatagrams()) {
+                QByteArray datagram;
+                datagram.resize(socket->pendingDatagramSize());
+                
+                QHostAddress sender;
+                quint16 senderPort;
+                socket->readDatagram(datagram.data(), datagram.size(),
+                                    &sender, &senderPort);
+                
+                emit datagramReceived(datagram, sender.toString(), senderPort);
+            }
+        });
+    }
+    
+signals:
+    void datagramReceived(const QByteArray &data, 
+                         const QString &sender, 
+                         quint16 port);
+    
+private:
+    QUdpSocket *socket;
+};
 ```
 
-**Theme System Architecture Benefits**:
-- **Design Patterns**: Demonstrates Singleton, Observer, and Strategy patterns
-- **Type Safety**: Enum classes prevent theme-related errors
-- **Performance**: Efficient stylesheet caching and generation
-- **User Experience**: Smooth theme transitions and system integration
-- **Maintainability**: Centralized theme logic with clear separation of concerns
-- **Extensibility**: Easy to add new themes or modify existing ones
-- **Professional Quality**: Comprehensive styling for all widget types
+#### QNetworkAccessManager - HTTP Client
 
-This theme management system exemplifies how Qt's features combine with solid C++ design patterns to create professional, maintainable applications. It demonstrates the practical application of concepts covered in the C++ Programming Concepts document.
+```cpp
+class HTTPClient : public QObject {
+    Q_OBJECT
+    
+public:
+    void sendRequest(const QString &url, const QString &method,
+                    const QByteArray &body = QByteArray()) {
+        QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+        QNetworkRequest request(QUrl(url));
+        request.setHeader(QNetworkRequest::ContentTypeHeader, 
+                         "application/json");
+        
+        QNetworkReply *reply = nullptr;
+        if (method == "GET") {
+            reply = manager->get(request);
+        } else if (method == "POST") {
+            reply = manager->post(request, body);
+        } else if (method == "PUT") {
+            reply = manager->put(request, body);
+        } else if (method == "DELETE") {
+            reply = manager->deleteResource(request);
+        }
+        
+        connect(reply, &QNetworkReply::finished, this, [=]() {
+            int statusCode = reply->attribute(
+                QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            QByteArray response = reply->readAll();
+            
+            emit requestComplete(statusCode, response);
+            reply->deleteLater();
+        });
+    }
+    
+signals:
+    void requestComplete(int statusCode, const QByteArray &response);
+    
+private:
+    QNetworkAccessManager *manager;
+};
+```
 
-Qt transforms what could be hundreds of lines of complex, platform-specific code into clean, readable, maintainable C++. It's the difference between building a car from individual metal sheets versus assembling one from high-quality, pre-engineered components.
+#### QWebSocket - WebSocket Communication
+
+```cpp
+#include <QWebSocket>
+
+class WebSocketClient : public QObject {
+    Q_OBJECT
+    
+public:
+    void connect(const QUrl &url) {
+        socket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+        
+        ::connect(socket, &QWebSocket::connected, this, [=]() {
+            emit connected();
+        });
+        
+        ::connect(socket, &QWebSocket::textMessageReceived, 
+                this, &WebSocketClient::messageReceived);
+        
+        ::connect(socket, &QWebSocket::binaryMessageReceived,
+                this, &WebSocketClient::binaryMessageReceived);
+        
+        socket->open(url);
+    }
+    
+    void sendMessage(const QString &message) {
+        if (socket && socket->isValid()) {
+            socket->sendTextMessage(message);
+        }
+    }
+    
+signals:
+    void connected();
+    void messageReceived(const QString &message);
+    void binaryMessageReceived(const QByteArray &data);
+    
+private:
+    QWebSocket *socket;
+};
+```
+
+---
+
+### 5. Qt Sql (Database)
+
+#### Database Connection
+
+```cpp
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+
+class MessageHistoryManager {
+public:
+    bool initialize() {
+        db = QSqlDatabase::addDatabase("QSQLITE");
+        db.setDatabaseName("commlink_history.db");
+        
+        if (!db.open()) {
+            qDebug() << "Database error:" << db.lastError().text();
+            return false;
+        }
+        
+        createTables();
+        return true;
+    }
+    
+    void createTables() {
+        QSqlQuery query;
+        query.exec(R"(
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                protocol TEXT NOT NULL,
+                direction TEXT NOT NULL,
+                format TEXT NOT NULL,
+                host TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                status TEXT NOT NULL
+            )
+        )");
+    }
+    
+    void addMessage(const Message &msg) {
+        QSqlQuery query;
+        query.prepare(R"(
+            INSERT INTO messages 
+            (timestamp, protocol, direction, format, host, port, message, status)
+            VALUES (:timestamp, :protocol, :direction, :format, 
+                    :host, :port, :message, :status)
+        )");
+        
+        query.bindValue(":timestamp", msg.timestamp);
+        query.bindValue(":protocol", msg.protocol);
+        query.bindValue(":direction", msg.direction);
+        query.bindValue(":format", msg.format);
+        query.bindValue(":host", msg.host);
+        query.bindValue(":port", msg.port);
+        query.bindValue(":message", msg.message);
+        query.bindValue(":status", msg.status);
+        
+        query.exec();
+    }
+    
+    QList<Message> search(const QString &searchTerm) {
+        QList<Message> results;
+        QSqlQuery query;
+        query.prepare("SELECT * FROM messages WHERE message LIKE :term");
+        query.bindValue(":term", "%" + searchTerm + "%");
+        
+        if (query.exec()) {
+            while (query.next()) {
+                Message msg;
+                msg.id = query.value("id").toInt();
+                msg.timestamp = query.value("timestamp").toString();
+                msg.protocol = query.value("protocol").toString();
+                // ... read other fields
+                results.append(msg);
+            }
+        }
+        
+        return results;
+    }
+    
+private:
+    QSqlDatabase db;
+};
+```
+
+---
+
+### 6. Signals and Slots (Event System)
+
+#### The Power of Decoupling
+
+Signals and slots allow objects to communicate without tight coupling:
+
+```cpp
+// Sender class (doesn't know about GUI)
+class TCPClient : public QObject {
+    Q_OBJECT
+signals:
+    void dataReceived(const QByteArray &data);
+    void connectionLost();
+};
+
+// Receiver class (doesn't know about TCPClient internals)
+class GUI : public QWidget {
+    Q_OBJECT
+public slots:
+    void onDataReceived(const QByteArray &data) {
+        logEdit->append("Received: " + QString::fromUtf8(data));
+    }
+    
+    void onConnectionLost() {
+        statusLabel->setText("❌ Disconnected");
+    }
+};
+
+// Connection (in GUI constructor)
+TCPClient *client = new TCPClient(this);
+connect(client, &TCPClient::dataReceived, 
+        this, &GUI::onDataReceived);
+connect(client, &TCPClient::connectionLost,
+        this, &GUI::onConnectionLost);
+```
+
+#### Signal-Slot Connection Types
+
+```cpp
+// Direct connection (same thread, immediate call)
+connect(sender, &Sender::signal, receiver, &Receiver::slot, 
+        Qt::DirectConnection);
+
+// Queued connection (cross-thread, via event queue)
+connect(sender, &Sender::signal, receiver, &Receiver::slot,
+        Qt::QueuedConnection);
+
+// Auto connection (Qt chooses based on thread)
+connect(sender, &Sender::signal, receiver, &Receiver::slot,
+        Qt::AutoConnection);  // Default
+```
+
+---
+
+### 7. Qt JSON (Data Parsing)
+
+```cpp
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
+// Parse JSON
+QByteArray jsonData = R"({"name": "Alice", "age": 28})";
+QJsonDocument doc = QJsonDocument::fromJson(jsonData);
+QJsonObject obj = doc.object();
+
+QString name = obj["name"].toString();  // "Alice"
+int age = obj["age"].toInt();            // 28
+
+// Create JSON
+QJsonObject person;
+person["name"] = "Bob";
+person["age"] = 32;
+person["email"] = "bob@example.com";
+
+QJsonArray hobbies;
+hobbies.append("coding");
+hobbies.append("hiking");
+person["hobbies"] = hobbies;
+
+QJsonDocument outDoc(person);
+QByteArray json = outDoc.toJson();  // Serialized JSON
+```
+
+---
+
+## Qt Best Practices in CommLink
+
+### 1. Parent-Child Memory Management
+
+```cpp
+// ✅ Good: Parent manages children
+QVBoxLayout *layout = new QVBoxLayout(this);  // 'this' is parent
+QPushButton *btn = new QPushButton("Send", this);
+// When 'this' is destroyed, layout and btn auto-deleted
+
+// ❌ Avoid: Orphaned widgets
+QPushButton *btn = new QPushButton("Send");  // No parent
+// Memory leak if not manually deleted
+```
+
+### 2. Use Qt's Type System
+
+```cpp
+// ✅ Good: Qt types for Qt APIs
+QString message;  // Works seamlessly with Qt
+QByteArray data;
+
+// ❌ Avoid: Constant conversion
+std::string message;  // Need .toStdString() everywhere
+```
+
+### 3. Connect Signals Properly
+
+```cpp
+// ✅ Good: New PMF syntax (compile-time checked)
+connect(button, &QPushButton::clicked, this, &GUI::onButtonClicked);
+
+// ❌ Avoid: Old SIGNAL/SLOT macros (runtime checked)
+connect(button, SIGNAL(clicked()), this, SLOT(onButtonClicked()));
+```
+
+### 4. Check Object Validity
+
+```cpp
+// ✅ Good: Check before use
+if (socket && socket->isValid()) {
+    socket->write(data);
+}
+
+// ❌ Dangerous: Assume validity
+socket->write(data);  // Crash if socket is null!
+```
+
+---
+
+## Advantages Over Other Frameworks
+
+| Feature | Qt | GTK | wxWidgets |
+|---------|----|----|-----------|
+| Language | C++ (primary) | C | C++ |
+| Cross-platform | Excellent | Good | Good |
+| Networking | Built-in (TCP/UDP/HTTP/WS) | Limited | Limited |
+| Database | Built-in SQLite | External | External |
+| Signals/Slots | Yes | GSignal | Events |
+| Commercial support | Yes | Limited | No |
+| Learning curve | Moderate | Steep | Moderate |
+
+---
+
+## Conclusion
+
+Qt provides CommLink with:
+
+✅ **Comprehensive toolkit**: GUI, networking, database in one framework  
+✅ **Cross-platform**: Write once, deploy everywhere  
+✅ **Production-ready**: Used in professional applications worldwide  
+✅ **Well-documented**: Extensive official documentation and examples  
+✅ **Active community**: Large user base for support
+
+For implementation details, see:
+- **GUI_Implementation_Guide.md**: Detailed GUI architecture
+- **Source_Code_Analysis.md**: Code walkthrough
+- **architecture.md**: System design overview
