@@ -6,6 +6,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QMap>
+#include <QTimer>
 #include "../core/dataformat.h"
 
 class HttpClient : public QObject {
@@ -25,6 +26,13 @@ public:
     void setConnected(bool connected);
     void disconnect();
     
+    // Long-polling support
+    void startPolling(const QString& url, int intervalMs = 2000);
+    void stopPolling();
+    bool isPolling() const { return m_isPolling; }
+    void setPollTimeout(int msecs) { m_pollTimeout = msecs; }
+    int getPollTimeout() const { return m_pollTimeout; }
+    
     static QString methodToString(Method method);
 
 signals:
@@ -33,13 +41,16 @@ signals:
     void responseReceived(const DataMessage& message, const QString& source, const QString& timestamp);
     void errorOccurred(const QString& error);
     void requestSent(const QString& method, const QString& url);
+    void pollingStopped(const QString& reason);
 
 private slots:
     void onReplyFinished(QNetworkReply* reply);
+    void onPollTimeout();
 
 private:
     QNetworkRequest buildRequest(const QString& url);
     QString getContentType() const;
+    void sendPollRequest();
     
     QNetworkAccessManager *m_manager;
     DataFormatType m_format;
@@ -48,7 +59,16 @@ private:
     int m_timeout;
     bool m_connected;
     
+    // Long-polling members
+    bool m_isPolling;
+    QString m_pollUrl;
+    int m_pollInterval;
+    int m_pollTimeout;
+    int m_consecutiveErrors;
+    QTimer *m_pollTimer;
+    
     static constexpr int DEFAULT_TIMEOUT_MS = 30000;
+    static constexpr int MAX_POLL_ERRORS = 3;
 };
 
 #endif

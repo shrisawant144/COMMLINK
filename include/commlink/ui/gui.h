@@ -9,6 +9,7 @@
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QListWidget>
+#include <QtWidgets/QCheckBox>
 #include <QtGui/QIntValidator>
 #include <QtGui/QCloseEvent>
 #include <QtCore/QJsonDocument>
@@ -59,6 +60,7 @@ private slots:
     void onClientConnected(const QString& clientInfo);
     void onClientDisconnected(const QString& clientInfo);
     void onHttpRequestSent(const QString& method, const QString& url);
+    void onHttpPollingToggled(bool enabled);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -99,6 +101,7 @@ private:
     QComboBox *targetClientCombo;
     QListWidget *connectedClientsList;
     QLabel *clientCountLabel;
+    QCheckBox *httpPollingCheckbox;
 
     // Validators
     QIntValidator *portValidator;

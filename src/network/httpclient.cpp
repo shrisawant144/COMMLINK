@@ -5,9 +5,13 @@
 
 HttpClient::HttpClient(QObject *parent)
     : QObject(parent), m_format(DataFormatType::JSON), m_method(POST), 
-      m_timeout(DEFAULT_TIMEOUT_MS), m_connected(false) {
+      m_timeout(DEFAULT_TIMEOUT_MS), m_connected(false),
+      m_isPolling(false), m_pollInterval(2000), m_pollTimeout(10000), m_consecutiveErrors(0) {
     m_manager = new QNetworkAccessManager(this);
     connect(m_manager, &QNetworkAccessManager::finished, this, &HttpClient::onReplyFinished);
+    
+    m_pollTimer = new QTimer(this);
+    connect(m_pollTimer, &QTimer::timeout, this, &HttpClient::onPollTimeout);
 }
 
 void HttpClient::sendRequest(const QString& url, Method method, const DataMessage& message) {
@@ -104,6 +108,11 @@ void HttpClient::onReplyFinished(QNetworkReply* reply) {
     int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (reply->error() == QNetworkReply::NoError) {
+        // Reset error counter on successful response
+        if (m_isPolling) {
+            m_consecutiveErrors = 0;
+        }
+        
         QByteArray data = reply->readAll();
         
         // Detect format from Content-Type header
@@ -132,6 +141,18 @@ void HttpClient::onReplyFinished(QNetworkReply* reply) {
         QString statusInfo = QString(" [HTTP %1]").arg(statusCode);
         emit responseReceived(msg, source + statusInfo, timestamp);
     } else {
+        // Handle errors
+        if (m_isPolling) {
+            m_consecutiveErrors++;
+            if (m_consecutiveErrors >= MAX_POLL_ERRORS) {
+                stopPolling();
+                QString reason = QString("Server not responding after %1 attempts").arg(MAX_POLL_ERRORS);
+                emit pollingStopped(reason);
+                emit errorOccurred(QString("Polling stopped: %1").arg(reason));
+                return;
+            }
+        }
+        
         QString error = QString("HTTP Error %1: %2").arg(statusCode).arg(reply->errorString());
         emit errorOccurred(error);
     }
@@ -155,6 +176,45 @@ void HttpClient::setConnected(bool connected) {
             emit this->connected();
         } else {
             emit disconnected();
+        }
+    }
+}
+
+void HttpClient::startPolling(const QString& url, int intervalMs) {
+    m_pollUrl = url;
+    m_pollInterval = intervalMs;
+    m_isPolling = true;
+    m_consecutiveErrors = 0;
+    
+    // Send first poll request immediately
+    sendPollRequest();
+    
+    // Start timer for subsequent polls
+    m_pollTimer->start(m_pollInterval);
+}
+
+void HttpClient::stopPolling() {
+    m_isPolling = false;
+    m_consecutiveErrors = 0;
+    m_pollTimer->stop();
+}
+
+void HttpClient::onPollTimeout() {
+    if (m_isPolling) {
+        sendPollRequest();
+    }
+}
+
+void HttpClient::sendPollRequest() {
+    if (!m_pollUrl.isEmpty()) {
+        // Always use GET for polling requests
+        QNetworkRequest request = buildRequest(m_pollUrl);
+        
+        // Set custom timeout for polling
+        QNetworkReply* reply = m_manager->get(request);
+        
+        if (reply && m_pollTimeout > 0) {
+            QTimer::singleShot(m_pollTimeout, reply, &QNetworkReply::abort);
         }
     }
 }

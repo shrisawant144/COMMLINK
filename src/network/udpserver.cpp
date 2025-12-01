@@ -8,7 +8,13 @@ UdpServer::UdpServer(QObject *parent)
 }
 
 bool UdpServer::startServer(quint16 port) {
-    if (m_socket->bind(QHostAddress::Any, port)) {
+    // Close existing socket if bound
+    if (m_socket->state() == QAbstractSocket::BoundState) {
+        m_socket->close();
+    }
+    
+    // Bind with ShareAddress and ReuseAddressHint to allow port reuse
+    if (m_socket->bind(QHostAddress::Any, port, QAbstractSocket::ShareAddress | QAbstractSocket::ReuseAddressHint)) {
         m_listening = true;
         return true;
     }

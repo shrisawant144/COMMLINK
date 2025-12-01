@@ -9,6 +9,14 @@ HttpServer::HttpServer(QObject *parent)
 }
 
 bool HttpServer::startServer(quint16 port) {
+    // Close existing server if already listening
+    if (m_server->isListening()) {
+        m_server->close();
+    }
+    
+    // Set max connections
+    m_server->setMaxPendingConnections(MAX_CLIENTS);
+    
     if (m_server->listen(QHostAddress::Any, port)) {
         return true;
     }
@@ -204,8 +212,17 @@ bool HttpServer::tryParseCompleteRequest(QTcpSocket* socket) {
         responseFormat = detectAcceptType(request.headers["Accept"]);
     }
     
-    // Build response message based on format
-    QByteArray responseBody = buildResponseBody(request, responseFormat);
+    // Check if there are queued messages for this client
+    QByteArray responseBody;
+    if (m_messageQueue.contains(socket) && !m_messageQueue[socket].isEmpty()) {
+        // Send queued message instead of standard response
+        DataMessage queuedMsg = m_messageQueue[socket].takeFirst();
+        responseBody = queuedMsg.serialize();
+        responseFormat = queuedMsg.type;
+    } else {
+        // Build standard response message
+        responseBody = buildResponseBody(request, responseFormat);
+    }
     
     static const int HTTP_OK = 200;
     QByteArray response = buildResponse(HTTP_OK, responseBody, responseFormat);
@@ -267,4 +284,77 @@ QByteArray HttpServer::buildCORSPreflightResponse() {
     response += "Server: CommLink/1.0\r\n";
     response += "\r\n";
     return response;
+}
+
+void HttpServer::sendToAll(const DataMessage& message) {
+    // Create a message with the server's format if needed
+    DataMessage msg = message;
+    if (msg.type != m_format) {
+        msg.type = m_format;
+    }
+    
+    QByteArray serialized = msg.serialize();
+    QByteArray response = buildResponse(200, serialized, m_format);
+    
+    for (QTcpSocket* client : m_clients.keys()) {
+        if (client && client->isValid() && client->state() == QAbstractSocket::ConnectedState) {
+            client->write(response);
+            client->flush();
+        }
+    }
+}
+
+void HttpServer::sendToClient(QTcpSocket* client, const DataMessage& message) {
+    if (!client || !client->isValid() || client->state() != QAbstractSocket::ConnectedState) {
+        emit errorOccurred("Cannot send to client: invalid or disconnected socket");
+        return;
+    }
+    
+    // Create a message with the server's format if needed
+    DataMessage msg = message;
+    if (msg.type != m_format) {
+        msg.type = m_format;
+    }
+    
+    QByteArray serialized = msg.serialize();
+    QByteArray response = buildResponse(200, serialized, m_format);
+    client->write(response);
+    client->flush();
+}
+
+QTcpSocket* HttpServer::findClientByAddress(const QString& addressPort) {
+    for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
+        if (it.value() == addressPort) {
+            return it.key();
+        }
+    }
+    return nullptr;
+}
+
+void HttpServer::queueMessageForClient(QTcpSocket* client, const DataMessage& message) {
+    if (!client) {
+        return;
+    }
+    
+    DataMessage msg = message;
+    if (msg.type != m_format) {
+        msg.type = m_format;
+    }
+    
+    m_messageQueue[client].append(msg);
+}
+
+void HttpServer::queueMessageForAll(const DataMessage& message) {
+    DataMessage msg = message;
+    if (msg.type != m_format) {
+        msg.type = m_format;
+    }
+    
+    for (QTcpSocket* client : m_clients.keys()) {
+        m_messageQueue[client].append(msg);
+    }
+}
+
+bool HttpServer::hasQueuedMessages(QTcpSocket* client) const {
+    return m_messageQueue.contains(client) && !m_messageQueue[client].isEmpty();
 }

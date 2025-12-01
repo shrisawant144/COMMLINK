@@ -18,6 +18,16 @@ public:
     void setFormat(DataFormatType format) { m_format = format; }
     void setSSLEnabled(bool enabled) { m_sslEnabled = enabled; }
     bool isSSLEnabled() const { return m_sslEnabled; }
+    
+    // Send methods for server-initiated messages
+    void sendToAll(const DataMessage& message);
+    void sendToClient(QTcpSocket* client, const DataMessage& message);
+    QTcpSocket* findClientByAddress(const QString& addressPort);
+    
+    // Message queuing for long-polling
+    void queueMessageForClient(QTcpSocket* client, const DataMessage& message);
+    void queueMessageForAll(const DataMessage& message);
+    bool hasQueuedMessages(QTcpSocket* client) const;
 
 signals:
     void clientConnected(const QString& clientInfo);
@@ -50,6 +60,7 @@ private:
     bool m_sslEnabled;
     QMap<QTcpSocket*, QString> m_clients;
     QMap<QTcpSocket*, QByteArray> m_requestBuffers;
+    QMap<QTcpSocket*, QList<DataMessage>> m_messageQueue; // Queue messages per client
          static constexpr int MAX_CLIENTS = 100;
          static constexpr int MAX_BUFFER_SIZE = 8192;
 };

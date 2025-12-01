@@ -108,6 +108,12 @@ CommLinkGUI::CommLinkGUI()
     connect(httpClient, &HttpClient::responseReceived, this, &CommLinkGUI::onDataReceived);
     connect(httpClient, &HttpClient::errorOccurred, this, &CommLinkGUI::onWsError);
     connect(httpClient, &HttpClient::requestSent, this, &CommLinkGUI::onHttpRequestSent);
+    connect(httpClient, &HttpClient::pollingStopped, this, [this](const QString& reason) {
+        httpPollingCheckbox->setChecked(false);
+        logger->logWarning(QString("HTTP polling stopped: %1").arg(reason));
+        QMessageBox::warning(this, "Polling Stopped", 
+            QString("Long-polling has been disabled:\n%1\n\nPlease check server availability.").arg(reason));
+    });
     
     // Initialize HTTP server
     httpServer = new HttpServer(this);
@@ -234,6 +240,11 @@ void CommLinkGUI::setupUI()
     httpMethodCombo->setMinimumHeight(32);
     httpMethodCombo->setVisible(false);
     
+    httpPollingCheckbox = new QCheckBox("Enable Long-Polling (Auto-receive messages)");
+    httpPollingCheckbox->setVisible(false);
+    httpPollingCheckbox->setToolTip("Automatically poll server for new messages every 2 seconds");
+    connect(httpPollingCheckbox, &QCheckBox::toggled, this, &CommLinkGUI::onHttpPollingToggled);
+    
     auto *clientInfoLabel = new QLabel("TCP/UDP: Host + Port | WebSocket: ws://host:port | HTTP: http://host:port/path");
     clientInfoLabel->setStyleSheet("color: #6c757d; font-size: 10px; font-style: italic;");
     clientInfoLabel->setWordWrap(true);
@@ -259,12 +270,13 @@ void CommLinkGUI::setupUI()
     sendLayout->addWidget(protocolCombo, 0, 1);
     sendLayout->addWidget(new QLabel("HTTP Method:"), 1, 0);
     sendLayout->addWidget(httpMethodCombo, 1, 1);
-    sendLayout->addWidget(clientInfoLabel, 2, 0, 1, 2);
-    sendLayout->addWidget(hostLabel, 3, 0);
-    sendLayout->addWidget(hostEdit, 3, 1);
-    sendLayout->addWidget(portLabel, 4, 0);
-    sendLayout->addWidget(portEdit, 4, 1);
-    sendLayout->addWidget(connectBtn, 5, 0, 1, 2);
+    sendLayout->addWidget(httpPollingCheckbox, 2, 0, 1, 2);
+    sendLayout->addWidget(clientInfoLabel, 3, 0, 1, 2);
+    sendLayout->addWidget(hostLabel, 4, 0);
+    sendLayout->addWidget(hostEdit, 4, 1);
+    sendLayout->addWidget(portLabel, 5, 0);
+    sendLayout->addWidget(portEdit, 5, 1);
+    sendLayout->addWidget(connectBtn, 6, 0, 1, 2);
     
     leftLayout->addWidget(sendGroup);
 
@@ -638,7 +650,9 @@ void CommLinkGUI::onConnect() {
     // Handle HTTP
     if (proto == "HTTP") {
         if (httpClient->isConnected()) {
+            httpClient->stopPolling(); // Stop polling if it was enabled
             httpClient->disconnect();
+            httpPollingCheckbox->setChecked(false); // Uncheck the box
             updateClientStatus();
             updateSendButtonState();
             return;
@@ -655,6 +669,19 @@ void CommLinkGUI::onConnect() {
         
         // Set HTTP client as "connected" (ready to send)
         httpClient->setFormat(format);
+        
+        // Set HTTP method from combo box
+        QString methodStr = httpMethodCombo->currentText();
+        HttpClient::Method method = HttpClient::POST; // default
+        if (methodStr == "GET") method = HttpClient::GET;
+        else if (methodStr == "POST") method = HttpClient::POST;
+        else if (methodStr == "PUT") method = HttpClient::PUT;
+        else if (methodStr == "DELETE") method = HttpClient::DELETE;
+        else if (methodStr == "PATCH") method = HttpClient::PATCH;
+        else if (methodStr == "HEAD") method = HttpClient::HEAD;
+        else if (methodStr == "OPTIONS") method = HttpClient::OPTIONS;
+        httpClient->setMethod(method);
+        
         // Manually trigger connected state for HTTP
         connect(httpClient, &HttpClient::connected, this, [this]() {
             updateClientStatus();
@@ -662,11 +689,16 @@ void CommLinkGUI::onConnect() {
         }, Qt::UniqueConnection);
         
         // Simulate connection by emitting the signal
-        QMetaObject::invokeMethod(httpClient, [this]() {
+        QMetaObject::invokeMethod(httpClient, [this, url]() {
             httpClient->setConnected(true);
+            // Start polling if checkbox is checked
+            if (httpPollingCheckbox->isChecked()) {
+                httpClient->startPolling(url, 2000);
+                logger->logInfo(QString("HTTP long-polling enabled for %1").arg(url));
+            }
         }, Qt::QueuedConnection);
         
-        logMessage("HTTP client ready: " + url, "[HTTP] ");
+        logMessage(QString("HTTP client ready: %1 [Method: %2]").arg(url).arg(methodStr), "[HTTP] ");
         return;
     }
     
@@ -774,6 +806,13 @@ void CommLinkGUI::onSend() {
                 QMessageBox::information(this, "Info", "WebSocket broadcast coming soon! For now use TCP server.");
             } else if (serverProto == "UDP" && udpServer->isListening()) {
                 QMessageBox::information(this, "Info", "UDP server replies automatically when it receives messages.");
+            } else if (serverProto == "HTTP" && httpServer->isListening()) {
+                httpServer->queueMessageForAll(msg);
+                QString sentMessage = QString("[%1] → HTTP Server queued broadcast (will send on next poll):\n%2\n")
+                                     .arg(timestamp).arg(messageText);
+                sentEdit->append(sentMessage);
+                logger->logSuccess("HTTP Server queued message for all clients");
+                historyManager.saveMessage("sent", "HTTP", "broadcast", receivePortEdit->text().toInt(), msg);
             } else {
                 QMessageBox::warning(this, "Error", "Server not listening");
             }
@@ -823,6 +862,18 @@ void CommLinkGUI::onSend() {
                     historyManager.saveMessage("sent", "UDP", targetClient, receivePortEdit->text().toInt(), msg);
                 } else {
                     QMessageBox::warning(this, "Error", "Invalid client address format");
+                }
+            } else if (serverProto == "HTTP" && httpServer->isListening()) {
+                QTcpSocket* client = httpServer->findClientByAddress(targetClient);
+                if (client) {
+                    httpServer->queueMessageForClient(client, msg);
+                    QString sentMessage = QString("[%1] → HTTP Server queued for %2 (will send on next poll):\n%3\n")
+                                         .arg(timestamp).arg(targetClient).arg(messageText);
+                    sentEdit->append(sentMessage);
+                    logger->logSuccess(QString("HTTP Server queued message for %1").arg(targetClient));
+                    historyManager.saveMessage("sent", "HTTP", targetClient, receivePortEdit->text().toInt(), msg);
+                } else {
+                    QMessageBox::warning(this, "Error", "Client not found or disconnected");
                 }
             } else {
                 QMessageBox::warning(this, "Error", "Server not listening");
@@ -1185,18 +1236,21 @@ void CommLinkGUI::onClientProtocolChanged(int index) {
         if (portField) portField->setVisible(false);
         if (portLabel) portLabel->setVisible(false);
         if (httpMethodCombo) httpMethodCombo->setVisible(true);
+        if (httpPollingCheckbox) httpPollingCheckbox->setVisible(true);
     } else if (proto == "WebSocket") {
         // WebSocket: URL only (port is in URL)
         hostEdit->setPlaceholderText("ws://host:port or wss://host:port");
         if (portField) portField->setVisible(false);
         if (portLabel) portLabel->setVisible(false);
         if (httpMethodCombo) httpMethodCombo->setVisible(false);
+        if (httpPollingCheckbox) httpPollingCheckbox->setVisible(false);
     } else {
         // TCP/UDP: Separate host and port
         hostEdit->setPlaceholderText("Host/IP address");
         if (portField) portField->setVisible(true);
         if (portLabel) portLabel->setVisible(true);
         if (httpMethodCombo) httpMethodCombo->setVisible(false);
+        if (httpPollingCheckbox) httpPollingCheckbox->setVisible(false);
     }
     
     logMessage(QString("Switched to %1 protocol").arg(proto), "[INFO] ");
@@ -1441,4 +1495,20 @@ void CommLinkGUI::closeEvent(QCloseEvent *event) {
     
     // Force application to quit
     QApplication::quit();
+}
+
+void CommLinkGUI::onHttpPollingToggled(bool enabled) {
+    if (enabled && httpClient->isConnected()) {
+        QString url = hostEdit->text().trimmed();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "http://" + url;
+        }
+        httpClient->startPolling(url, 2000); // Poll every 2 seconds
+        logger->logInfo(QString("HTTP long-polling enabled for %1").arg(url));
+        logMessage("HTTP long-polling started - will auto-receive messages", "[HTTP-POLL] ");
+    } else {
+        httpClient->stopPolling();
+        logger->logInfo("HTTP long-polling disabled");
+        logMessage("HTTP long-polling stopped", "[HTTP-POLL] ");
+    }
 }

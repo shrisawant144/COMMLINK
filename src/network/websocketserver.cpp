@@ -13,6 +13,11 @@ WebSocketServer::~WebSocketServer() {
 }
 
 bool WebSocketServer::startServer(quint16 port) {
+    // Close existing server if already listening
+    if (m_server->isListening()) {
+        m_server->close();
+    }
+    
     if (m_server->listen(QHostAddress::Any, port)) {
         return true;
     }

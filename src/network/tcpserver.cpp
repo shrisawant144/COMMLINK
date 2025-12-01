@@ -16,6 +16,14 @@ TcpServer::~TcpServer() {
 }
 
 bool TcpServer::startServer(quint16 port) {
+    // Close any existing server first
+    if (m_server->isListening()) {
+        m_server->close();
+    }
+    
+    // Set socket options to allow address reuse
+    m_server->setMaxPendingConnections(MAX_CLIENTS);
+    
     if (m_server->listen(QHostAddress::Any, port)) {
         return true;
     }
