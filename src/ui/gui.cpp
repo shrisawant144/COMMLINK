@@ -14,14 +14,21 @@
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QListWidget>
+#include <QtWidgets/QShortcut>
+#include <QtWidgets/QProgressDialog>
+#include <QtWidgets/QScrollArea>
+#include <QtWidgets/QTableWidget>
+#include <QtWidgets/QHeaderView>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonParseError>
 #include <QtCore/QUrl>
 #include <QtGui/QIntValidator>
+#include <QtGui/QKeySequence>
 #include <QtWidgets/QMessageBox>
 #include <QtCore/QDateTime>
 #include <QtCore/QThread>
 #include <QtCore/QSettings>
+#include <QtCore/QTimer>
 #include <QtGui/QFont>
 #include <QtGui/QPalette>
 #include <QtWidgets/QFileDialog>
@@ -40,9 +47,10 @@ CommLinkGUI::CommLinkGUI()
       clearMessagesBtn(nullptr), jsonEdit(nullptr), logEdit(nullptr), receivedEdit(nullptr),
       clientReceivedEdit(nullptr), serverReceivedEdit(nullptr), sentEdit(nullptr),
       statusBar(nullptr), menuBar(nullptr), lightModeAction(nullptr), darkModeAction(nullptr),
-      autoModeAction(nullptr), logger(nullptr), clientStatusLabel(nullptr), serverStatusLabel(nullptr),
-      sendModeCombo(nullptr), targetClientCombo(nullptr), connectedClientsList(nullptr),
-      clientCountLabel(nullptr), portValidator(nullptr)
+      autoModeAction(nullptr), logger(nullptr), progressDialog(nullptr), clientStatusLabel(nullptr), 
+      serverStatusLabel(nullptr), sendModeCombo(nullptr), targetClientCombo(nullptr), 
+      connectedClientsList(nullptr), clientCountLabel(nullptr), httpPollingCheckbox(nullptr),
+      portValidator(nullptr)
 {
     // Note: Qt uses parent-child ownership for automatic memory management.
     // Raw pointers are correct here - Qt will delete child objects when parent is destroyed.
@@ -132,6 +140,9 @@ CommLinkGUI::CommLinkGUI()
     
     setupUI();
     setupValidators();
+    setupShortcuts();
+    setupTooltips();
+    setupAccessibility();
     
     // Initialize theme
     ThemeManager::instance().loadSettings();
@@ -169,14 +180,23 @@ void CommLinkGUI::setupUI()
     autoModeAction->setCheckable(true);
     autoModeAction->setActionGroup(themeGroup);
     themeMenu->addAction(autoModeAction);
+    
+    // Create Help menu
+    auto *helpMenu = menuBar->addMenu("&Help");
+    auto *shortcutsAction = new QAction("Keyboard &Shortcuts", this);
+    shortcutsAction->setShortcut(QKeySequence("F1"));
+    connect(shortcutsAction, &QAction::triggered, this, &CommLinkGUI::showShortcutsHelp);
+    helpMenu->addAction(shortcutsAction);
 
     // Main content area with horizontal splitter
     auto *splitter = new QSplitter(Qt::Horizontal);
+    splitter->setChildrenCollapsible(false); // Prevent panels from collapsing
     mainLayout->addWidget(splitter);
 
     // Left panel - Communication
     auto *leftPanel = new QWidget();
     leftPanel->setMinimumWidth(400);
+    leftPanel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     auto *leftLayout = new QVBoxLayout(leftPanel);
     leftLayout->setSpacing(12);
 
@@ -719,9 +739,15 @@ void CommLinkGUI::onConnect() {
         if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
             url = "ws://" + url;
         }
+        
+        // Show progress dialog for connection
+        QApplication::setOverrideCursor(Qt::WaitCursor);
         wsClient->setFormat(format);
         wsClient->connectToServer(url);
         logMessage("Connecting to " + url + "...", "[WS] ");
+        
+        // Restore cursor when connection completes (success or failure)
+        QTimer::singleShot(500, this, []() { QApplication::restoreOverrideCursor(); });
         return;
     }
     
@@ -734,13 +760,20 @@ void CommLinkGUI::onConnect() {
             return;
         }
         
-        if (!validateInputs()) return;
+        if (!validateInputs()) {
+            return;
+        }
         QString host = hostEdit->text().trimmed();
         int port = portEdit->text().toInt();
         
+        // Show busy cursor during connection
+        QApplication::setOverrideCursor(Qt::WaitCursor);
         tcpClient->setFormat(format);
         tcpClient->connectToHost(host, static_cast<quint16>(port));
         logMessage(QString("Connecting to %1:%2 via TCP...").arg(host).arg(port), "[INFO] ");
+        
+        // Restore cursor after connection attempt
+        QTimer::singleShot(500, this, []() { QApplication::restoreOverrideCursor(); });
         return;
     }
     
@@ -1511,4 +1544,252 @@ void CommLinkGUI::onHttpPollingToggled(bool enabled) {
         logger->logInfo("HTTP long-polling disabled");
         logMessage("HTTP long-polling stopped", "[HTTP-POLL] ");
     }
+}
+
+void CommLinkGUI::setupShortcuts() {
+    // Send message (Ctrl+Return is more intuitive for send, Ctrl+S for save)
+    auto *sendShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Return), this);
+    connect(sendShortcut, &QShortcut::activated, this, &CommLinkGUI::onSend);
+    
+    // Connect/Disconnect (Ctrl+K)
+    auto *connectShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_K), this);
+    connect(connectShortcut, &QShortcut::activated, this, &CommLinkGUI::onConnect);
+    
+    // Load file (Ctrl+O - Open)
+    auto *loadShortcut = new QShortcut(QKeySequence::Open, this);
+    connect(loadShortcut, &QShortcut::activated, this, &CommLinkGUI::onLoadMessage);
+    
+    // Save file (Ctrl+S - Save)
+    auto *saveShortcut = new QShortcut(QKeySequence::Save, this);
+    connect(saveShortcut, &QShortcut::activated, this, &CommLinkGUI::onSaveMessage);
+    
+    // Clear messages (Ctrl+L)
+    auto *clearShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_L), this);
+    connect(clearShortcut, &QShortcut::activated, this, &CommLinkGUI::onClearMessages);
+    
+    // Export messages (Ctrl+E)
+    auto *exportShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_E), this);
+    connect(exportShortcut, &QShortcut::activated, this, &CommLinkGUI::onExportMessages);
+    
+    // Export logs (Ctrl+Shift+E)
+    auto *exportLogsShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_E), this);
+    connect(exportLogsShortcut, &QShortcut::activated, this, &CommLinkGUI::onExportLogs);
+    
+    // Start/Stop Server (Ctrl+R - Run)
+    auto *serverShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_R), this);
+    connect(serverShortcut, &QShortcut::activated, this, [this]() {
+        if (startReceiveBtn->isEnabled()) {
+            onStartReceive();
+        } else {
+            onStopReceive();
+        }
+    });
+    
+    logMessage("Keyboard shortcuts enabled. Press F1 for list.", "[SHORTCUTS] ");
+}
+
+void CommLinkGUI::showShortcutsHelp() {
+    auto *dialog = new QDialog(this);
+    dialog->setWindowTitle("Keyboard Shortcuts");
+    dialog->setMinimumWidth(500);
+    dialog->setMinimumHeight(400);
+    
+    auto *layout = new QVBoxLayout(dialog);
+    
+    auto *label = new QLabel("Available keyboard shortcuts:");
+    label->setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 8px;");
+    layout->addWidget(label);
+    
+    auto *table = new QTableWidget(11, 2);
+    table->setHorizontalHeaderLabels({"Shortcut", "Action"});
+    table->horizontalHeader()->setStretchLastSection(true);
+    table->verticalHeader()->setVisible(false);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    
+    // Populate shortcuts
+    QStringList shortcuts = {
+        "F1", "Show this help",
+        "Ctrl+Return", "Send message",
+        "Ctrl+K", "Connect/Disconnect",
+        "Ctrl+O", "Load message from file",
+        "Ctrl+S", "Save message to file",
+        "Ctrl+L", "Clear all messages",
+        "Ctrl+E", "Export messages",
+        "Ctrl+Shift+E", "Export logs",
+        "Ctrl+R", "Start/Stop server",
+        "Ctrl+Q", "Quit application",
+        "Esc", "Close dialogs"
+    };
+    
+    for (int i = 0; i < shortcuts.size(); i += 2) {
+        int row = i / 2;
+        table->setItem(row, 0, new QTableWidgetItem(shortcuts[i]));
+        table->setItem(row, 1, new QTableWidgetItem(shortcuts[i + 1]));
+    }
+    
+    table->resizeColumnsToContents();
+    layout->addWidget(table);
+    
+    auto *closeBtn = new QPushButton("Close");
+    closeBtn->setDefault(true);
+    connect(closeBtn, &QPushButton::clicked, dialog, &QDialog::accept);
+    
+    auto *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(closeBtn);
+    layout->addLayout(btnLayout);
+    
+    dialog->exec();
+}
+
+void CommLinkGUI::setupTooltips() {
+    // Connection tooltips
+    hostEdit->setToolTip("Enter host/IP address (TCP/UDP) or full URL (WebSocket: ws://host:port, HTTP: http://host:port/path)");
+    portEdit->setToolTip("Port number (1-65535). Avoid privileged ports <1024 unless running with elevated permissions.");
+    receivePortEdit->setToolTip("Server listening port (1-65535). Avoid privileged ports <1024 unless running as administrator.");
+    
+    // Protocol tooltips
+    protocolCombo->setToolTip(
+        "TCP: Reliable, connection-oriented, guaranteed delivery\n"
+        "UDP: Fast, connectionless, no delivery guarantee\n"
+        "WebSocket: Full-duplex, persistent connection over HTTP\n"
+        "HTTP: Request-response, stateless, widely compatible"
+    );
+    
+    receiveProtocolCombo->setToolTip(
+        "TCP Server: Multiple concurrent connections, reliable\n"
+        "UDP Server: Connectionless, listens for datagrams\n"
+        "WebSocket Server: Persistent bidirectional connections\n"
+        "HTTP Server: REST API endpoints with request handling"
+    );
+    
+    // Format tooltips
+    dataFormatCombo->setToolTip(
+        "JSON: Structured data with key-value pairs\n"
+        "XML: Tagged hierarchical data\n"
+        "CSV: Comma-separated tabular data\n"
+        "Text: Plain text messages\n"
+        "Binary: Raw binary data (hex encoded)\n"
+        "Hex: Hexadecimal representation"
+    );
+    
+    // Action button tooltips
+    connectBtn->setToolTip("Connect to remote server (Ctrl+K)");
+    sendBtn->setToolTip("Send message to connected peer (Ctrl+Return)");
+    startReceiveBtn->setToolTip("Start listening for incoming connections (Ctrl+R)");
+    stopReceiveBtn->setToolTip("Stop server and close all client connections (Ctrl+R)");
+    
+    loadJsonBtn->setToolTip("Load message from file (Ctrl+O)");
+    saveJsonBtn->setToolTip("Save message to file (Ctrl+S)");
+    exportMessagesBtn->setToolTip("Export received messages to file (Ctrl+E)");
+    exportLogsBtn->setToolTip("Export application logs to file (Ctrl+Shift+E)");
+    clearMessagesBtn->setToolTip("Clear all message displays (Ctrl+L)");
+    
+    // Send mode tooltips
+    sendModeCombo->setToolTip(
+        "Client Mode: Send as a connected client\n"
+        "Server Broadcast: Send to all connected clients\n"
+        "Server Targeted: Send to specific selected client"
+    );
+    
+    targetClientCombo->setToolTip("Select specific client to send message to (Server Targeted mode only)");
+    
+    // HTTP-specific tooltips
+    httpMethodCombo->setToolTip(
+        "GET: Retrieve data\n"
+        "POST: Submit data\n"
+        "PUT: Update resource\n"
+        "DELETE: Remove resource\n"
+        "PATCH: Partial update\n"
+        "HEAD: Get headers only\n"
+        "OPTIONS: Get supported methods"
+    );
+    
+    httpPollingCheckbox->setToolTip(
+        "Enable automatic polling to receive messages from HTTP server.\n"
+        "Polls every 2 seconds. Useful for simulating real-time updates over HTTP."
+    );
+    
+    logMessage("Advanced tooltips enabled. Hover over controls for help.", "[TOOLTIPS] ");
+}
+
+void CommLinkGUI::setupAccessibility() {
+    // Set window properties for screen readers
+    setAccessibleName("CommLink Network Communication Tool");
+    setAccessibleDescription("Main application window for network communication via TCP, UDP, WebSocket, and HTTP protocols");
+    
+    // Associate labels with their input fields using setBuddy()
+    auto *hostLabel = findChild<QLabel*>();
+    if (hostLabel && hostLabel->text() == "Host:") {
+        hostLabel->setBuddy(hostEdit);
+        hostLabel->setAccessibleDescription("Host address or URL input field");
+    }
+    
+    auto *portLabel = findChild<QLabel*>("clientPortLabel");
+    if (portLabel) {
+        portLabel->setBuddy(portEdit);
+        portLabel->setAccessibleDescription("Port number input field");
+    }
+    
+    // Set accessible names and descriptions for major components
+    protocolCombo->setAccessibleName("Client Protocol");
+    protocolCombo->setAccessibleDescription("Select protocol for client connection: TCP, UDP, WebSocket, or HTTP");
+    
+    receiveProtocolCombo->setAccessibleName("Server Protocol");
+    receiveProtocolCombo->setAccessibleDescription("Select protocol for server listening: TCP, UDP, WebSocket, or HTTP");
+    
+    dataFormatCombo->setAccessibleName("Message Format");
+    dataFormatCombo->setAccessibleDescription("Select data format for messages: JSON, XML, CSV, Text, Binary, or Hex");
+    
+    hostEdit->setAccessibleName("Host Address");
+    hostEdit->setAccessibleDescription("Enter host IP address or URL for connection");
+    
+    portEdit->setAccessibleName("Port Number");
+    portEdit->setAccessibleDescription("Enter port number between 1 and 65535");
+    
+    receivePortEdit->setAccessibleName("Server Port");
+    receivePortEdit->setAccessibleDescription("Enter port number for server to listen on");
+    
+    jsonEdit->setAccessibleName("Message Content");
+    jsonEdit->setAccessibleDescription("Enter message content to send. Format depends on selected data format.");
+    
+    clientReceivedEdit->setAccessibleName("Client Received Messages");
+    clientReceivedEdit->setAccessibleDescription("Display area for messages received by client connections");
+    
+    serverReceivedEdit->setAccessibleName("Server Received Messages");
+    serverReceivedEdit->setAccessibleDescription("Display area for messages received by server connections");
+    
+    sentEdit->setAccessibleName("Sent Messages");
+    sentEdit->setAccessibleDescription("Display area for messages you have sent");
+    
+    receivedEdit->setAccessibleName("All Received Messages");
+    receivedEdit->setAccessibleDescription("Combined display of all received messages from both client and server");
+    
+    // Button accessibility
+    connectBtn->setAccessibleName("Connect Button");
+    connectBtn->setAccessibleDescription("Connect to or disconnect from remote server");
+    
+    sendBtn->setAccessibleName("Send Message Button");
+    sendBtn->setAccessibleDescription("Send the message content to connected peer");
+    
+    startReceiveBtn->setAccessibleName("Start Server Button");
+    startReceiveBtn->setAccessibleDescription("Start server and begin listening for connections");
+    
+    stopReceiveBtn->setAccessibleName("Stop Server Button");
+    stopReceiveBtn->setAccessibleDescription("Stop server and close all connections");
+    
+    // Set proper tab order for keyboard navigation
+    setTabOrder(protocolCombo, hostEdit);
+    setTabOrder(hostEdit, portEdit);
+    setTabOrder(portEdit, connectBtn);
+    setTabOrder(connectBtn, receiveProtocolCombo);
+    setTabOrder(receiveProtocolCombo, receivePortEdit);
+    setTabOrder(receivePortEdit, startReceiveBtn);
+    setTabOrder(startReceiveBtn, stopReceiveBtn);
+    setTabOrder(stopReceiveBtn, dataFormatCombo);
+    setTabOrder(dataFormatCombo, jsonEdit);
+    setTabOrder(jsonEdit, sendBtn);
+    
+    logMessage("Accessibility features enabled (screen reader support, keyboard navigation).", "[A11Y] ");
 }

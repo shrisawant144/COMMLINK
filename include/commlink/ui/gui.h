@@ -10,6 +10,9 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QProgressDialog>
+#include <QtWidgets/QScrollArea>
+#include <QtWidgets/QShortcut>
 #include <QtGui/QIntValidator>
 #include <QtGui/QCloseEvent>
 #include <QtCore/QJsonDocument>
@@ -68,6 +71,10 @@ protected:
 private:
     void setupUI();
     void setupValidators();
+    void setupShortcuts();
+    void setupTooltips();
+    void setupAccessibility();
+    void showShortcutsHelp();
     void updateStatusBar();
     void saveSettings();
     void logMessage(const QString &message, const QString &prefix = "");
@@ -93,6 +100,7 @@ private:
     QAction *darkModeAction;
     QAction *autoModeAction;
     LoggerWidget *logger;
+    QProgressDialog *progressDialog;
     
     // Enhanced UI components
     QLabel *clientStatusLabel;
