@@ -17,6 +17,7 @@ public:
     bool isListening() const;
     void setFormat(DataFormatType format) { m_format = format; }
     void sendToClient(QWebSocket* client, const DataMessage& message, bool binary = false);
+    void sendToAll(const DataMessage& message, bool binary = false);
     QWebSocket* findClientByAddress(const QString& addressPort);
     void setSSLEnabled(bool enabled) { m_sslEnabled = enabled; }
     bool isSSLEnabled() const { return m_sslEnabled; }

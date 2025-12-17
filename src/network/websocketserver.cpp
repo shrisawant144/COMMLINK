@@ -52,6 +52,37 @@ void WebSocketServer::sendToClient(QWebSocket* client, const DataMessage& messag
     }
 }
 
+void WebSocketServer::sendToAll(const DataMessage& message, bool binary) {
+    if (m_clients.isEmpty()) {
+        emit errorOccurred("No clients connected to broadcast message");
+        return;
+    }
+    
+    QByteArray data = message.serialize();
+    int successCount = 0;
+    
+    for (QWebSocket* client : m_clients) {
+        if (!client) continue;
+        
+        bool success = false;
+        if (binary) {
+            success = client->sendBinaryMessage(data) >= 0;
+        } else {
+            success = client->sendTextMessage(QString::fromUtf8(data)) >= 0;
+        }
+        
+        if (success) {
+            successCount++;
+        } else {
+            emit errorOccurred("Failed to send broadcast to: " + client->peerAddress().toString());
+        }
+    }
+    
+    if (successCount == 0) {
+        emit errorOccurred("Failed to send message to any client");
+    }
+}
+
 QWebSocket* WebSocketServer::findClientByAddress(const QString& addressPort) {
     for (QWebSocket* client : m_clients) {
         QString clientAddr = client->peerAddress().toString() + ":" + QString::number(client->peerPort());

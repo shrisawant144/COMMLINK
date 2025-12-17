@@ -11,13 +11,11 @@ bool UdpClient::connectToHost(const QString& host, quint16 port) {
     m_host = QHostAddress(host);
     m_port = port;
     
-    if (m_socket->bind()) {
-        m_connected = true;
-        emit connected();
-        return true;
-    }
-    emit errorOccurred("Failed to bind UDP socket");
-    return false;
+    // UDP is connectionless - no actual connection needed
+    // Just store the target address and mark as "connected"
+    m_connected = true;
+    emit connected();
+    return true;
 }
 
 void UdpClient::disconnect() {

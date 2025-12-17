@@ -33,14 +33,29 @@ add_library(commlink_network STATIC
 target_include_directories(commlink_network PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(commlink_network Qt5::Core Qt5::Network Qt5::WebSockets commlink_core)
 
-# UI library
+# UI library - Modular components
 add_library(commlink_ui STATIC
+    # Original GUI (kept for reference)
     ui/gui.cpp
     ui/historytab.cpp
     ui/thememanager.cpp
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/gui.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/historytab.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/thememanager.h
+    
+    # New modular components
+    ui/connectionpanel.cpp
+    ui/serverpanel.cpp
+    ui/messagepanel.cpp
+    ui/displaypanel.cpp
+    ui/statuspanel.cpp
+    ui/mainwindow.cpp
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/connectionpanel.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/serverpanel.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/messagepanel.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/displaypanel.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/statuspanel.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/mainwindow.h
 )
 target_include_directories(commlink_ui PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(commlink_ui Qt5::Widgets Qt5::Sql commlink_core commlink_network)
