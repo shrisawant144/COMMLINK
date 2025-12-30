@@ -351,20 +351,14 @@ ctest --verbose
 
 ## 📚 Documentation
 
-### User Documentation
-- **[User Guide](docs/user-guide.md)** - Complete usage instructions with examples
-- **[Beginner's Guide](docs/Beginners_Complete_Guide.md)** - Step-by-step learning path
-- **[Project Overview](docs/Project_Overview.md)** - High-level project understanding
+📚 **[Complete Documentation](docs/README.md)** - Start here for all guides
 
-### Developer Documentation
-- **[Architecture](docs/architecture.md)** - System design and patterns
-- **[C++ Concepts](docs/CPP_Programming_Concepts.md)** - C++ features used
-- **[Qt Framework](docs/Qt_Framework_Features.md)** - Qt components explained
-- **[GUI Implementation](docs/GUI_Implementation_Guide.md)** - UI architecture
-- **[Source Code Analysis](docs/Source_Code_Analysis.md)** - Detailed code walkthrough
-
-### Contributing
-- **[Contributing Guidelines](CONTRIBUTING.md)** - How to contribute to the project
+**Quick Links:**
+- 🚀 [Quick Start](docs/quick-start.md) - Get running in 5 minutes
+- 📖 [User Guide](docs/user-guide-simple.md) - How to use CommLink  
+- 🎓 [Learning Guide](docs/learning-guide.md) - Networking concepts explained
+- 💻 [Developer Guide](docs/developer-guide.md) - Build and contribute
+- ❓ [FAQ](docs/faq.md) - Common questions answered
 
 ---
 
@@ -390,10 +384,10 @@ ctest --verbose
 
 ---
 
-## 🔧 Requirements
+## Requirements
 
 ### Build Requirements
-- **CMake**: 3.10 or newer
+- **CMake**: 3.8.2 or newer
 - **C++ Compiler**: Supporting C++17
   - GCC 7+ (Linux)
   - Clang 5+ (macOS)
