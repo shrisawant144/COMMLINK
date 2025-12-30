@@ -1,6 +1,4 @@
 # CommLink
-
-[![CI](https://github.com/shrisawant144/COMMLINK/workflows/CI/badge.svg)](https://github.com/shrisawant144/COMMLINK/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](VERSION)
 [![Qt](https://img.shields.io/badge/Qt-5.12%2B-green.svg)](https://www.qt.io/)
