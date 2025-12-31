@@ -1,0 +1,25 @@
+var annotated_dup =
+[
+    [ "CommLinkGUI", "classCommLinkGUI.html", "classCommLinkGUI" ],
+    [ "ConnectionPanel", "classConnectionPanel.html", "classConnectionPanel" ],
+    [ "DataMessage", "classDataMessage.html", "classDataMessage" ],
+    [ "DisplayPanel", "classDisplayPanel.html", "classDisplayPanel" ],
+    [ "ExportManager", "classExportManager.html", "classExportManager" ],
+    [ "FileManager", "classFileManager.html", "classFileManager" ],
+    [ "HistoryTab", "classHistoryTab.html", "classHistoryTab" ],
+    [ "HttpClient", "classHttpClient.html", "classHttpClient" ],
+    [ "HttpServer", "classHttpServer.html", "classHttpServer" ],
+    [ "LoggerWidget", "classLoggerWidget.html", "classLoggerWidget" ],
+    [ "MainWindow", "classMainWindow.html", "classMainWindow" ],
+    [ "MessageHistoryManager", "classMessageHistoryManager.html", "classMessageHistoryManager" ],
+    [ "MessagePanel", "classMessagePanel.html", "classMessagePanel" ],
+    [ "ServerPanel", "classServerPanel.html", "classServerPanel" ],
+    [ "StatusPanel", "classStatusPanel.html", "classStatusPanel" ],
+    [ "TcpClient", "classTcpClient.html", "classTcpClient" ],
+    [ "TcpServer", "classTcpServer.html", "classTcpServer" ],
+    [ "ThemeManager", "classThemeManager.html", "classThemeManager" ],
+    [ "UdpClient", "classUdpClient.html", "classUdpClient" ],
+    [ "UdpServer", "classUdpServer.html", "classUdpServer" ],
+    [ "WebSocketClient", "classWebSocketClient.html", "classWebSocketClient" ],
+    [ "WebSocketServer", "classWebSocketServer.html", "classWebSocketServer" ]
+];

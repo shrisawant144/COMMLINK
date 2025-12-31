@@ -1,0 +1,90 @@
+/**
+ * @mainpage CommLink - Network Communication Testing Tool
+ *
+ * @section intro_sec Introduction
+ *
+ * CommLink is a cross-platform desktop application for testing and debugging network communications.
+ * Built with Qt5 and C++17, it provides a unified interface for multiple network protocols and data formats.
+ *
+ * @section features_sec Features
+ *
+ * - **Multi-Protocol**: TCP, UDP, HTTP, WebSocket (client and server)
+ * - **Data Formats**: JSON, XML, CSV, TEXT, BINARY, HEX
+ * - **Message History**: SQLite database with search and export
+ * - **Real-Time Logging**: Monitor all network activity
+ * - **Theme Support**: Light, Dark, and System themes
+ *
+ * @section architecture_sec Architecture
+ *
+ * The application follows a **modular orchestrator pattern**:
+ *
+ * - @ref MainWindow serves as the central orchestrator
+ * - UI panels communicate via signals and slots
+ * - Network components operate asynchronously
+ * - Core services provide shared functionality
+ *
+ * @image html architecture.png "Architecture Overview"
+ *
+ * @section components_sec Components
+ *
+ * ### UI Components
+ * - @ref MainWindow - Application orchestrator
+ * - @ref ConnectionPanel - Client connection management
+ * - @ref ServerPanel - Server management
+ * - @ref MessagePanel - Message composition
+ * - @ref DisplayPanel - Message display and history
+ *
+ * ### Network Components
+ * - @ref TcpClient / @ref TcpServer - TCP protocol
+ * - @ref UdpClient / @ref UdpServer - UDP protocol
+ * - @ref HttpClient / @ref HttpServer - HTTP protocol
+ * - @ref WebSocketClient / @ref WebSocketServer - WebSocket protocol
+ *
+ * ### Core Components
+ * - @ref MessageHistoryManager - Database operations
+ * - @ref DataMessage - Data format handling
+ * - @ref FileManager - File I/O operations
+ * - @ref ExportManager - Export functionality
+ *
+ * @section code_flow_sec Code Flow
+ *
+ * Key execution flows are documented in method descriptions:
+ *
+ * - @ref MainWindow::onConnectRequested() "Connection Flow"
+ * - @ref MainWindow::onSendRequested() "Send Flow"
+ * - @ref MainWindow::onDataReceived() "Receive Flow"
+ *
+ * For detailed flow documentation, see:
+ * - [CODE_FLOW.md](@ref CODE_FLOW.md) - Complete flow explanations
+ * - [CODE_FLOW_QUICK_REFERENCE.md](@ref CODE_FLOW_QUICK_REFERENCE.md) - Quick reference
+ *
+ * @section getting_started_sec Getting Started
+ *
+ * ### Building
+ * ```bash
+ * mkdir build && cd build
+ * cmake ..
+ * make -j$(nproc)
+ * ```
+ *
+ * ### Requirements
+ * - CMake 3.8.2+
+ * - C++17 compiler
+ * - Qt5 (Core, Widgets, Network, Sql, WebSockets)
+ *
+ * @section documentation_sec Documentation
+ *
+ * - [User Guide](@ref user-guide-simple.md) - Usage instructions
+ * - [Developer Guide](@ref developer-guide.md) - Build and contribute
+ * - [Architecture](@ref ARCHITECTURE.md) - System design
+ * - [Code Flow](@ref CODE_FLOW.md) - Execution flows
+ *
+ * @section license_sec License
+ *
+ * MIT License - See LICENSE file for details.
+ *
+ * @section author_sec Author
+ *
+ * Shrikrishna Sawant - [GitHub](https://github.com/shrisawant144)
+ *
+ */

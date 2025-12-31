@@ -24,6 +24,25 @@
 #include "commlink/core/filemanager.h"
 #include "commlink/core/exportmanager.h"
 
+/**
+ * @brief MainWindow constructor - Initializes the application
+ * 
+ * This is the main initialization sequence:
+ * 
+ * 1. Set window properties (title, icon, size)
+ * 2. Initialize database (MessageHistoryManager)
+ * 3. initializeNetworkComponents() - Creates all 8 network objects and wires their signals
+ * 4. setupUI() - Creates all 5 UI panels and arranges layout
+ * 5. setupMenuBar() - Creates menu bar with theme options
+ * 6. setupShortcuts() - Configures keyboard shortcuts
+ * 7. setupConnections() - Wires UI panel signals to MainWindow slots
+ * 8. loadSettings() - Restores window geometry and preferences
+ * 9. Initialize theme manager and apply theme
+ * 
+ * @note Network component signals are connected in initializeNetworkComponents()
+ * @note UI panel signals are connected in setupConnections()
+ * @note Order matters: network components must be created before UI panels
+ */
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , connectionPanel(nullptr)
@@ -82,6 +101,23 @@ MainWindow::MainWindow(QWidget *parent)
     logMessage("CommLink started successfully", "[INFO] ");
 }
 
+/**
+ * @brief Initializes all network components and wires their signals
+ * 
+ * Flow:
+ * 1. Creates all 8 network objects (4 clients + 4 servers)
+ * 2. Connects network component signals to MainWindow slots:
+ *    - connected() → updateStatus()
+ *    - disconnected() → updateStatus()
+ *    - messageReceived() → onDataReceived()
+ *    - errorOccurred() → onNetworkError()
+ *    - clientConnected() → onClientConnected() (servers only)
+ *    - clientDisconnected() → onClientDisconnected() (servers only)
+ * 
+ * @note All network components are created with MainWindow as parent
+ * @note Parent-child relationship ensures automatic cleanup
+ * @note Signals are connected immediately, ready for use
+ */
 void MainWindow::initializeNetworkComponents()
 {
     // TCP
@@ -488,6 +524,40 @@ void MainWindow::onSendModeChanged(const QString &mode)
     logMessage(QString("Send mode changed to %1").arg(mode), "[INFO] ");
 }
 
+/**
+ * @brief Handles message send request - Complete send flow
+ * 
+ * Flow:
+ * 1. Receives sendRequested() signal from MessagePanel
+ * 2. Gets message text and format from MessagePanel
+ * 3. Validates message is not empty
+ * 4. Validates input format (JSON syntax, hex format, etc.)
+ * 5. Parses input string to QVariant using DataMessage::parseInput()
+ *    - JSON: QJsonDocument
+ *    - XML/CSV/TEXT: QString
+ *    - BINARY/HEX: QByteArray
+ * 6. Creates DataMessage object with format and parsed data
+ * 7. Checks send mode (Client or Server)
+ * 
+ * 8. If Client mode:
+ *    - Gets protocol from ConnectionPanel
+ *    - Calls appropriate network client's sendMessage(msg)
+ *    - Network component serializes DataMessage to bytes
+ *    - Bytes sent over network (asynchronous)
+ * 
+ * 9. If Server mode (Broadcast or Selected):
+ *    - Gets protocol from ServerPanel
+ *    - Broadcast: Sends to all connected clients
+ *    - Selected: Sends to specific client
+ * 
+ * 10. Updates DisplayPanel with sent message
+ * 11. Logs the action
+ * 12. Saves to database via MessageHistoryManager
+ * 
+ * @note All network operations are asynchronous
+ * @note Message serialization format depends on DataFormatType
+ * @see DataMessage::serialize() for serialization details
+ */
 // Message handlers
 void MainWindow::onSendRequested()
 {
@@ -732,6 +802,51 @@ void MainWindow::onExportLogsRequested()
     }
 }
 
+/**
+ * @brief Handles incoming data from all network components
+ * 
+ * @param msg The received DataMessage (already deserialized)
+ * @param source Source address/identifier (e.g., "127.0.0.1:5000")
+ * @param timestamp Timestamp when message was received
+ * 
+ * Flow:
+ * 1. Receives messageReceived() signal from network component
+ *    (TcpClient, TcpServer, UdpClient, UdpServer, WebSocketClient, 
+ *     WebSocketServer, HttpClient, or HttpServer)
+ * 
+ * 2. Network component has already:
+ *    - Read bytes from socket
+ *    - Deserialized bytes to DataMessage
+ *    - Created timestamp
+ *    - Extracted source address
+ * 
+ * 3. Determines protocol from sender object:
+ *    - tcpClient/tcpServer → "TCP"
+ *    - udpClient/udpServer → "UDP"
+ *    - wsClient/wsServer → "WebSocket"
+ *    - httpClient/httpServer → "HTTP"
+ * 
+ * 4. Converts DataMessage to display string using toDisplayString()
+ *    - JSON: Pretty-printed (indented)
+ *    - XML/CSV/TEXT: As-is
+ *    - BINARY: Hex representation with size
+ *    - HEX: Hex string
+ * 
+ * 5. Appends to DisplayPanel (received messages area)
+ * 
+ * 6. Logs the received message
+ * 
+ * 7. Parses source string to extract host and port
+ * 
+ * 8. Saves to database via MessageHistoryManager::saveMessage()
+ * 
+ * 9. Updates status panel
+ * 
+ * @note This slot is connected to all 8 network components
+ * @note DataMessage is already deserialized by the network component
+ * @note All operations happen in main thread (thread-safe)
+ * @see TcpClient::onReadyRead() for deserialization example
+ */
 // Network event handlers
 void MainWindow::onDataReceived(const DataMessage &msg, const QString &source, const QString &timestamp)
 {

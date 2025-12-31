@@ -1,67 +1,67 @@
 # CommLink Documentation
 
-## Start Here
+Welcome to the CommLink documentation. This guide helps you find the right documentation for your needs.
+
+## Getting Started
 
 ### New Users
-- **[Quick Start Guide](quick-start.md)** - Get up and running in 5 minutes
-- **[Learning Guide](learning-guide.md)** - Understand networking concepts with examples
-- **[FAQ](faq.md)** - Common questions and solutions
-
-### Regular Users  
+- **[Quick Start](quick-start.md)** - Get up and running in 5 minutes
 - **[User Guide](user-guide-simple.md)** - Complete usage instructions
-- **[Keyboard Shortcuts](Keyboard_Shortcuts_Reference.md)** - Speed up your workflow
+- **[Learning Guide](learning-guide.md)** - Networking concepts explained
+- **[FAQ](faq.md)** - Common questions and solutions
 
 ### Developers
 - **[Developer Guide](developer-guide.md)** - Build, test, and contribute
-- **[Architecture](architecture-simple.md)** - System design overview
+- **[Architecture](ARCHITECTURE.md)** - System design and architecture
+- **[Code Flow](CODE_FLOW.md)** - Detailed execution flows
+- **[API Documentation](DOXYGEN.md)** - Doxygen-generated API docs
 
-## What is CommLink?
+## Documentation Structure
 
-CommLink is a **network communication testing tool** that helps you:
+### User Documentation
+- `quick-start.md` - Quick setup guide
+- `user-guide-simple.md` - Complete user manual
+- `learning-guide.md` - Educational content
+- `faq.md` - Frequently asked questions
+- `Keyboard_Shortcuts_Reference.md` - Keyboard shortcuts
 
-✅ Test TCP/UDP socket connections  
-✅ Debug REST APIs (HTTP)  
-✅ Test WebSocket real-time communication  
-✅ Work with multiple data formats (JSON, XML, CSV, etc.)  
-✅ Save and export message history  
+### Developer Documentation
+- `developer-guide.md` - Development setup and guidelines
+- `ARCHITECTURE.md` - System architecture and design
+- `CODE_FLOW.md` - Detailed code execution flows
+- `CODE_FLOW_QUICK_REFERENCE.md` - Quick flow reference
+- `DOXYGEN.md` - API documentation guide
+
+### API Documentation
+- Generated HTML documentation in `doxygen/html/`
+- View by opening `doxygen/html/index.html` in a browser
+- Generated from source code comments using Doxygen
 
 ## Quick Examples
 
 ### Test an API
 ```
 Connection Panel → HTTP → Host: api.github.com → Method: GET → Connect
-Message Panel → Send → View response in Client Received tab
+Message Panel → Send → View response in Display Panel
 ```
 
-### Create TCP Chat
+### Create TCP Server
 ```
-Instance 1: Server Panel → TCP Server → Port 5000 → Start Server
-Instance 2: Connection Panel → TCP → Host: 127.0.0.1, Port: 5000 → Connect
+Server Panel → TCP Server → Port 5000 → Start Server
+Connection Panel → TCP → Host: 127.0.0.1, Port: 5000 → Connect
 Message Panel → Type message → Send
-```
-
-### WebSocket Echo Test
-```
-Connection Panel → WebSocket → URL: ws://echo.websocket.org → Connect
-Message Panel → Format: JSON → Message: {"hello": "world"} → Send
 ```
 
 ## Need Help?
 
-1. **Check [FAQ](faq.md)** for common issues
-2. **Look at Logs tab** in CommLink for error details  
-3. **Create GitHub issue** with details if problem persists
+1. Check [FAQ](faq.md) for common issues
+2. Review logs in the application's Status Panel
+3. Open a [GitHub issue](https://github.com/shrisawant144/COMMLINK/issues) with details
 
-## File Organization
+## Contributing
 
-```
-docs/
-├── README.md                       # This file - start here
-├── quick-start.md                  # 5-minute setup guide
-├── user-guide-simple.md            # Complete user manual
-├── learning-guide.md               # Networking concepts explained
-├── developer-guide.md              # Build and contribute
-├── architecture-simple.md          # System design
-├── faq.md                          # Common questions
-└── Keyboard_Shortcuts_Reference.md # Shortcuts list
-```
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
+- Development setup
+- Coding standards
+- Testing guidelines
+- Pull request process

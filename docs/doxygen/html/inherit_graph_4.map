@@ -1,0 +1,13 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" title=" " alt="" coords="5,233,80,260"/>
+<area shape="rect" id="node2" href="$classHttpClient.html" title=" " alt="" coords="176,5,264,32"/>
+<area shape="rect" id="node3" href="$classHttpServer.html" title=" " alt="" coords="174,56,266,83"/>
+<area shape="rect" id="node4" href="$classMessageHistoryManager.html" title=" " alt="" coords="128,107,312,133"/>
+<area shape="rect" id="node5" href="$classTcpClient.html" title="TCP client for connection&#45;oriented network communication." alt="" coords="179,157,261,184"/>
+<area shape="rect" id="node6" href="$classTcpServer.html" title=" " alt="" coords="177,208,263,235"/>
+<area shape="rect" id="node7" href="$classThemeManager.html" title=" " alt="" coords="158,259,282,285"/>
+<area shape="rect" id="node8" href="$classUdpClient.html" title=" " alt="" coords="177,309,263,336"/>
+<area shape="rect" id="node9" href="$classUdpServer.html" title=" " alt="" coords="175,360,265,387"/>
+<area shape="rect" id="node10" href="$classWebSocketClient.html" title=" " alt="" coords="154,411,286,437"/>
+<area shape="rect" id="node11" href="$classWebSocketServer.html" title=" " alt="" coords="152,461,288,488"/>
+</map>
