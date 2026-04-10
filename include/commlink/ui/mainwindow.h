@@ -28,6 +28,7 @@
 #include "messagepanel.h"
 #include "displaypanel.h"
 #include "statuspanel.h"
+#include "networkinfopanel.h"
 
 /**
  * @brief Main application window with modular UI components
@@ -139,6 +140,7 @@ private slots:
      * @brief Handles server protocol change
      */
     void onServerProtocolChanged(const QString &protocol);
+    void onServerConfigurationChanged();
     
     /**
      * @brief Handles send mode change (Client/Server Broadcast/Selected)
@@ -346,6 +348,7 @@ private:
     ConnectionPanel *connectionPanel;
     ServerPanel *serverPanel;
     MessagePanel *messagePanel;
+    NetworkInfoPanel *networkInfoPanel;
     DisplayPanel *displayPanel;
     StatusPanel *statusPanel;
 

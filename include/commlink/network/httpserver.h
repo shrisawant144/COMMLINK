@@ -12,7 +12,7 @@ class HttpServer : public QObject {
 public:
     explicit HttpServer(QObject *parent = nullptr);
     
-    bool startServer(quint16 port);
+    bool startServer(quint16 port, const QHostAddress& bindAddress = QHostAddress::Any);
     void stopServer();
     bool isListening() const;
     void setFormat(DataFormatType format) { m_format = format; }

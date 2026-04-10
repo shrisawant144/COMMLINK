@@ -15,7 +15,7 @@ class TcpServer : public QObject {
 public:
     explicit TcpServer(QObject *parent = nullptr);
     ~TcpServer();
-    bool startServer(quint16 port);
+    bool startServer(quint16 port, const QHostAddress& bindAddress = QHostAddress::Any);
     void stopServer();
     bool isListening() const;
     void sendToAll(const DataMessage& message);

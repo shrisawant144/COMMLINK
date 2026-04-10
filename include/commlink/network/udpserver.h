@@ -9,7 +9,7 @@ class UdpServer : public QObject {
     Q_OBJECT
 public:
     explicit UdpServer(QObject *parent = nullptr);
-    bool startServer(quint16 port);
+    bool startServer(quint16 port, const QHostAddress& bindAddress = QHostAddress::Any);
     void stopServer();
     bool isListening() const { return m_listening; }
     void setFormat(DataFormatType format) { m_format = format; }

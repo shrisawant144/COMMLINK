@@ -6,6 +6,7 @@
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QLabel>
 #include <QtCore/QString>
+#include <QtNetwork/QHostAddress>
 
 /**
  * @brief Panel for managing server configuration and connections
@@ -24,12 +25,15 @@ public:
     // Getters
     QString getProtocol() const;
     int getPort() const;
+    QHostAddress getBindAddress() const;
+    QString getBindAddressText() const;
     bool isServerRunning() const;
 
     // Setters
     void setServerState(bool running);
     void setProtocol(const QString &protocol);
     void setPort(int port);
+    void setBindAddress(const QString &bindAddress);
 
     // Client management
     void addClient(const QString &clientInfo);
@@ -47,6 +51,7 @@ signals:
     void stopServerRequested();
     void protocolChanged(const QString &protocol);
     void sendModeChanged(const QString &mode);
+    void configurationChanged();
 
 private slots:
     void onStartClicked();
@@ -58,9 +63,11 @@ private:
     void updateClientCount();
     void applyStyles();
     void setupAccessibility();
+    void populateBindAddresses();
 
     // UI Components
     QComboBox *protocolCombo;
+    QComboBox *bindAddressCombo;
     QLineEdit *portEdit;
     QPushButton *startBtn;
     QPushButton *stopBtn;

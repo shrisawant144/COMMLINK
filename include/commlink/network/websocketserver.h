@@ -12,7 +12,7 @@ class WebSocketServer : public QObject {
 public:
     explicit WebSocketServer(QObject *parent = nullptr);
     ~WebSocketServer();
-    bool startServer(quint16 port);
+    bool startServer(quint16 port, const QHostAddress& bindAddress = QHostAddress::Any);
     void stopServer();
     bool isListening() const;
     void setFormat(DataFormatType format) { m_format = format; }
