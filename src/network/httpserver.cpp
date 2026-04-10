@@ -8,7 +8,7 @@ HttpServer::HttpServer(QObject *parent)
     connect(m_server, &QTcpServer::newConnection, this, &HttpServer::onNewConnection);
 }
 
-bool HttpServer::startServer(quint16 port) {
+bool HttpServer::startServer(quint16 port, const QHostAddress& bindAddress) {
     // Close existing server if already listening
     if (m_server->isListening()) {
         m_server->close();
@@ -17,7 +17,7 @@ bool HttpServer::startServer(quint16 port) {
     // Set max connections
     m_server->setMaxPendingConnections(MAX_CLIENTS);
     
-    if (m_server->listen(QHostAddress::Any, port)) {
+    if (m_server->listen(bindAddress, port)) {
         return true;
     }
     emit errorOccurred(m_server->errorString());

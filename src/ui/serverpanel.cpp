@@ -1,4 +1,6 @@
 #include "commlink/ui/serverpanel.h"
+#include <QtNetwork/QNetworkAddressEntry>
+#include <QtNetwork/QNetworkInterface>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QGridLayout>
@@ -9,6 +11,7 @@
 ServerPanel::ServerPanel(QWidget *parent)
     : QWidget(parent)
     , protocolCombo(nullptr)
+    , bindAddressCombo(nullptr)
     , portEdit(nullptr)
     , startBtn(nullptr)
     , stopBtn(nullptr)
@@ -44,12 +47,26 @@ void ServerPanel::setupUI()
     connect(protocolCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ServerPanel::onProtocolChanged);
 
+    bindAddressCombo = new QComboBox();
+    bindAddressCombo->setMinimumHeight(MIN_HEIGHT);
+    bindAddressCombo->setToolTip(
+        "Select which local address the server should listen on.\n"
+        "All Interfaces allows LAN and internet exposure if the network is configured.\n"
+        "Loopback Only restricts access to the same machine."
+    );
+    populateBindAddresses();
+    connect(bindAddressCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int) { emit configurationChanged(); });
+
     // Port input
     portEdit = new QLineEdit("8080");
     portEdit->setMinimumHeight(MIN_HEIGHT);
     portEdit->setPlaceholderText("Port number");
     portEdit->setValidator(new QIntValidator(1, 65535, this));
     portEdit->setToolTip("Server listening port (1-65535). Avoid privileged ports <1024 unless running as administrator.");
+    connect(portEdit, &QLineEdit::textChanged, this, [this](const QString &) {
+        emit configurationChanged();
+    });
 
     // Start/Stop buttons
     startBtn = new QPushButton("Start Server");
@@ -106,13 +123,15 @@ void ServerPanel::setupUI()
     // Layout
     gridLayout->addWidget(new QLabel("Protocol:"), 0, 0);
     gridLayout->addWidget(protocolCombo, 0, 1);
-    gridLayout->addWidget(new QLabel("Port:"), 1, 0);
-    gridLayout->addWidget(portEdit, 1, 1);
+    gridLayout->addWidget(new QLabel("Bind Address:"), 1, 0);
+    gridLayout->addWidget(bindAddressCombo, 1, 1);
+    gridLayout->addWidget(new QLabel("Port:"), 2, 0);
+    gridLayout->addWidget(portEdit, 2, 1);
 
     auto *btnLayout = new QHBoxLayout();
     btnLayout->addWidget(startBtn);
     btnLayout->addWidget(stopBtn);
-    gridLayout->addLayout(btnLayout, 2, 0, 1, 2);
+    gridLayout->addLayout(btnLayout, 3, 0, 1, 2);
 
     mainLayout->addWidget(group);
     mainLayout->addWidget(clientsGroup);
@@ -163,6 +182,7 @@ void ServerPanel::onProtocolChanged(int index)
 {
     Q_UNUSED(index);
     emit protocolChanged(getProtocol());
+    emit configurationChanged();
 }
 
 void ServerPanel::updateClientCount()
@@ -185,6 +205,16 @@ int ServerPanel::getPort() const
     return portEdit->text().toInt();
 }
 
+QHostAddress ServerPanel::getBindAddress() const
+{
+    return QHostAddress(bindAddressCombo->currentData().toString());
+}
+
+QString ServerPanel::getBindAddressText() const
+{
+    return bindAddressCombo->currentData().toString();
+}
+
 bool ServerPanel::isServerRunning() const
 {
     return serverRunning;
@@ -197,6 +227,7 @@ void ServerPanel::setServerState(bool running)
     startBtn->setEnabled(!running);
     stopBtn->setEnabled(running);
     protocolCombo->setEnabled(!running);
+    bindAddressCombo->setEnabled(!running);
     portEdit->setEnabled(!running);
 }
 
@@ -211,6 +242,14 @@ void ServerPanel::setProtocol(const QString &protocol)
 void ServerPanel::setPort(int port)
 {
     portEdit->setText(QString::number(port));
+}
+
+void ServerPanel::setBindAddress(const QString &bindAddress)
+{
+    int index = bindAddressCombo->findData(bindAddress);
+    if (index >= 0) {
+        bindAddressCombo->setCurrentIndex(index);
+    }
 }
 
 // Client management
@@ -272,6 +311,9 @@ void ServerPanel::setupAccessibility()
     // Protocol combo
     protocolCombo->setAccessibleName("Server Protocol Selection");
     protocolCombo->setAccessibleDescription("Select the protocol for the server: TCP, UDP, or WebSocket");
+
+    bindAddressCombo->setAccessibleName("Server Bind Address");
+    bindAddressCombo->setAccessibleDescription("Select the local address the server will listen on");
     
     // Port edit
     portEdit->setAccessibleName("Server Port");
@@ -298,4 +340,35 @@ void ServerPanel::setupAccessibility()
     
     targetClientCombo->setAccessibleName("Target Client Selection");
     targetClientCombo->setAccessibleDescription("Select the specific client to send the message to");
+}
+
+void ServerPanel::populateBindAddresses()
+{
+    bindAddressCombo->clear();
+    bindAddressCombo->addItem("All Interfaces (0.0.0.0)", "0.0.0.0");
+    bindAddressCombo->addItem("Loopback Only (127.0.0.1)", "127.0.0.1");
+
+    QStringList seenAddresses;
+    const auto interfaces = QNetworkInterface::allInterfaces();
+    for (const QNetworkInterface &iface : interfaces) {
+        if (!(iface.flags() & QNetworkInterface::IsUp) ||
+            !(iface.flags() & QNetworkInterface::IsRunning)) {
+            continue;
+        }
+
+        for (const QNetworkAddressEntry &entry : iface.addressEntries()) {
+            const QHostAddress ip = entry.ip();
+            if (ip.protocol() != QAbstractSocket::IPv4Protocol) {
+                continue;
+            }
+
+            const QString ipString = ip.toString();
+            if (ipString.isEmpty() || ipString == "0.0.0.0" || seenAddresses.contains(ipString)) {
+                continue;
+            }
+
+            seenAddresses.append(ipString);
+            bindAddressCombo->addItem(QString("%1 (%2)").arg(iface.humanReadableName(), ipString), ipString);
+        }
+    }
 }

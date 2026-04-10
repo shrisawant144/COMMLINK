@@ -48,6 +48,7 @@ MainWindow::MainWindow(QWidget *parent)
     , connectionPanel(nullptr)
     , serverPanel(nullptr)
     , messagePanel(nullptr)
+    , networkInfoPanel(nullptr)
     , displayPanel(nullptr)
     , statusPanel(nullptr)
     , menuBar(nullptr)
@@ -211,9 +212,11 @@ void MainWindow::setupUI()
     connectionPanel = new ConnectionPanel();
     serverPanel = new ServerPanel();
     messagePanel = new MessagePanel();
+    networkInfoPanel = new NetworkInfoPanel();
     
     leftLayout->addWidget(connectionPanel);
     leftLayout->addWidget(serverPanel);
+    leftLayout->addWidget(networkInfoPanel);
     leftLayout->addWidget(messagePanel);
     leftLayout->addStretch();
     
@@ -337,6 +340,8 @@ void MainWindow::setupConnections()
             this, &MainWindow::onStopServerRequested);
     connect(serverPanel, &ServerPanel::protocolChanged,
             this, &MainWindow::onServerProtocolChanged);
+    connect(serverPanel, &ServerPanel::configurationChanged,
+            this, &MainWindow::onServerConfigurationChanged);
     
     // Message panel
     connect(messagePanel, &MessagePanel::sendRequested,
@@ -451,32 +456,36 @@ void MainWindow::onStartServerRequested()
     QString protocol = serverPanel->getProtocol();
     int port = serverPanel->getPort();
     quint16 serverPort = static_cast<quint16>(port);
+    QHostAddress bindAddress = serverPanel->getBindAddress();
+    QString bindAddressText = serverPanel->getBindAddressText();
     DataFormatType format = messagePanel->getFormat();
     
     bool success = false;
     if (protocol == "TCP Server") {
         tcpServer->setFormat(format);
-        success = tcpServer->startServer(serverPort);
+        success = tcpServer->startServer(serverPort, bindAddress);
     } else if (protocol == "UDP Server") {
         udpServer->setFormat(format);
-        success = udpServer->startServer(serverPort);
+        success = udpServer->startServer(serverPort, bindAddress);
     } else if (protocol == "WebSocket Server") {
         wsServer->setFormat(format);
-        success = wsServer->startServer(serverPort);
+        success = wsServer->startServer(serverPort, bindAddress);
     } else if (protocol == "HTTP Server") {
         httpServer->setFormat(format);
-        success = httpServer->startServer(serverPort);
+        success = httpServer->startServer(serverPort, bindAddress);
     }
     
     if (success) {
         serverPanel->setServerState(true);
         statusPanel->setServerStatus("Running", true);
         updateStatus();
-        logMessage(QString("%1 started on port %2").arg(protocol).arg(port), "[SERVER] ");
+        logMessage(QString("%1 started on %2:%3").arg(protocol, bindAddressText).arg(port), "[SERVER] ");
     } else {
         QMessageBox::critical(this, "Server Error",
-            QString("Failed to start %1 on port %2\n\nPlease check if the port is already in use.").arg(protocol).arg(port));
-        logMessage(QString("Failed to start %1 on port %2").arg(protocol).arg(port), "[ERROR] ");
+            QString("Failed to start %1 on %2:%3\n\nPlease check if the port is already in use and whether the selected bind address is available.")
+                .arg(protocol, bindAddressText)
+                .arg(port));
+        logMessage(QString("Failed to start %1 on %2:%3").arg(protocol, bindAddressText).arg(port), "[ERROR] ");
     }
 }
 
@@ -515,7 +524,16 @@ void MainWindow::onServerProtocolChanged(const QString &protocol)
     serverPanel->setServerState(false);
     updateStatus();
     statusPanel->setProtocolInfo(connectionPanel->getProtocol(), protocol);
+    networkInfoPanel->updateServerContext(protocol, serverPanel->getBindAddressText(), serverPanel->getPort());
     logMessage(QString("Server protocol changed to %1").arg(protocol), "[INFO] ");
+}
+
+void MainWindow::onServerConfigurationChanged()
+{
+    networkInfoPanel->updateServerContext(serverPanel->getProtocol(),
+                                          serverPanel->getBindAddressText(),
+                                          serverPanel->getPort());
+    updateStatusBar();
 }
 
 void MainWindow::onSendModeChanged(const QString &mode)
@@ -1080,7 +1098,7 @@ void MainWindow::updateStatusBar()
     QString sendStatus = anyClientConnected ? 
         QString("TX: %1:%2").arg(connectionPanel->getHost()).arg(connectionPanel->getPort()) : "TX: Idle";
     QString recvStatus = anyServerListening ? 
-        QString("RX: Port %1").arg(serverPanel->getPort()) : "RX: Idle";
+        QString("RX: %1:%2").arg(serverPanel->getBindAddressText()).arg(serverPanel->getPort()) : "RX: Idle";
     QString themeStatus = QString("UI: %1").arg(ThemeManager::instance().getThemeName());
     QString status = QString("%1 | %2 | %3").arg(sendStatus, recvStatus, themeStatus);
     
@@ -1145,6 +1163,7 @@ void MainWindow::saveSettings()
     settings.setValue("clientHost", connectionPanel->getHost());
     settings.setValue("clientPort", connectionPanel->getPort());
     settings.setValue("serverProtocol", serverPanel->getProtocol());
+    settings.setValue("serverBindAddress", serverPanel->getBindAddressText());
     settings.setValue("serverPort", serverPanel->getPort());
     settings.setValue("dataFormat", messagePanel->getDataFormat());
 }
@@ -1166,12 +1185,19 @@ void MainWindow::loadSettings()
     if (settings.contains("serverProtocol")) {
         serverPanel->setProtocol(settings.value("serverProtocol").toString());
     }
+    if (settings.contains("serverBindAddress")) {
+        serverPanel->setBindAddress(settings.value("serverBindAddress").toString());
+    }
     if (settings.contains("serverPort")) {
         serverPanel->setPort(settings.value("serverPort").toInt());
     }
     if (settings.contains("dataFormat")) {
         messagePanel->setDataFormat(settings.value("dataFormat").toString());
     }
+
+    networkInfoPanel->updateServerContext(serverPanel->getProtocol(),
+                                          serverPanel->getBindAddressText(),
+                                          serverPanel->getPort());
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

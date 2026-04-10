@@ -49,12 +49,14 @@ add_library(commlink_ui STATIC
     ui/messagepanel.cpp
     ui/displaypanel.cpp
     ui/statuspanel.cpp
+    ui/networkinfopanel.cpp
     ui/mainwindow.cpp
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/connectionpanel.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/serverpanel.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/messagepanel.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/displaypanel.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/statuspanel.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/networkinfopanel.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/mainwindow.h
 )
 target_include_directories(commlink_ui PUBLIC ${CMAKE_SOURCE_DIR}/include)

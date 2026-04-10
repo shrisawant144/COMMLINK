@@ -15,7 +15,7 @@ TcpServer::~TcpServer() {
     stopServer();
 }
 
-bool TcpServer::startServer(quint16 port) {
+bool TcpServer::startServer(quint16 port, const QHostAddress& bindAddress) {
     // Close any existing server first
     if (m_server->isListening()) {
         m_server->close();
@@ -24,7 +24,7 @@ bool TcpServer::startServer(quint16 port) {
     // Set socket options to allow address reuse
     m_server->setMaxPendingConnections(MAX_CLIENTS);
     
-    if (m_server->listen(QHostAddress::Any, port)) {
+    if (m_server->listen(bindAddress, port)) {
         return true;
     }
     emit errorOccurred(m_server->errorString());
