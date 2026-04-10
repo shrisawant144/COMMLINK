@@ -1,212 +1,259 @@
 # Developer Guide
 
-## Building CommLink
+This guide is the primary entry point for engineers working on CommLink.
 
-### Prerequisites
-- **CMake** 3.8.2+
-- **Qt5** 5.12+ (Core, Widgets, Network, Sql, WebSockets)
-- **C++17** compiler (GCC 7+, Clang 5+, MSVC 2017+)
+It covers how to build the project, how the repository is structured, what architectural patterns the code uses, and what the current development reality looks like.
 
-### Quick Build
+## Engineering Overview
+
+CommLink is a Qt5/C++17 desktop application for network communication testing. The codebase is organized around a modular default UI that orchestrates reusable protocol handlers and shared business logic.
+
+At a high level:
+
+- `src/main.cpp` boots the Qt application and selects the default modular UI or the legacy UI.
+- `src/ui/mainwindow.cpp` is the orchestration layer for the modular interface.
+- `src/network/` contains protocol-specific transport code.
+- `src/core/` contains shared abstractions such as payload formatting, history persistence, and export/file helpers.
+
+## Prerequisites
+
+- CMake 3.8.2 or newer
+- Qt5 5.12 or newer
+- A C++17-capable compiler
+
+Required Qt modules:
+
+- `Core`
+- `Widgets`
+- `Network`
+- `Sql`
+- `WebSockets`
+
+## Build
+
+### Recommended build
+
 ```bash
-git clone https://github.com/shrisawant144/COMMLINK.git
-cd COMMLINK
-./scripts/build.sh
-```
-
-### Manual Build
-```bash
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . -j$(nproc)
-```
-
-## Project Structure
-
-```
-CommLink/
-├── src/
-│   ├── main.cpp                    # Application entry point
-│   ├── core/                       # Core functionality
-│   │   ├── dataformat.cpp          # Format conversions (JSON/XML/CSV/etc)
-│   │   ├── filemanager.cpp         # File I/O operations
-│   │   ├── exportmanager.cpp       # Export functionality
-│   │   ├── logger.cpp              # Logging system
-│   │   └── messagehistorymanager.cpp  # SQLite database operations
-│   ├── network/                    # Protocol implementations
-│   │   ├── tcpclient.cpp           # TCP client
-│   │   ├── tcpserver.cpp           # TCP server
-│   │   ├── udpclient.cpp           # UDP client
-│   │   ├── udpserver.cpp           # UDP server
-│   │   ├── httpclient.cpp          # HTTP client
-│   │   ├── httpserver.cpp          # HTTP server
-│   │   ├── websocketclient.cpp     # WebSocket client
-│   │   └── websocketserver.cpp     # WebSocket server
-│   └── ui/                         # User interface panels
-│       ├── mainwindow.cpp          # Main application window
-│       ├── gui.cpp                 # Legacy GUI (being phased out)
-│       ├── connectionpanel.cpp     # Client connection controls
-│       ├── serverpanel.cpp         # Server management controls
-│       ├── messagepanel.cpp        # Message composition
-│       ├── displaypanel.cpp        # Message display with tabs
-│       ├── statuspanel.cpp         # Status information
-│       ├── historytab.cpp          # Message history interface
-│       └── thememanager.cpp        # Theme management
-├── include/commlink/               # Header files (same structure as src/)
-├── tests/
-│   └── unit/                       # Unit tests
-│       ├── test_dataformat.cpp
-│       └── test_filemanager.cpp
-├── resources/                      # Application resources
-│   ├── CommLink.qrc               # Qt resource file
-│   ├── logo/                      # Application icons
-│   └── controls/                  # UI control assets
-├── scripts/                       # Build and utility scripts
-│   ├── build.sh                   # Main build script
-│   ├── install-deps.sh            # Dependency installation
-│   ├── setup-linux.sh             # Linux setup
-│   └── setup-windows.ps1          # Windows setup
-├── docs/                          # Documentation
-├── cmake/                         # CMake modules
-├── CMakeLists.txt                 # Build configuration
-└── README.md
-```
-
-## Key Classes
-
-### Network Components
-All network classes inherit from QObject and follow similar patterns:
-
-```cpp
-class TcpClient : public QObject {
-    Q_OBJECT
-public:
-    void connectToHost(const QString& host, quint16 port);
-    void sendMessage(const DataMessage& message);
-    void setFormat(DataFormatType format);
-    bool isConnected() const;
-signals:
-    void connected();
-    void disconnected();
-    void messageReceived(const DataMessage& message, const QString& source);
-    void errorOccurred(const QString& error);
-};
-```
-
-### UI Panels
-Panel-based architecture with specialized components:
-
-```cpp
-class ConnectionPanel : public QWidget {
-    Q_OBJECT
-public:
-    QString getProtocol() const;
-    QString getHost() const;
-    int getPort() const;
-    void setConnectionState(bool connected);
-signals:
-    void connectRequested();
-    void protocolChanged(const QString& protocol);
-};
-```
-
-### DataFormat
-Handles format conversions:
-```cpp
-enum class DataFormatType {
-    JSON, XML, CSV, TEXT, BINARY, HEX
-};
-
-class DataMessage {
-public:
-    DataFormatType type;
-    QVariant data;
-    
-    DataMessage(DataFormatType t = DataFormatType::TEXT, const QVariant& d = QVariant());
-    QByteArray serialize() const;
-    static DataMessage deserialize(const QByteArray& bytes, DataFormatType type);
-};
-```
-
-## Adding Features
-
-### New Protocol Support
-1. Create client/server classes inheriting from QObject
-2. Implement standard signals: connected(), disconnected(), messageReceived(), errorOccurred()
-3. Add to MainWindow network component initialization
-4. Update ConnectionPanel and ServerPanel protocol lists
-
-### New UI Panel
-1. Create class inheriting from QWidget
-2. Add to MainWindow setupUI() method
-3. Connect signals to MainWindow slots
-4. Update layout in MainWindow
-
-## Testing
-
-### Unit Tests
-```bash
+mkdir -p build
 cd build
-ctest --verbose
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . -j"$(nproc)"
 ```
 
-### Manual Testing
-1. Build debug version: `cmake -DCMAKE_BUILD_TYPE=Debug ..`
-2. Run application: `./bin/commlink`
-3. Test each panel thoroughly:
-   - Connection Panel: Try all protocols
-   - Server Panel: Start/stop servers
-   - Message Panel: Test all data formats
-   - Display Panel: Check all tabs
+Run the application:
 
-## Code Style
+```bash
+./bin/commlink
+```
 
-### Naming Conventions
-- **Classes**: PascalCase (`TcpClient`, `MessagePanel`)
-- **Methods**: camelCase (`sendMessage`, `getProtocol`)
-- **Variables**: camelCase (`messageCount`, `connectionPanel`)
-- **Constants**: UPPER_CASE (`DEFAULT_WIDTH`, `MIN_HEIGHT`)
-- **Signals**: camelCase (`connectRequested`, `messageReceived`)
+Launch the legacy UI explicitly:
 
-### Qt Conventions
-- Use Qt containers (`QList`, `QMap`) over STL
-- Prefer `QString` over `std::string`
-- Use Qt's signal/slot mechanism for events
-- Follow Qt's memory management (parent-child ownership)
-- Use `Q_OBJECT` macro for classes with signals/slots
+```bash
+./bin/commlink --legacy
+```
 
-## Debugging Tips
+### Convenience scripts
 
-### Network Issues
-- Enable Qt logging: `QT_LOGGING_RULES="*.debug=true"`
-- Check firewall and port availability
-- Use Wireshark for packet analysis
+The repository includes helper scripts under `scripts/`:
 
-### GUI Issues  
-- Test with different themes (Light/Dark/System)
-- Verify panel layouts on different screen sizes
-- Check signal/slot connections between panels
-- Validate input data in panels before processing
+- `install-deps.sh`
+- `build.sh`
+- `format.sh`
+- `setup-linux.sh`
+- `setup-windows.ps1`
 
-### Database Issues
-- Check SQLite file permissions in user directory
-- Use DB Browser for SQLite to inspect database
-- Enable SQL query logging in MessageHistoryManager
-- Verify database schema matches current version
+Use them as shortcuts, but treat CMake as the source of truth for how the project is built.
 
-## Contributing
+## Repository Structure
 
-1. Fork repository
-2. Create feature branch: `git checkout -b feature/new-feature`
-3. Follow code style guidelines
-4. Add tests for new functionality
-5. Update documentation
-6. Submit pull request
+```text
+COMMLINK/
+├── include/commlink/
+│   ├── core/              # Public headers for shared logic
+│   ├── network/           # Public headers for protocol handlers
+│   └── ui/                # Public headers for UI classes
+├── src/
+│   ├── core/              # Shared implementation
+│   ├── network/           # Protocol implementations
+│   ├── ui/                # Modular UI + legacy GUI
+│   ├── main.cpp           # Application entry point
+│   └── CMakeLists.txt     # Main target definitions
+├── resources/             # Qt resource collections and assets
+├── docs/                  # Project documentation
+├── scripts/               # Setup, build, and formatting helpers
+├── tests/                 # Test sources
+├── cmake/                 # Shared CMake modules
+└── CMakeLists.txt         # Top-level build configuration
+```
 
-## Release Process
+## Build Targets
 
-1. Update version in `VERSION` file
-2. Update `CHANGELOG.md`
-3. Create git tag: `git tag v1.0.1`
-4. Build release binaries
-5. Create GitHub release with binaries
+The build is split into layered static libraries:
+
+- `commlink_core`
+- `commlink_network`
+- `commlink_ui`
+- `commlink` executable
+
+This separation is useful when making changes because it encourages clear boundaries between shared logic, protocol code, and UI concerns.
+
+## Architectural Model
+
+### Default UI
+
+The modular application is centered on `MainWindow`, which acts as an orchestrator rather than a catch-all implementation bucket.
+
+Its responsibilities are:
+
+- Create major UI panels
+- Create network client/server instances
+- Connect signals and slots between panels and protocol handlers
+- Persist settings and message history
+- Translate network events into UI updates
+
+### Legacy UI
+
+The legacy `CommLinkGUI` still exists and can be launched with `--legacy`. It is useful for compatibility and comparison, but new work should generally prefer the modular architecture unless a change must affect both paths.
+
+## Important Modules
+
+### `DataMessage` and format handling
+
+The payload abstraction lives in `include/commlink/core/dataformat.h`.
+
+It is responsible for:
+
+- Validating input for the selected format
+- Parsing UI text into an internal `QVariant`
+- Serializing data before send
+- Deserializing incoming bytes after receive
+- Producing a display-friendly string for the UI and history storage
+
+### Message history
+
+`MessageHistoryManager` provides the SQLite-backed local history system.
+
+It handles:
+
+- Database initialization
+- Schema creation
+- Message persistence
+- Querying and export support
+- Session identifiers
+
+### Protocol handlers
+
+Each protocol gets its own class pair where relevant:
+
+- `TcpClient` / `TcpServer`
+- `UdpClient` / `UdpServer`
+- `WebSocketClient` / `WebSocketServer`
+- `HttpClient` / `HttpServer`
+
+These classes are asynchronous Qt objects that emit signals upward rather than manipulating UI state directly.
+
+## Typical Development Workflow
+
+1. Build the project.
+2. Launch the app from the build directory.
+3. Reproduce or exercise the flow you are changing.
+4. Make code changes in the appropriate layer.
+5. Rebuild and rerun the relevant flows manually.
+6. Update docs when behavior, setup, or architecture has changed.
+
+## Testing Status
+
+This section is intentionally explicit because it matters for contributor expectations.
+
+### Current state
+
+- The repository contains test source files under `tests/unit/`.
+- The current `tests/CMakeLists.txt` has test targets commented out.
+- Running `ctest` against the shipped build configuration currently reports no tests.
+- Some checked-in test sources appear to target older APIs and should be treated as stale until refreshed.
+
+### What this means for contributors
+
+For now, validation is primarily:
+
+- Successful build
+- Manual runtime verification
+- Focused code review
+
+If you add or modernize tests, keep them aligned with the current API surface and re-enable them through CMake rather than relying on ad hoc standalone binaries.
+
+## Debugging Guidance
+
+### UI and orchestration issues
+
+- Start with `src/ui/mainwindow.cpp`.
+- Confirm signal-slot wiring in `setupConnections()` and `initializeNetworkComponents()`.
+- Verify panel state transitions through `updateStatus()`, `updateSendButtonState()`, and related methods.
+
+### Protocol issues
+
+- Inspect the matching class in `src/network/`.
+- Confirm the chosen `DataFormatType` is being propagated correctly.
+- Pay attention to asynchronous behavior and protocol-specific connection state.
+
+### Persistence issues
+
+- Inspect `MessageHistoryManager`.
+- Verify the SQLite database can be created in the application data directory.
+- Check whether the payload was transformed before save via `toDisplayString()`.
+
+## Documentation Expectations
+
+Documentation changes are part of normal engineering work in this repository.
+
+Update documentation when you change:
+
+- Build or runtime requirements
+- CLI behavior
+- Architecture or ownership boundaries
+- Public-facing user workflows
+- Contributor workflows
+
+Relevant files usually include:
+
+- `README.md`
+- `docs/README.md`
+- `docs/developer-guide.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CODE_FLOW.md`
+- `CONTRIBUTING.md`
+
+## Style Guidelines
+
+### C++ and Qt conventions
+
+- Use Qt ownership patterns consistently.
+- Prefer signal-slot communication over direct cross-widget coupling.
+- Keep protocol logic in `network`, not in UI components.
+- Keep business logic in `core` where it can be shared.
+
+### Naming conventions
+
+- Classes: `PascalCase`
+- Methods and variables: `camelCase`
+- Constants: `UPPER_CASE` or descriptive `static constexpr` members
+
+## Recommended First Files To Read
+
+If you are new to the project, start here:
+
+1. `src/main.cpp`
+2. `include/commlink/ui/mainwindow.h`
+3. `src/ui/mainwindow.cpp`
+4. `include/commlink/core/dataformat.h`
+5. `src/core/messagehistorymanager.cpp`
+6. One protocol pair under `src/network/`
+
+## Release Hygiene
+
+Before cutting a release or preparing the repository for wider reuse, verify:
+
+- Build succeeds from a clean checkout
+- Documentation matches current behavior
+- Changelog and version files are updated
+- Legacy versus modular UI behavior is clearly described where relevant

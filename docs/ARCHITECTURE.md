@@ -1,89 +1,268 @@
 # Architecture
 
-Technical overview of CommLink's internal architecture and design principles.
+This document explains how CommLink is structured at the system level and how responsibilities are divided across the codebase.
 
-## Core Design Philosophy: A Modular Orchestrator
+It is written for contributors and maintainers who need to understand where behavior belongs before changing it.
 
-The application is built around a central **orchestrator** pattern to avoid the pitfalls of a monolithic design. The `MainWindow` class (`include/commlink/ui/mainwindow.h`) serves as this central orchestrator.
+## System Summary
 
-Instead of containing all application logic, `MainWindow`'s primary responsibilities are:
-1.  **Instantiation**: It creates and owns all major sub-components (UI panels, network handlers).
-2.  **Connection**: It wires components together using Qt's **Signals and Slots** mechanism.
-3.  **State Management**: It tracks the overall application state (e.g., which protocol is active, connection status).
+CommLink is a Qt desktop application with:
 
-This modular approach makes the system easier to maintain, test, and extend. For example, adding a new protocol like `MQTT` would involve creating a new `MqttClient` and adding it to `MainWindow` without needing to modify the existing UI panels directly.
+- a modular default UI
+- protocol-specific network handlers
+- shared core services for formatting, file I/O, export, logging, and history
 
----
+The architectural center of the current application is `MainWindow`, which coordinates the UI panels and the network layer without embedding protocol behavior inside the smaller widgets.
 
-## The `MainWindow` Class
+## Architectural Goals
 
-`MainWindow` is the heart of the application. It inherits from `QMainWindow`, giving it the standard features of a desktop application window.
+The current design aims to provide:
 
-### Key C++ & Qt Concepts in Use
+- clear boundaries between UI, transport, and shared logic
+- asynchronous network operations that do not block the UI thread
+- reusable protocol handlers
+- a maintainable migration path away from the older monolithic GUI
 
-A review of `MainWindow.h` reveals several important C++ and Qt concepts that are fundamental to the application's design.
+## High-Level Component Model
 
-#### 1. Inheritance
-```cpp
-class MainWindow : public QMainWindow
+```text
+main.cpp
+  |
+  +-- QApplication
+  |
+  +-- MainWindow (default) or CommLinkGUI (--legacy)
+        |
+        +-- UI panels
+        |     +-- ConnectionPanel
+        |     +-- ServerPanel
+        |     +-- MessagePanel
+        |     +-- DisplayPanel
+        |     +-- StatusPanel
+        |
+        +-- Network components
+        |     +-- TcpClient / TcpServer
+        |     +-- UdpClient / UdpServer
+        |     +-- WebSocketClient / WebSocketServer
+        |     +-- HttpClient / HttpServer
+        |
+        +-- Core services
+              +-- MessageHistoryManager
+              +-- FileManager
+              +-- ExportManager
+              +-- ThemeManager
+              +-- DataMessage / DataFormatType
 ```
-By inheriting from `QMainWindow`, our class gets a vast amount of built-in functionality for free, including support for menu bars, toolbars, a status bar, and proper window management within the operating system.
 
-#### 2. The `Q_OBJECT` Macro
-```cpp
-Q_OBJECT
-```
-This macro is mandatory for any Qt object that defines its own signals or slots. It enables Qt's **Meta-Object System**, which provides the underlying power for the signal-slot mechanism.
+## Layer Responsibilities
 
-#### 3. Signals and Slots
-This is the core communication mechanism in the application. It allows for complete decoupling between components. The `private slots:` section of `MainWindow` defines the functions that will react to events.
+## 1. Entry Point
 
-**Example Flow:**
-1.  A user clicks the "Connect" button inside the `ConnectionPanel` widget.
-2.  The `ConnectionPanel` object emits a signal (e.g., `connectClicked()`).
-3.  `MainWindow` connects this signal to its `onConnectRequested()` slot during setup.
-4.  The `onConnectRequested()` function is automatically executed, where it can read data from the `ConnectionPanel` and instruct the appropriate network client to connect.
+`src/main.cpp` is responsible for:
 
-#### 4. Pointers and Object Ownership
-```cpp
-// UI Panels
-ConnectionPanel *connectionPanel;
-// ...
-// Network components
-TcpClient *tcpClient;
-```
-`MainWindow` holds **pointers** to its sub-components. This is because these objects are created dynamically on the heap during the `setupUI()` and `initializeNetworkComponents()` phases. `MainWindow` is the **owner** of these objects and is responsible for their lifecycle. They are destroyed when `MainWindow` is destroyed.
+- creating the Qt application
+- applying application metadata
+- parsing command-line options
+- choosing between the modular UI and the legacy UI
 
-#### 5. Event Overriding
-```cpp
-protected:
-    void closeEvent(QCloseEvent *event) override;
-```
-`MainWindow` overrides the `closeEvent` virtual function from `QMainWindow`. This allows it to intercept the user's request to close the window. Inside this function, we can execute cleanup code, such as calling `saveSettings()` to persist the window size and other user preferences before allowing the application to exit.
+This file should stay thin and bootstrap-focused.
 
----
+## 2. UI Layer
 
-## Component Breakdown
+The UI layer lives in `src/ui/` and `include/commlink/ui/`.
 
-The application is logically divided into three main categories of components, all managed by `MainWindow`.
+### Modular UI
 
-### 1. UI Panels
-*(e.g., `ConnectionPanel`, `MessagePanel`, `DisplayPanel`)*
+The modular interface is built around:
 
-*   **Responsibility**: Each panel is a self-contained `QWidget` that manages a specific part of the user interface.
-*   **Communication**: They do not talk to each other directly. Instead, they emit signals to report user actions (e.g., `protocolChanged`, `sendRequested`).
-*   **State**: They hold UI-specific state but rely on `MainWindow` for application-level state.
+- `MainWindow`
+- `ConnectionPanel`
+- `ServerPanel`
+- `MessagePanel`
+- `DisplayPanel`
+- `StatusPanel`
 
-### 2. Network Components
-*(e.g., `TcpClient`, `UdpServer`, `WebSocketClient`)*
+#### `MainWindow` responsibilities
 
-*   **Responsibility**: Each class encapsulates all the logic for a single network protocol. They handle the low-level details of connecting, sending, receiving, and disconnecting.
-*   **Communication**: They run asynchronously to prevent blocking the UI. They emit signals for network events like `onDataReceived`, `onClientConnected`, or `onNetworkError`.
+`MainWindow` acts as an orchestrator. It is responsible for:
 
-### 3. Core/Business Logic Components
-*(e.g., `MessageHistoryManager`, `ThemeManager`, `FileManager`)*
+- creating UI panels
+- creating network handlers
+- connecting signals and slots
+- coordinating send/receive flows
+- updating UI status
+- persisting settings
+- persisting history entries
 
-*   **Responsibility**: These classes provide shared services that are used across the application.
-*   `MessageHistoryManager`: Handles the logic for storing and retrieving messages from the SQLite database.
-*   `ThemeManager`: Manages the application's look and feel (Light/Dark/Auto modes).
-*   `FileManager`: Provides utility functions for loading and saving message payloads from/to files.
+`MainWindow` should coordinate behavior, not become the implementation owner of protocol internals.
+
+#### Panel responsibilities
+
+Each panel should remain focused:
+
+- `ConnectionPanel`: client-side protocol, host, port, and connection options
+- `ServerPanel`: server-side protocol, port, client list, and send mode
+- `MessagePanel`: message composition and format selection
+- `DisplayPanel`: sent/received/log presentation and history access
+- `StatusPanel`: compact status and summary information
+
+Panels should expose user intent via signals rather than calling each other directly.
+
+### Legacy UI
+
+`CommLinkGUI` is the older monolithic implementation. It still exists for compatibility and can be launched with `--legacy`.
+
+It is a larger, more tightly coupled code path than the modular UI. New work should default to the modular architecture unless the legacy path must also be updated for correctness or parity.
+
+## 3. Network Layer
+
+The network layer lives in `src/network/` and `include/commlink/network/`.
+
+Each protocol implementation is encapsulated in a dedicated QObject-based class. These classes handle:
+
+- connect/start behavior
+- disconnect/stop behavior
+- async send/receive flows
+- serialization/deserialization boundaries
+- error signaling
+
+They communicate upward by emitting signals such as:
+
+- `connected()`
+- `disconnected()`
+- `messageReceived(...)`
+- `errorOccurred(...)`
+- server-side client connection signals where relevant
+
+The network layer should not directly manipulate UI widgets.
+
+## 4. Core Layer
+
+The core layer lives in `src/core/` and `include/commlink/core/`.
+
+### `DataMessage`
+
+This is the shared payload abstraction. It packages:
+
+- the selected `DataFormatType`
+- the parsed `QVariant` payload
+
+It is the serialization boundary used by both UI-facing send flows and network receive flows.
+
+### `MessageHistoryManager`
+
+This service manages:
+
+- SQLite database initialization
+- schema creation
+- message persistence
+- message queries
+- export helpers
+- session identifiers
+
+It is the main persistence component in the application.
+
+### `FileManager`
+
+This provides utility behavior for:
+
+- loading payload text from disk
+- saving payload text to disk
+- recent file tracking
+- default save directory resolution
+
+### `ExportManager`
+
+This handles exporting:
+
+- log output
+- message collections
+
+### `ThemeManager`
+
+This centralizes theme choice and application-wide styling behavior.
+
+## Communication Model
+
+The main communication pattern in the modular architecture is Qt signals and slots.
+
+### Typical flow
+
+1. A panel emits a signal describing user intent.
+2. `MainWindow` receives that signal.
+3. `MainWindow` selects the relevant network/core service.
+4. The service emits results or errors asynchronously.
+5. `MainWindow` updates the UI and persists history as needed.
+
+This keeps smaller widgets decoupled and avoids direct widget-to-widget orchestration.
+
+## Ownership and Lifetime
+
+The project relies heavily on Qt parent-child ownership.
+
+Typical ownership patterns:
+
+- `MainWindow` owns network components
+- `MainWindow` owns major modular UI widgets
+- lower-level Qt child objects are owned by their parent widgets/objects
+
+This is why raw pointers are common in the UI and network classes. In Qt, raw pointers plus parent ownership are a normal and correct memory-management pattern.
+
+## Persistence Model
+
+CommLink persists:
+
+- UI settings through `QSettings`
+- message history through SQLite
+
+Settings include things like:
+
+- geometry
+- selected client/server protocols
+- host and port values
+- selected data format
+
+History records include:
+
+- direction
+- protocol
+- host/port
+- content
+- sender information
+- session identifier
+- format type
+
+## Current Architectural Realities
+
+This section documents realities that matter when making changes.
+
+### Dual UI paths exist
+
+The repository contains both a modular default UI and a legacy UI path. Not every improvement will automatically apply to both.
+
+### Tests are not yet fully integrated
+
+The codebase contains test source files, but automated tests are not currently enabled through the shipped CMake test configuration. Treat test strategy as an active area for improvement rather than an already-complete subsystem.
+
+### `MainWindow` is still a large coordinator
+
+The modular architecture is meaningfully cleaner than the legacy UI, but `MainWindow` still carries substantial orchestration logic. That is acceptable for now, but new work should avoid making it a dumping ground for protocol-specific details that could live lower in the stack.
+
+## Change Placement Guidelines
+
+When deciding where to implement a change:
+
+- Put transport behavior in `network`
+- Put reusable business rules in `core`
+- Put UI presentation and small widget behavior in `ui`
+- Put cross-component coordination in `MainWindow`
+
+If a change touches multiple layers, try to keep each layer’s contribution narrow and explicit.
+
+## Suggested Future Improvements
+
+High-leverage architectural improvements include:
+
+- re-enabling and modernizing automated tests
+- continuing to reduce reliance on the legacy GUI
+- extracting reusable orchestration helpers from `MainWindow` where complexity grows
+- improving protocol-specific validation consistency across the UI

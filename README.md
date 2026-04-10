@@ -1,111 +1,146 @@
 # CommLink
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](VERSION)
-[![Qt](https://img.shields.io/badge/Qt-5.12%2B-green.svg)](https://www.qt.io/)
-[![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
+CommLink is a cross-platform desktop application for testing, inspecting, and debugging network communication across multiple protocols from a single Qt-based interface.
 
-**CommLink** is a cross-platform desktop application for testing and debugging network communications. It provides a unified interface for working with multiple network protocols and data formats.
+It is designed for developers, QA engineers, students, and integrators who need one tool that can act as both a client and a server, switch data formats quickly, and keep a searchable record of message traffic during a session.
 
-## Features
+## Highlights
 
-### Multi-Protocol Support
-- **TCP Client/Server** - Reliable, connection-oriented communication
-- **UDP Client/Server** - Fast, connectionless messaging
-- **HTTP Client/Server** - RESTful API testing (GET, POST, PUT, DELETE)
-- **WebSocket Client/Server** - Real-time bidirectional communication
+- Multi-protocol support: TCP, UDP, WebSocket, and HTTP in both client and server workflows where applicable.
+- Multiple payload formats: JSON, XML, CSV, plain text, binary, and hex.
+- Modular desktop UI: a panel-based interface centered around a `MainWindow` orchestrator.
+- Local history storage: SQLite-backed message history with session tracking.
+- File and export utilities: load/save payloads and export messages or logs.
+- Cross-platform build: CMake + Qt5 + C++17.
 
-### Data Format Flexibility
-- **JSON, XML, CSV, TEXT, BINARY, HEX** - Multiple format support with automatic conversion
+## Project Status
 
-### Core Capabilities
-- **Persistent History** - SQLite database with full-text search
-- **Export Options** - Export messages in TXT, CSV, JSON formats
-- **File Operations** - Load/save messages with auto-format detection
-- **Real-Time Logging** - Monitor all activity with timestamps
-- **Theme Support** - Light, Dark, and System themes
-- **Session Tracking** - Group related messages together
+CommLink builds successfully in its current form and includes both:
+
+- A modular default UI launched by `MainWindow`
+- A legacy monolithic UI still available through `--legacy`
+
+The modular UI is the primary architecture going forward. The legacy UI remains in the repository for compatibility and reference.
+
+## Who This Is For
+
+- Developers testing local services or custom protocols
+- QA teams validating request/response flows
+- Students learning network programming concepts
+- Engineers troubleshooting integration issues between services
+
+## Core Capabilities
+
+### Protocol workflows
+
+- TCP client/server
+- UDP client/server
+- WebSocket client/server
+- HTTP client/server
+
+### Payload handling
+
+- Compose and send structured or raw messages
+- Switch formats without leaving the UI
+- Serialize and deserialize through a shared `DataMessage` abstraction
+
+### Productivity features
+
+- Real-time activity log
+- Searchable message history
+- Export to JSON, CSV, or text
+- Theme support
+- Keyboard shortcuts for common actions
+
+## Architecture At A Glance
+
+The application is organized into three main layers:
+
+- `core`: shared business logic such as formatting, file I/O, exports, logging, and history management
+- `network`: protocol-specific client/server implementations
+- `ui`: the modular desktop interface and the legacy GUI
+
+The default application flow is:
+
+1. `src/main.cpp` creates the Qt application.
+2. `MainWindow` initializes the database, network objects, and UI panels.
+3. UI panels emit signals for user actions.
+4. `MainWindow` orchestrates protocol handlers and updates the display/history layers.
+
+For a deeper walkthrough, see [Architecture](docs/ARCHITECTURE.md) and [Code Flow](docs/CODE_FLOW.md).
+
+## Repository Layout
+
+```text
+COMMLINK/
+├── include/commlink/      # Public headers
+├── src/                   # Application source
+│   ├── core/              # Shared logic and persistence
+│   ├── network/           # Protocol implementations
+│   └── ui/                # Modular and legacy UI code
+├── resources/             # Qt resources, logos, UI assets
+├── docs/                  # User, developer, and architecture docs
+├── scripts/               # Build and environment helper scripts
+├── tests/                 # Test sources
+└── CMakeLists.txt         # Top-level build entry point
+```
+
+## Build Requirements
+
+- CMake 3.8.2 or newer
+- A C++17 compiler
+- Qt5 with `Core`, `Widgets`, `Network`, `Sql`, and `WebSockets`
 
 ## Quick Start
 
+### Linux
+
 ```bash
-# Install dependencies
 ./scripts/install-deps.sh
-
-# Build
 ./scripts/build.sh
-
-# Run
 ./build/bin/commlink
 ```
 
-## Documentation
-
-📚 **[Complete Documentation](docs/README.md)** - Start here for all guides
-
-**Quick Links:**
-- 🚀 [Quick Start](docs/quick-start.md) - Get running in 5 minutes
-- 📖 [User Guide](docs/user-guide-simple.md) - How to use CommLink
-- 💻 [Developer Guide](docs/developer-guide.md) - Build and contribute
-- 🏗️ [Architecture](docs/ARCHITECTURE.md) - System design
-- 🔄 [Code Flow](docs/CODE_FLOW.md) - Execution flows
-- 📚 [API Documentation](docs/DOXYGEN.md) - Doxygen API docs
-
-## Requirements
-
-### Build Requirements
-- **CMake**: 3.8.2 or newer
-- **C++ Compiler**: Supporting C++17 (GCC 7+, Clang 5+, MSVC 2017+)
-- **Qt5**: Core, Widgets, Network, Sql, WebSockets
-
-### Runtime Requirements
-- Linux, Windows 10+, or macOS 10.14+
-- 512 MB RAM minimum
-- 100 MB disk space
-
-## Building from Source
+### Manual build
 
 ```bash
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
+mkdir -p build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . -j"$(nproc)"
+./bin/commlink
 ```
 
-For debug builds:
-```bash
-cmake -DCMAKE_BUILD_TYPE=Debug ..
-```
+## Development Notes
 
-## Use Cases
+- The default executable target is `commlink`.
+- The project currently builds successfully with the checked-in `build/` directory configuration.
+- Test sources exist, but the test targets are not currently enabled in CMake. See the developer guide for the current testing status and recommended next steps.
 
-- **Development & Testing** - Test REST APIs, debug microservice communication
-- **Learning & Education** - Understand network protocols and data formats
-- **Professional Use** - QA testing, integration testing, protocol verification
+## Documentation Map
+
+- [Documentation Home](docs/README.md)
+- [Quick Start](docs/quick-start.md)
+- [User Guide](docs/user-guide-simple.md)
+- [Developer Guide](docs/developer-guide.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Code Flow](docs/CODE_FLOW.md)
+- [Doxygen Guide](docs/DOXYGEN.md)
+- [Contributing](CONTRIBUTING.md)
+
+## Roadmap Priorities
+
+Current high-value improvement areas for the project:
+
+- Re-enable and modernize automated tests
+- Continue converging on the modular UI as the primary code path
+- Strengthen protocol-level validation and UX consistency
+- Expand contributor and API documentation
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Development setup instructions
-- Coding standards and style guide
-- Testing guidelines
-- Pull request process
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for setup, coding expectations, documentation standards, and pull request guidance.
 
 ## License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-## Author
-
-**Shrikrishna Sawant**
-- GitHub: [@shrisawant144](https://github.com/shrisawant144)
-- Project: [CommLink](https://github.com/shrisawant144/COMMLINK)
-
-## Support
-
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/shrisawant144/COMMLINK/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/shrisawant144/COMMLINK/discussions)
-
----
-
-Built with ❤️ using Qt and C++17
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

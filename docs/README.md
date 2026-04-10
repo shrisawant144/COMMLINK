@@ -1,67 +1,79 @@
-# CommLink Documentation
+# Documentation
 
-Welcome to the CommLink documentation. This guide helps you find the right documentation for your needs.
+This directory contains the primary documentation set for CommLink.
 
-## Getting Started
+The goal of this documentation is to support three audiences:
 
-### New Users
-- **[Quick Start](quick-start.md)** - Get up and running in 5 minutes
-- **[User Guide](user-guide-simple.md)** - Complete usage instructions
-- **[Learning Guide](learning-guide.md)** - Networking concepts explained
-- **[FAQ](faq.md)** - Common questions and solutions
+- End users learning how to install and use the application
+- Contributors who want to build, debug, and extend the codebase
+- Maintainers who need architectural context and operational guidance
 
-### Developers
-- **[Developer Guide](developer-guide.md)** - Build, test, and contribute
-- **[Architecture](ARCHITECTURE.md)** - System design and architecture
-- **[Code Flow](CODE_FLOW.md)** - Detailed execution flows
-- **[API Documentation](DOXYGEN.md)** - Doxygen-generated API docs
+## Start Here
 
-## Documentation Structure
+### If you want to run the app
 
-### User Documentation
-- `quick-start.md` - Quick setup guide
-- `user-guide-simple.md` - Complete user manual
-- `learning-guide.md` - Educational content
-- `faq.md` - Frequently asked questions
-- `Keyboard_Shortcuts_Reference.md` - Keyboard shortcuts
+- [Quick Start](quick-start.md)
+- [User Guide](user-guide-simple.md)
+- [FAQ](faq.md)
 
-### Developer Documentation
-- `developer-guide.md` - Development setup and guidelines
-- `ARCHITECTURE.md` - System architecture and design
-- `CODE_FLOW.md` - Detailed code execution flows
-- `CODE_FLOW_QUICK_REFERENCE.md` - Quick flow reference
-- `DOXYGEN.md` - API documentation guide
+### If you want to understand the codebase
 
-### API Documentation
-- Generated HTML documentation in `doxygen/html/`
-- View by opening `doxygen/html/index.html` in a browser
-- Generated from source code comments using Doxygen
+- [Developer Guide](developer-guide.md)
+- [Architecture](ARCHITECTURE.md)
+- [Code Flow](CODE_FLOW.md)
+- [Code Flow Quick Reference](CODE_FLOW_QUICK_REFERENCE.md)
 
-## Quick Examples
+### If you want generated API references
 
-### Test an API
-```
-Connection Panel → HTTP → Host: api.github.com → Method: GET → Connect
-Message Panel → Send → View response in Display Panel
-```
+- [Doxygen Guide](DOXYGEN.md)
+- `docs/doxygen/html/index.html`
 
-### Create TCP Server
-```
-Server Panel → TCP Server → Port 5000 → Start Server
-Connection Panel → TCP → Host: 127.0.0.1, Port: 5000 → Connect
-Message Panel → Type message → Send
-```
+## Documentation Set
 
-## Need Help?
+### Product and usage
 
-1. Check [FAQ](faq.md) for common issues
-2. Review logs in the application's Status Panel
-3. Open a [GitHub issue](https://github.com/shrisawant144/COMMLINK/issues) with details
+- `quick-start.md`
+- `user-guide-simple.md`
+- `learning-guide.md`
+- `faq.md`
+- `Keyboard_Shortcuts_Reference.md`
 
-## Contributing
+### Engineering and maintenance
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
-- Development setup
-- Coding standards
-- Testing guidelines
-- Pull request process
+- `developer-guide.md`
+- `ARCHITECTURE.md`
+- `CODE_FLOW.md`
+- `CODE_FLOW_QUICK_REFERENCE.md`
+- `DOXYGEN.md`
+
+## Documentation Principles
+
+CommLink documentation should aim to be:
+
+- Accurate: it must match the current codebase, not an older design.
+- Actionable: readers should know what to do next after reading a section.
+- Layered: top-level guides should orient, while deeper docs provide detail.
+- Honest about status: if something is incomplete, legacy, or not yet automated, say so clearly.
+
+## Current Reality
+
+The project includes both a modular default UI and a legacy UI path. Documentation should prefer the modular architecture when describing the main system design, while still acknowledging the legacy code where it affects maintenance or runtime behavior.
+
+The repository also contains test source files, but automated test targets are not currently enabled in the shipped CMake configuration. Developer-facing docs should reflect that accurately.
+
+## Maintaining The Docs
+
+When code changes affect setup, behavior, architecture, or contributor workflow:
+
+1. Update the nearest relevant document in this directory.
+2. Update the root [README](../README.md) if the project-facing summary changed.
+3. Update [CONTRIBUTING.md](../CONTRIBUTING.md) if contributor expectations changed.
+4. Regenerate Doxygen output if public API comments were updated and generated docs are part of the change.
+
+## Suggested Reading Order For New Contributors
+
+1. [README](../README.md)
+2. [Developer Guide](developer-guide.md)
+3. [Architecture](ARCHITECTURE.md)
+4. [Code Flow](CODE_FLOW.md)
+5. Source files under `src/ui/mainwindow.cpp`, `src/core/`, and `src/network/`
