@@ -46,13 +46,15 @@ MessageHistoryManager::~MessageHistoryManager()
     }
 }
 
-bool MessageHistoryManager::initializeDatabase()
+bool MessageHistoryManager::initializeDatabase(const QString &filename)
 {
-    QString dbPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(dbPath);
-    dbPath += "/message_history.db";
+    QString dbPath = filename;
+    if (dbPath.isEmpty()) {
+        dbPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QDir().mkpath(dbPath); dbPath += "/message_history.db";
+    }
 
-    db = QSqlDatabase::addDatabase("QSQLITE");
+    db = QSqlDatabase::addDatabase("QSQLITE", QUuid::createUuid().toString());
     db.setDatabaseName(dbPath);
 
     if (!db.open()) {
@@ -65,65 +67,36 @@ bool MessageHistoryManager::initializeDatabase()
 
 bool MessageHistoryManager::createTables()
 {
-    // Check if we need to migrate (old table without WebSocket/HTTP support)
-    QSqlQuery checkQuery(db);
-    if (checkQuery.exec("SELECT protocol FROM messages WHERE protocol IN ('WebSocket', 'HTTP') LIMIT 1")) {
-        // Table exists and supports WebSocket/HTTP, no migration needed
-    } else {
-        // Drop old table if it exists (migration)
-        if (!executeQuery("DROP TABLE IF EXISTS messages")) {
-            qWarning() << "Failed to drop old messages table during migration";
-        }
+    const QString schema = R"(CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        direction TEXT CHECK(direction IN ('sent','received')),
+        protocol TEXT CHECK(protocol IN ('TCP','UDP','WebSocket','HTTP')),
+        host TEXT NOT NULL, port INTEGER NOT NULL, content TEXT NOT NULL,
+        sender_info TEXT, session_id TEXT, format_type INTEGER DEFAULT 0,
+        raw_payload BLOB, raw_wire BLOB))";
+    if (!db.transaction()) return false;
+    auto fail = [this] { db.rollback(); return false; };
+    QSqlQuery definition(db); definition.exec("SELECT sql FROM sqlite_master WHERE type='table' AND name='messages'");
+    bool legacy = definition.next() && !definition.value(0).toString().contains("WebSocket");
+    definition.finish();
+    if (legacy && !executeQuery("ALTER TABLE messages RENAME TO messages_legacy")) return fail();
+    if (!executeQuery(schema)) return fail();
+    if (legacy) {
+        QStringList oldColumns; QSqlQuery columns(db); columns.exec("PRAGMA table_info(messages_legacy)");
+        while (columns.next()) oldColumns << columns.value(1).toString();
+        QStringList shared;
+        for (const auto &column : QStringList{"id","timestamp","direction","protocol","host","port","content","sender_info","session_id","format_type","raw_payload","raw_wire"})
+            if (oldColumns.contains(column)) shared << column;
+        const auto names = shared.join(',');
+        if (!executeQuery("INSERT INTO messages (" + names + ") SELECT " + names + " FROM messages_legacy") || !executeQuery("DROP TABLE messages_legacy")) return fail();
     }
-    
-    QString createMessagesTable = R"(
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            direction TEXT CHECK(direction IN ('sent', 'received')),
-            protocol TEXT CHECK(protocol IN ('TCP', 'UDP', 'WebSocket', 'HTTP')),
-            host TEXT NOT NULL,
-            port INTEGER NOT NULL,
-            content TEXT NOT NULL,
-            sender_info TEXT,
-            session_id TEXT,
-            format_type INTEGER DEFAULT 0
-        );
-    )";
-
-    QString createIndexTimestamp = "CREATE INDEX IF NOT EXISTS idx_timestamp ON messages(timestamp);";
-    QString createIndexDirection = "CREATE INDEX IF NOT EXISTS idx_direction ON messages(direction);";
-    QString createIndexSession = "CREATE INDEX IF NOT EXISTS idx_session ON messages(session_id);";
-    QString createIndexFormat = "CREATE INDEX IF NOT EXISTS idx_format ON messages(format_type);";
-
-    bool success = executeQuery(createMessagesTable) &&
-                   executeQuery(createIndexTimestamp) &&
-                   executeQuery(createIndexDirection) &&
-                   executeQuery(createIndexSession) &&
-                   executeQuery(createIndexFormat);
-
-    // Check if format_type column exists before adding it
-    QSqlQuery checkColumnQuery(db);
-    bool columnExists = false;
-    if (checkColumnQuery.exec("PRAGMA table_info(messages);")) {
-        while (checkColumnQuery.next()) {
-            if (checkColumnQuery.value("name").toString() == "format_type") {
-                columnExists = true;
-                break;
-            }
-        }
+    QStringList present; QSqlQuery columns(db); columns.exec("PRAGMA table_info(messages)");
+    while (columns.next()) present << columns.value(1).toString();
+    for (const auto &column : QStringList{"format_type", "raw_payload", "raw_wire"}) {
+        if (!present.contains(column) && !executeQuery("ALTER TABLE messages ADD COLUMN " + column + (column == "format_type" ? " INTEGER DEFAULT 0" : " BLOB"))) return fail();
     }
-
-    // Only add column if it doesn't already exist
-    if (!columnExists) {
-        QString addFormatColumn = "ALTER TABLE messages ADD COLUMN format_type INTEGER DEFAULT 0;";
-        if (!executeQuery(addFormatColumn)) {
-            qWarning() << "Failed to add format_type column to messages table";
-            return false;
-        }
-    }
-
-    return success;
+    if (!executeQuery("CREATE INDEX IF NOT EXISTS idx_timestamp ON messages(timestamp)") || !executeQuery("CREATE INDEX IF NOT EXISTS idx_session ON messages(session_id)") || !executeQuery("PRAGMA user_version=1")) return fail();
+    return db.commit();
 }
 
 bool MessageHistoryManager::executeQuery(const QString &query)
@@ -154,8 +127,8 @@ bool MessageHistoryManager::saveMessage(const QString &direction, const QString 
     }
 
     QSqlQuery query(db);
-    query.prepare("INSERT INTO messages (direction, protocol, host, port, content, sender_info, session_id, format_type) "
-                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    query.prepare("INSERT INTO messages (direction, protocol, host, port, content, sender_info, session_id, format_type, raw_payload, raw_wire) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     query.addBindValue(direction);
     query.addBindValue(protocol);
     query.addBindValue(host);
@@ -165,6 +138,8 @@ bool MessageHistoryManager::saveMessage(const QString &direction, const QString 
     query.addBindValue(currentSessionId);
     query.addBindValue(static_cast<int>(message.type)); // Store format type
 
+    query.addBindValue(message.serialize());
+    query.addBindValue(message.wireBytes.isNull() ? message.serialize() : message.wireBytes);
     if (!query.exec()) {
         qCritical() << "Failed to save message:" << query.lastError().text();
         return false;
@@ -187,7 +162,7 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
         return messages;
     }
 
-    QString queryStr = "SELECT id, timestamp, direction, protocol, host, port, content, sender_info, session_id "
+    QString queryStr = "SELECT id, timestamp, direction, protocol, host, port, content, sender_info, session_id, format_type, raw_payload, raw_wire "
                        "FROM messages WHERE 1=1";
     QStringList conditions;
     QVariantList params;
@@ -228,7 +203,7 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
         params << endDate.toString(Qt::ISODate);
     }
 
-    queryStr += " ORDER BY timestamp DESC LIMIT ? OFFSET ?";
+    queryStr += " ORDER BY id DESC LIMIT ? OFFSET ?";
     params << limit << offset;
 
     QSqlQuery query(db);
@@ -257,6 +232,8 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
         message["sender_info"] = query.value(COL_SENDER_INFO);
         message["session_id"] = query.value(COL_SESSION_ID);
         message["format_type"] = query.value(COL_FORMAT_TYPE);
+        message["raw_payload"] = query.value(10);
+        message["raw_wire"] = query.value(11);
         messages.append(message);
     }
 

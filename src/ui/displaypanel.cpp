@@ -88,6 +88,11 @@ void DisplayPanel::setupUI()
         tabWidget->addTab(historyScroll, "History");
     }
 
+    traffic = new TrafficInspector;
+    auto *trafficScroll = new QScrollArea;
+    trafficScroll->setFrameShape(QFrame::NoFrame); trafficScroll->setWidgetResizable(true); trafficScroll->setWidget(traffic);
+    tabWidget->addTab(trafficScroll, "Traffic");
+    for (auto *edit : {clientReceivedEdit, serverReceivedEdit, sentEdit, allMessagesEdit, logsEdit}) edit->document()->setMaximumBlockCount(4000);
     layout->addWidget(tabWidget);
 
     // Control buttons
@@ -190,6 +195,7 @@ void DisplayPanel::appendLogMessage(const QString &message)
 // Clear operations
 void DisplayPanel::clearAllMessages()
 {
+    traffic->clear();
     clientReceivedEdit->clear();
     serverReceivedEdit->clear();
     sentEdit->clear();

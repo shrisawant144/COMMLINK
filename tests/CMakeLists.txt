@@ -6,6 +6,13 @@ set_tests_properties(UILayoutTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscr
 
 # Unit tests
 find_package(Qt5 REQUIRED COMPONENTS Test)
+add_executable(test_workflow ui/test_workflow.cpp)
+target_link_libraries(test_workflow PRIVATE commlink_ui Qt5::Test)
+add_test(NAME WorkflowTest COMMAND test_workflow)
+set_tests_properties(WorkflowTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_executable(test_workspace unit/test_workspace.cpp)
+target_link_libraries(test_workspace PRIVATE commlink_core Qt5::Test)
+add_test(NAME WorkspaceTest COMMAND test_workspace)
 add_executable(test_transport unit/test_transport.cpp)
 target_link_libraries(test_transport PRIVATE commlink_network Qt5::Test)
 add_test(NAME TransportTest COMMAND test_transport)

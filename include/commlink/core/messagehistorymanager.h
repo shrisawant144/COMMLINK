@@ -17,7 +17,7 @@ public:
     explicit MessageHistoryManager(QObject *parent = nullptr);
     ~MessageHistoryManager();
 
-    bool initializeDatabase();
+    bool initializeDatabase(const QString &filename = QString());
     bool saveMessage(const QString &direction, const QString &protocol,
                      const QString &host, int port, const DataMessage &message,
                      const QString &senderInfo = QString());

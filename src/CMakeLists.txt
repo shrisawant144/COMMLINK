@@ -2,6 +2,7 @@
 add_library(commlink_core STATIC
     core/dataformat.cpp
     core/streamframer.cpp
+    core/workspacestore.cpp
     core/filemanager.cpp
     core/exportmanager.cpp
     core/logger.cpp
@@ -52,6 +53,10 @@ add_library(commlink_ui STATIC
     ui/statuspanel.cpp
     ui/networkinfopanel.cpp
     ui/mainwindow.cpp
+    ui/workbenchpanel.cpp
+    ui/trafficinspector.cpp
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/workbenchpanel.h
+    ${CMAKE_SOURCE_DIR}/include/commlink/ui/trafficinspector.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/connectionpanel.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/serverpanel.h
     ${CMAKE_SOURCE_DIR}/include/commlink/ui/messagepanel.h

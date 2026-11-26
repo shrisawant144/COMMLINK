@@ -24,6 +24,8 @@
 
 // UI Panels
 #include "connectionpanel.h"
+#include "workbenchpanel.h"
+#include "../core/workspacestore.h"
 #include "serverpanel.h"
 #include "messagepanel.h"
 #include "displaypanel.h"
@@ -344,6 +346,13 @@ private:
     void updateStatusBar();
     void logMessage(const QString &message, const QString &prefix = "");
 
+    QJsonObject captureWorkspace() const;
+    bool restoreWorkspace(const QJsonObject &state);
+    void configureTransports();
+    bool recordMessage(const QString &direction, const QString &protocol, const QString &host, int port, const DataMessage &message, const QString &source = QString());
+    QString expandWorkspace(const QString &text);
+    WorkspaceStore workspaceStore;
+    WorkbenchPanel *workbenchPanel;
     // UI Panels
     ConnectionPanel *connectionPanel;
     ServerPanel *serverPanel;

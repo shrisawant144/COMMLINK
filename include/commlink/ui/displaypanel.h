@@ -1,5 +1,6 @@
 #pragma once
 #include <QtWidgets/QWidget>
+#include "trafficinspector.h"
 #include <QtWidgets/QTextEdit>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QPushButton>
@@ -29,6 +30,7 @@ public:
     explicit DisplayPanel(MessageHistoryManager *historyMgr = nullptr, QWidget *parent = nullptr);
     ~DisplayPanel() override = default;
 
+    TrafficInspector *inspector() const { return traffic; }
     // Message display operations
     void appendReceivedMessage(const QString &message, bool isServerMessage = false);
     void appendSentMessage(const QString &message);
@@ -57,6 +59,7 @@ private:
     void setupAccessibility();
 
     // UI Components
+    TrafficInspector *traffic;
     QTabWidget *tabWidget;
     QTextEdit *clientReceivedEdit;
     QTextEdit *serverReceivedEdit;

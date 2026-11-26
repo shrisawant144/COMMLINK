@@ -213,11 +213,14 @@ void MainWindow::setupUI()
     leftLayout->setSpacing(12);
     leftLayout->setSizeConstraint(QLayout::SetMinimumSize);
     
+    workbenchPanel = new WorkbenchPanel();
+    workbenchPanel->setProfiles(workspaceStore.names());
     connectionPanel = new ConnectionPanel();
     serverPanel = new ServerPanel();
     messagePanel = new MessagePanel();
     networkInfoPanel = new NetworkInfoPanel();
     
+    leftLayout->addWidget(workbenchPanel);
     leftLayout->addWidget(connectionPanel);
     leftLayout->addWidget(serverPanel);
     leftLayout->addWidget(networkInfoPanel);
@@ -338,6 +341,21 @@ void MainWindow::setupShortcuts()
 
 void MainWindow::setupConnections()
 {
+    connect(workbenchPanel, &WorkbenchPanel::saveRequested, this, [this](const QString &name) {
+        QString error;
+        if (!workspaceStore.save(name, captureWorkspace(), &error)) { QMessageBox::warning(this, "Workspace", error); return; }
+        workbenchPanel->setProfiles(workspaceStore.names()); saveSettings(); logMessage("Workspace saved: " + name);
+    });
+    connect(workbenchPanel, &WorkbenchPanel::openRequested, this, [this](const QString &name) {
+        QString error; const auto state = workspaceStore.load(name, &error);
+        if (!error.isEmpty()) { QMessageBox::warning(this, "Workspace", error); return; }
+        if (restoreWorkspace(state)) { saveSettings(); logMessage("Workspace opened: " + name); }
+    });
+    connect(workbenchPanel, &WorkbenchPanel::optionsChanged, this, [this] { saveSettings(); });
+    connect(displayPanel->inspector(), &TrafficInspector::replayRequested, this, [this](const QByteArray &payload, int format) {
+        messagePanel->setDataFormat(format == int(DataFormatType::BINARY) || format == int(DataFormatType::HEX) ? "Hex" : "Text");
+        messagePanel->setMessage(format == int(DataFormatType::BINARY) || format == int(DataFormatType::HEX) ? QString::fromLatin1(payload.toHex(' ')) : QString::fromUtf8(payload));
+    });
     // Connection panel
     connect(connectionPanel, &ConnectionPanel::connectRequested,
             this, &MainWindow::onConnectRequested);
@@ -392,7 +410,9 @@ void MainWindow::onConnectRequested()
     }
     
     QString protocol = connectionPanel->getProtocol();
-    QString host = connectionPanel->getHost();
+    QString host = expandWorkspace(connectionPanel->getHost());
+    if (host.isEmpty()) return;
+    configureTransports();
     int port = connectionPanel->getPort();
     DataFormatType format = messagePanel->getFormat();
     
@@ -468,6 +488,7 @@ void MainWindow::onClientProtocolChanged(const QString &protocol)
 // Server handlers
 void MainWindow::onStartServerRequested()
 {
+    configureTransports();
     QString protocol = serverPanel->getProtocol();
     int port = serverPanel->getPort();
     quint16 serverPort = static_cast<quint16>(port);
@@ -594,7 +615,7 @@ void MainWindow::onSendModeChanged(const QString &mode)
 // Message handlers
 void MainWindow::onSendRequested()
 {
-    QString messageText = messagePanel->getMessage();
+    QString messageText = expandWorkspace(messagePanel->getMessage());
     if (messageText.isEmpty()) {
         QMessageBox::warning(this, "Error", "Message cannot be empty");
         return;
@@ -624,19 +645,19 @@ void MainWindow::onSendRequested()
                 tcpServer->sendToAll(msg);
                 displayPanel->appendSentMessage(QString("[%1] → TCP Server Broadcast:\n%2").arg(timestamp, messageText));
                 logMessage("TCP Server broadcast to all clients", "[SEND] ");
-                historyManager.saveMessage("sent", "TCP", "broadcast", serverPanel->getPort(), msg);
+                recordMessage("sent", "TCP", "broadcast", serverPanel->getPort(), msg);
             } else if (serverProto == "WebSocket Server" && wsServer->isListening()) {
                 wsServer->sendToAll(msg);
                 displayPanel->appendSentMessage(QString("[%1] → WebSocket Server Broadcast:\n%2").arg(timestamp, messageText));
                 logMessage("WebSocket Server broadcast to all clients", "[SEND] ");
-                historyManager.saveMessage("sent", "WebSocket", "broadcast", serverPanel->getPort(), msg);
+                recordMessage("sent", "WebSocket", "broadcast", serverPanel->getPort(), msg);
             } else if (serverProto == "UDP Server" && udpServer->isListening()) {
                 QMessageBox::information(this, "Info", "UDP server replies automatically when it receives messages.");
             } else if (serverProto == "HTTP Server" && httpServer->isListening()) {
                 httpServer->queueMessageForAll(msg);
                 displayPanel->appendSentMessage(QString("[%1] → HTTP Server Broadcast (queued):\n%2").arg(timestamp, messageText));
                 logMessage("HTTP Server queued broadcast", "[SEND] ");
-                historyManager.saveMessage("sent", "HTTP", "broadcast", serverPanel->getPort(), msg);
+                recordMessage("sent", "HTTP", "broadcast", serverPanel->getPort(), msg);
             } else {
                 QMessageBox::warning(this, "Error", "Server not listening");
             }
@@ -683,7 +704,7 @@ void MainWindow::onSendRequested()
                 // Strip " Server" suffix for database (CHECK constraint requires TCP/UDP/WebSocket/HTTP only)
                 QString dbProtocol = serverProto;
                 dbProtocol.remove(" Server");
-                historyManager.saveMessage("sent", dbProtocol, targetClient, serverPanel->getPort(), msg);
+                recordMessage("sent", dbProtocol, targetClient, serverPanel->getPort(), msg);
             } else {
                 QMessageBox::warning(this, "Error", "Client not found or disconnected");
             }
@@ -695,7 +716,7 @@ void MainWindow::onSendRequested()
     QString proto = connectionPanel->getProtocol();
     
     if (proto == "HTTP") {
-        QString url = connectionPanel->getHost();
+        QString url = expandWorkspace(connectionPanel->getHost());
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = "http://" + url;
         }
@@ -713,22 +734,22 @@ void MainWindow::onSendRequested()
         httpClient->sendRequest(url, method, msg);
         displayPanel->appendSentMessage(QString("[%1] → HTTP %2 to %3:\n%4").arg(timestamp, methodStr, url, messageText));
         logMessage(QString("Sent via HTTP %1").arg(methodStr), "[SEND] ");
-        historyManager.saveMessage("sent", "HTTP", url, 0, msg);
+        recordMessage("sent", "HTTP", url, 0, msg);
     } else if (proto == "WebSocket" && wsClient->isConnected()) {
         wsClient->sendMessage(msg);
         displayPanel->appendSentMessage(QString("[%1] → WebSocket to %2:\n%3").arg(timestamp, connectionPanel->getHost(), messageText));
         logMessage("Sent via WebSocket", "[SEND] ");
-        historyManager.saveMessage("sent", "WebSocket", connectionPanel->getHost(), 0, msg);
+        recordMessage("sent", "WebSocket", connectionPanel->getHost(), 0, msg);
     } else if (proto == "TCP" && tcpClient->isConnected()) {
         tcpClient->sendMessage(msg);
         displayPanel->appendSentMessage(QString("[%1] → TCP to %2:%3:\n%4").arg(timestamp, connectionPanel->getHost()).arg(connectionPanel->getPort()).arg(messageText));
         logMessage("Sent via TCP", "[SEND] ");
-        historyManager.saveMessage("sent", "TCP", connectionPanel->getHost(), connectionPanel->getPort(), msg);
+        recordMessage("sent", "TCP", connectionPanel->getHost(), connectionPanel->getPort(), msg);
     } else if (proto == "UDP" && udpClient->isConnected()) {
         udpClient->sendMessage(msg);
         displayPanel->appendSentMessage(QString("[%1] → UDP to %2:%3:\n%4").arg(timestamp, connectionPanel->getHost()).arg(connectionPanel->getPort()).arg(messageText));
         logMessage("Sent via UDP", "[SEND] ");
-        historyManager.saveMessage("sent", "UDP", connectionPanel->getHost(), connectionPanel->getPort(), msg);
+        recordMessage("sent", "UDP", connectionPanel->getHost(), connectionPanel->getPort(), msg);
     } else {
         QMessageBox::warning(this, "Error", "Not connected");
     }
@@ -948,7 +969,7 @@ void MainWindow::onDataReceived(const DataMessage &msg, const QString &source, c
         }
     }
     
-    if (!historyManager.saveMessage("received", protocol, host, port, msg, source)) {
+    if (!recordMessage("received", protocol, host, port, msg, source)) {
         logMessage("Failed to save message to history", "[WARN] ");
     }
     
@@ -983,7 +1004,7 @@ void MainWindow::onNetworkError(const QString &error)
 void MainWindow::onHttpPollingToggled(bool enabled)
 {
     if (enabled && httpClient->isConnected()) {
-        QString url = connectionPanel->getHost();
+        QString url = expandWorkspace(connectionPanel->getHost());
         httpClient->startPolling(url, 2000);
         logMessage("HTTP long-polling enabled", "[HTTP] ");
     } else {
@@ -1174,6 +1195,7 @@ void MainWindow::logMessage(const QString &message, const QString &prefix)
 void MainWindow::saveSettings()
 {
     QSettings settings("CommLink", "ModularGUI");
+    settings.setValue("workspaceState", QJsonDocument(captureWorkspace()).toJson(QJsonDocument::Compact));
     settings.setValue("geometry", saveGeometry());
     settings.setValue("clientProtocol", connectionPanel->getProtocol());
     settings.setValue("clientHost", connectionPanel->getHost());
@@ -1211,6 +1233,9 @@ void MainWindow::loadSettings()
         messagePanel->setDataFormat(settings.value("dataFormat").toString());
     }
 
+    const auto state = QJsonDocument::fromJson(settings.value("workspaceState").toByteArray()).object();
+    if (!state.isEmpty()) restoreWorkspace(state);
+
     networkInfoPanel->updateServerContext(serverPanel->getProtocol(),
                                           serverPanel->getBindAddressText(),
                                           serverPanel->getPort());
@@ -1237,4 +1262,48 @@ void MainWindow::closeEvent(QCloseEvent *event)
     
     event->accept();
     QApplication::quit();
+}
+
+QJsonObject MainWindow::captureWorkspace() const {
+    return {{"version", 1}, {"clientProtocol", connectionPanel->getProtocol()}, {"host", connectionPanel->getHost()},
+        {"port", connectionPanel->getPort()}, {"serverProtocol", serverPanel->getProtocol()}, {"serverPort", serverPanel->getPort()},
+        {"bind", serverPanel->getBindAddressText()}, {"format", messagePanel->getDataFormat()}, {"payload", messagePanel->getMessage()},
+        {"sendTarget", int(serverPanel->sendTarget())}, {"options", workbenchPanel->options()}};
+}
+bool MainWindow::restoreWorkspace(const QJsonObject &state) {
+    if (tcpClient->isConnected() || udpClient->isConnected() || wsClient->isConnected() || httpClient->isConnected() || serverPanel->isServerRunning()) {
+        QMessageBox::information(this, "Workspace", "Disconnect clients and stop the server before opening a workspace."); return false;
+    }
+    connectionPanel->setProtocol(state["clientProtocol"].toString("TCP")); connectionPanel->setHost(state["host"].toString("127.0.0.1"));
+    connectionPanel->setPort(state["port"].toInt(5000)); serverPanel->setProtocol(state["serverProtocol"].toString("TCP Server"));
+    serverPanel->setPort(state["serverPort"].toInt(8080)); serverPanel->setBindAddress(state["bind"].toString("127.0.0.1"));
+    messagePanel->setDataFormat(state["format"].toString("JSON")); messagePanel->setMessage(state["payload"].toString());
+    const int target = state["sendTarget"].toInt(); serverPanel->setSendTarget(target >= 0 && target <= 2 ? static_cast<ServerPanel::SendTarget>(target) : ServerPanel::RemoteServer);
+    workbenchPanel->setOptions(state["options"].toObject()); return true;
+}
+QString MainWindow::expandWorkspace(const QString &text) {
+    QString error; const auto value = WorkspaceStore::expand(text, workbenchPanel->options()["variables"].toObject(), &error);
+    if (!error.isEmpty()) QMessageBox::warning(this, "Workspace variable", error);
+    return value;
+}
+void MainWindow::configureTransports() {
+    const auto options = workbenchPanel->options();
+    const int mode = options["framing"].toInt();
+    const auto framing = static_cast<StreamFramer::Mode>(qBound(0, mode, 3));
+    QByteArray delimiter = QByteArray::fromHex(options["delimiter"].toString("0a").toLatin1());
+    if (delimiter.isEmpty()) delimiter = "\n";
+    tcpClient->setFraming(framing, delimiter); tcpServer->setFraming(framing, delimiter);
+    tcpClient->setKeepAlive(options["keepAlive"].toBool()); tcpServer->setKeepAlive(options["keepAlive"].toBool());
+}
+bool MainWindow::recordMessage(const QString &direction, const QString &protocol, const QString &host, int port,
+                               const DataMessage &message, const QString &source) {
+    DataMessage captured = message;
+    if (direction == "sent" && protocol == "TCP") {
+        StreamFramer framer; framer.mode = static_cast<StreamFramer::Mode>(qBound(0, workbenchPanel->options()["framing"].toInt(), 3));
+        framer.delimiter = QByteArray::fromHex(workbenchPanel->options()["delimiter"].toString("0a").toLatin1());
+        captured.wireBytes = framer.encode(message.serialize());
+    }
+    displayPanel->inspector()->append(captured, direction == "sent" ? "TX queued" : "RX", protocol, host + ':' + QString::number(port),
+        direction == "sent" ? "Queued to transport; remote delivery is not acknowledged." : source);
+    return historyManager.saveMessage(direction, protocol, host, port, captured, source);
 }
