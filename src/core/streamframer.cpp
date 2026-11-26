@@ -18,7 +18,7 @@ QByteArray StreamFramer::encode(const QByteArray& payload) const {
     return payload;
 }
 
-QList<StreamFramer::Frame> StreamFramer::feed(const QByteArray& bytes) {
+QList<StreamFramer::Frame> StreamFramer::feed(const QByteArray& bytes, int maximumFrames) {
     QList<Frame> frames;
     error.clear();
     if (mode == Raw) {
@@ -30,7 +30,8 @@ QList<StreamFramer::Frame> StreamFramer::feed(const QByteArray& bytes) {
     }
     buffer += bytes;
     const QByteArray separator = mode == Newline ? QByteArray("\n") : delimiter;
-    while (!buffer.isEmpty()) {
+    maximumFrames = qBound(1, maximumFrames, 1024);
+    while (!buffer.isEmpty() && frames.size() < maximumFrames) {
         int payloadSize = 0, wireSize = 0;
         if (mode == Length32) {
             if (buffer.size() < 4)

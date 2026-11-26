@@ -1,5 +1,7 @@
 #include "commlink/network/tcpserver.h"
+
 #include <QDateTime>
+#include <QPointer>
 
 TcpServer::TcpServer(QObject *parent)
     : QObject(parent), m_format(DataFormatType::JSON), m_sslEnabled(false), m_idleTimeout(300) {
@@ -39,6 +41,8 @@ void TcpServer::stopServer() {
     m_clients.clear();
     m_lastActivity.clear();
     m_framers.clear();
+    peerEndpoints.clear();
+    scheduledReads.clear();
     m_server->close();
 }
 
@@ -113,38 +117,69 @@ void TcpServer::onNewConnection() {
     client->setSocketOption(QAbstractSocket::KeepAliveOption, m_keepAlive ? 1 : 0);
     m_lastActivity[client] = QDateTime::currentSecsSinceEpoch();
     QString clientInfo = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
+    peerEndpoints[client] = clientInfo;
     emit clientConnected(clientInfo);
 }
 
 void TcpServer::onReadyRead() {
-    QTcpSocket *client = qobject_cast<QTcpSocket*>(sender());
-    if (!client) return;
-    
+    auto* client = qobject_cast<QTcpSocket*>(sender());
+    if (client && readBatch(client))
+        scheduleRead(client);
+}
+void TcpServer::scheduleRead(QTcpSocket* client) {
+    if (scheduledReads.contains(client))
+        return;
+    scheduledReads.insert(client);
+    QPointer<QTcpSocket> guard(client);
+    QTimer::singleShot(0, this, [this, guard] {
+        if (!guard)
+            return;
+        scheduledReads.remove(guard);
+        if (readBatch(guard))
+            scheduleRead(guard);
+    });
+}
+bool TcpServer::readBatch(QTcpSocket* client) {
+    if (!m_framers.contains(client))
+        return false;
     m_lastActivity[client] = QDateTime::currentSecsSinceEpoch();
-
     auto& framer = m_framers[client];
-    const auto frames = framer.feed(client->readAll());
+    const auto frames = framer.feed(client->bytesAvailable() > 0
+                                        ? client->read(framer.mode == StreamFramer::Raw
+                                                           ? StreamFramer::MaximumPayload
+                                                           : StreamFramer::MaximumPayload + 32)
+                                        : QByteArray());
+    const auto error = framer.error;
+    const auto endpoint = peerEndpoints.value(client);
     for (const auto& frame : frames) {
-        DataMessage msg = DataMessage::deserialize(frame.payload, m_format);
-        msg.wireBytes = frame.wire;
-        emit messageReceived(
-            msg, client->peerAddress().toString() + ":" + QString::number(client->peerPort()),
-            QDateTime::currentDateTime().toString(Qt::ISODateWithMs));
+        if (!m_framers.contains(client))
+            return false;
+        auto message = DataMessage::deserialize(frame.payload, m_format);
+        message.wireBytes = frame.wire;
+        emit messageReceived(message, endpoint,
+                             QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
     }
-    if (!framer.error.isEmpty()) {
-        emit errorOccurred(framer.error);
+    if (!error.isEmpty()) {
+        emit errorOccurred(error);
         client->abort();
+        return false;
     }
+    return m_framers.contains(client) &&
+           (frames.size() == StreamFramer::FrameBatchSize || client->bytesAvailable() > 0);
 }
 
 void TcpServer::onClientDisconnected() {
     QTcpSocket *client = qobject_cast<QTcpSocket*>(sender());
     if (!client) return;
-    
-    QString clientInfo = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
+
+    const QString clientInfo = peerEndpoints.value(client);
+    while (readBatch(client)) {
+    }
     m_clients.removeAll(client);
     m_lastActivity.remove(client);
     m_framers.remove(client);
+    peerEndpoints.remove(client);
+    scheduledReads.remove(client);
 
     emit clientDisconnected(clientInfo);
     client->deleteLater();

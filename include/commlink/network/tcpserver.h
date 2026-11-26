@@ -7,6 +7,7 @@
 #include <QList>
 #include <QMap>
 #include <QObject>
+#include <QSet>
 #include <QSslSocket>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -46,6 +47,10 @@ private slots:
     void checkIdleConnections();
 
 private:
+    bool readBatch(QTcpSocket* client);
+    void scheduleRead(QTcpSocket* client);
+    QSet<QTcpSocket*> scheduledReads;
+    QMap<QTcpSocket*, QString> peerEndpoints;
     StreamFramer m_framing;
     QMap<QTcpSocket*, StreamFramer> m_framers;
     bool m_keepAlive = false;

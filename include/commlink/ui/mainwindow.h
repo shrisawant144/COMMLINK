@@ -350,12 +350,15 @@ private:
     QJsonObject captureWorkspace() const;
     bool restoreWorkspace(const QJsonObject& state);
     void configureTransports();
+    void restoreConversation();
     bool recordMessage(const QString& direction, const QString& protocol, const QString& host,
                        int port, const DataMessage& message, const QString& source = QString());
     QString expandWorkspace(const QString& text);
+    QString activeClientEndpoint;
     QString httpDetails;
     qint64 httpElapsed = -1;
     ReplayEngine replay;
+    quint64 replayHttpRequestId = 0;
     QObject* replayTransport = nullptr;
     QString replayText;
     DataFormatType replayFormat = DataFormatType::TEXT;

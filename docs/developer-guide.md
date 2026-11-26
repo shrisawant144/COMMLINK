@@ -268,6 +268,7 @@ The work is staged in dependent local branches. Each feature branch includes the
 - `feature/transport-correctness`: original payload preservation, TCP buffering/framing and typed destinations.
 - `feature/workspaces-and-inspector`: named workspaces, variable expansion, traffic inspection and non-destructive history migration.
 - `feature/replay-and-protocol-controls`: replay/assertions, HTTP/WS/UDP controls, bounded retention, packaging and CI.
+- `fix/workbench-acceptance-gaps`: complete saved-session restoration, HTTP request correlation/body accuracy/poll cancellation, and bounded TCP receive batches with event-loop fairness tests.
 - `integration/professional-workbench`: all completed stages, ready to run and review together.
 
 The UI and core tests run headlessly. Transport and workflow tests require permission to bind loopback sockets. Continuous integration is configured for Linux; other desktop platforms still require native build and startup verification.

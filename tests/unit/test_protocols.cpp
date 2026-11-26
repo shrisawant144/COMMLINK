@@ -10,6 +10,94 @@
 class ProtocolTest : public QObject {
     Q_OBJECT
 private slots:
+    void httpComposedBodies_data() {
+        QTest::addColumn<int>("method");
+        QTest::addColumn<QByteArray>("expected");
+        QTest::newRow("GET") << int(HttpClient::GET) << QByteArray();
+        QTest::newRow("HEAD") << int(HttpClient::HEAD) << QByteArray();
+        QTest::newRow("DELETE") << int(HttpClient::DELETE) << QByteArray("payload");
+        QTest::newRow("OPTIONS") << int(HttpClient::OPTIONS) << QByteArray("payload");
+    }
+    void httpComposedBodies() {
+        QFETCH(int, method);
+        QFETCH(QByteArray, expected);
+        QTcpServer peer;
+        QVERIFY(peer.listen(QHostAddress::LocalHost));
+        HttpClient client;
+        client.sendRequest(QString("http://127.0.0.1:%1/x").arg(peer.serverPort()),
+                           static_cast<HttpClient::Method>(method),
+                           DataMessage(DataFormatType::TEXT, "payload"));
+        QTRY_VERIFY(peer.hasPendingConnections());
+        auto* socket = peer.nextPendingConnection();
+        QByteArray request;
+        QTRY_VERIFY(([&] {
+            request += socket->readAll();
+            const int end = request.indexOf("\r\n\r\n");
+            if (end < 0)
+                return false;
+            const auto length = QRegularExpression("Content-Length: ([0-9]+)",
+                                                   QRegularExpression::CaseInsensitiveOption)
+                                    .match(QString::fromLatin1(request.left(end)));
+            return request.size() >= end + 4 + (length.hasMatch() ? length.captured(1).toInt() : 0);
+        })());
+        QCOMPARE(request.mid(request.indexOf("\r\n\r\n") + 4), expected);
+        client.disconnect();
+    }
+    void pollingRejectsInvalidHeaders() {
+        QTcpServer peer;
+        QVERIFY(peer.listen(QHostAddress::LocalHost));
+        HttpClient client;
+        client.addHeader("X-Bad", "value\r\nInjected: true");
+        client.startPolling(QString("http://127.0.0.1:%1/").arg(peer.serverPort()), 10);
+        QTest::qWait(50);
+        const bool connected = peer.hasPendingConnections();
+        client.stopPolling();
+        client.disconnect();
+        QVERIFY(!connected);
+    }
+    void stoppingPollingCancelsResponse() {
+        QTcpServer peer;
+        QVERIFY(peer.listen(QHostAddress::LocalHost));
+        HttpClient client;
+        QSignalSpy received(&client, &HttpClient::responseReceived);
+        client.startPolling(QString("http://127.0.0.1:%1/").arg(peer.serverPort()), 10000);
+        QTRY_VERIFY(peer.hasPendingConnections());
+        auto* socket = peer.nextPendingConnection();
+        QTRY_VERIFY(socket->bytesAvailable() > 0);
+        socket->readAll();
+        client.stopPolling();
+        if (socket->state() == QAbstractSocket::ConnectedState) {
+            socket->write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
+            socket->flush();
+        }
+        QTest::qWait(60);
+        QCOMPARE(received.count(), 0);
+        client.disconnect();
+    }
+    void incompleteResponseCannotPassAnAssertion() {
+        QTcpServer peer;
+        QVERIFY(peer.listen(QHostAddress::LocalHost));
+        HttpClient client;
+        client.setTimeout(2000);
+        QSignalSpy received(&client, &HttpClient::responseForRequest),
+            metadata(&client, &HttpClient::responseInspected),
+            failed(&client, &HttpClient::requestFailed);
+        client.sendRequest(QString("http://127.0.0.1:%1/").arg(peer.serverPort()), HttpClient::GET);
+        QTRY_VERIFY(peer.hasPendingConnections());
+        auto* socket = peer.nextPendingConnection();
+        auto* reply = client.findChild<QNetworkReply*>();
+        QVERIFY(reply);
+        QSignalSpy bodyAvailable(reply, &QIODevice::readyRead);
+        socket->write("HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\nexpected");
+        socket->flush();
+        QTRY_VERIFY(!bodyAvailable.isEmpty());
+        socket->disconnectFromHost();
+        QTRY_COMPARE(failed.count(), 1);
+        QCOMPARE(received.count(), 0);
+        QCOMPARE(metadata.count(), 1);
+        QVERIFY(!metadata[0][6].toBool());
+        QCOMPARE(metadata[0][0].toByteArray(), QByteArray("expected"));
+    }
     void httpInspectionAndTimeout() {
         QTcpServer peer;
         QVERIFY(peer.listen(QHostAddress::LocalHost));

@@ -121,16 +121,31 @@ When a native Linux build inherits Snap schema paths from an editor such as VS C
 1. Configure the client and server, then choose the send destination in **Send Mode**: Remote Server, Broadcast, or Selected Client.
 2. In **Workspace → Options**, choose TCP framing (raw chunks, newline, custom delimiter in hex, or a network-order 32-bit length prefix), keep-alive, HTTP headers/timeouts/authentication, and WebSocket ping interval. Disconnect before changing transport options.
 3. Define variables such as `HOST=127.0.0.1` and use `${HOST}` in endpoints, headers and payloads. Variables are expanded once; missing variables are reported.
-4. Enter a workspace name and **Save**. **Open** restores its connection settings, payload, variables, framing, HTTP method and polling preference. The last working state is restored on startup.
+4. Enter a workspace name and **Save**. **Open** restores its connection settings, payload, variables, framing, HTTP method and polling preference. The active workspace name and its debugging session are restored on startup, including retained conversation bytes, original timestamps and response details.
 5. Open **Traffic** to filter messages and inspect original bytes, decoded content, endpoints, UTC timestamps and HTTP status/headers/timing. **Use Payload** fills the composer without transmitting. **Export Conversation** writes byte-safe Base64 payloads to JSON.
-6. **Replay** repeats the current payload to the selected destination. Choose a count, interval and optional response assertion: contains text, equals hexadecimal bytes, or JSON field equals a value. JSON paths use dots, including numeric array indices. **Stop** cancels pending sends. Assertions use the first response from the selected transport after each send; raw TCP mode observes chunks rather than complete messages.
+6. **Replay** repeats the current payload to the selected destination. Choose a count, interval and optional response assertion: contains text, equals hexadecimal bytes, or JSON field equals a value. JSON paths use dots, including numeric array indices. **Stop** cancels pending sends. HTTP assertions are matched to the replay request, so older requests and background polling cannot satisfy them. Assertions use the first response from the selected transport after each send; raw TCP mode observes chunks rather than complete messages.
 7. History survives restarts, preserves new payloads as bytes and supports **Use Payload** in message details. Older records remain available after migration; original bytes cannot be recovered for records created before byte capture was added.
 
 Workspaces live under the application's data directory in `workspaces/` and are written atomically with owner-only file permissions. Authentication fields are session-only and cleared when opening a workspace. Explicit headers and variables are saved as entered, so avoid saving credentials there unless intended.
 
-Traffic retains at most 2,000 records and 64 MiB of captured payload/wire bytes. Text previews are bounded and may be truncated; retained originals remain available in Traffic and History. TCP frames and HTTP bodies are limited to 8 MiB. TCP/WebSocket outgoing queues are limited to 16 MiB per peer. HTTP permits up to 16 concurrent client requests, with a 32 MiB total limit on queued mock-server payloads. Optional history retention is configured in Options (0 keeps all records; positive values delete older history on startup).
+Traffic retains at most 2,000 records and 64 MiB of captured payload/wire bytes. Text previews are bounded and may be truncated; retained originals remain available in Traffic and History. TCP frames and HTTP bodies are limited to 8 MiB. TCP/WebSocket outgoing queues are limited to 16 MiB per peer. HTTP permits up to 16 concurrent client requests, with a 32 MiB total limit on queued mock-server payloads. TCP bursts are decoded in batches of at most 64 frames per event-loop turn so other UI work can run. Optional history retention is configured in Options (0 keeps all records; positive values delete older history on startup).
 
 TCP captures include configured framing; UDP captures contain the datagram payload. HTTP and WebSocket captures contain application payloads provided by Qt, with HTTP response metadata shown separately; they are not packet captures of TLS or protocol framing. The built-in HTTP server is a bounded local mock server: it supports Content-Length requests and explicitly rejects transfer encoding, including chunked requests. HTTPS/WSS clients use Qt's normal certificate verification; local servers currently use plain TCP/HTTP/WS.
+
+## Acceptance checks
+
+| Area | Verification |
+| --- | --- |
+| Exact traffic inspection | Binary payload/wire round trips, HTTP bodies as transmitted, incomplete-response capture, byte-safe export. GET/HEAD have no request body; DELETE/OPTIONS preserve composed bodies. |
+| Correct TCP handling | Fragmented/coalesced raw, newline, delimiter and length-prefixed traffic, with bounded receive batches. |
+| Saved workspaces | Names, settings, variables, payloads and retained conversation sessions survive restart; sessions remain separate. |
+| Clear conversations | Original timestamps, normalized endpoints, bytes, protocol, response details and errors; selecting a row opens its views. |
+| Explicit sending controls | Typed remote, broadcast and selected-client destinations; selected-client routing tested with two peers. |
+| Protocol controls | HTTP headers/authentication/status/timing, cancellation and polling validation; WebSocket binary/pong diagnostics; TCP framing and keep-alive. |
+| Repeatable testing | Counts, intervals, exact-byte/text/JSON assertions, failure/timeout/cancellation, and HTTP request correlation. |
+| Dependable operation | Small-window layouts in both themes, startup compatibility, migration, display/queue limits, TCP event-loop fairness and Debian packaging. |
+
+HTTP/WebSocket inspection is at the application-payload layer; it does not capture encrypted TLS packets or Qt's protocol framing. Linux builds and native startup are verified; Windows/macOS still require native verification.
 
 ## Tests and packages
 

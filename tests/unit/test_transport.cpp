@@ -32,6 +32,65 @@ private slots:
         QVERIFY(oversized.feed(QByteArray::fromHex("7fffffff")).isEmpty());
         QVERIFY(!oversized.error.isEmpty());
     }
+    void boundedFrameBatchesYieldToOtherEvents() {
+        StreamFramer framer;
+        framer.mode = StreamFramer::Newline;
+        const QByteArray burst = QByteArray("x\n").repeated(1000);
+        int decoded = framer.feed(burst).size();
+        QCOMPARE(decoded, StreamFramer::FrameBatchSize);
+        while (decoded < 1000) {
+            const auto batch = framer.feed({});
+            QVERIFY(!batch.isEmpty());
+            QVERIFY(batch.size() <= StreamFramer::FrameBatchSize);
+            decoded += batch.size();
+        }
+        TcpServer server;
+        server.setFraming(StreamFramer::Newline);
+        server.setFormat(DataFormatType::TEXT);
+        QVERIFY(server.startServer(0, QHostAddress::LocalHost));
+        QTcpSocket peer;
+        peer.connectToHost(QHostAddress::LocalHost, server.localPort());
+        QTRY_COMPARE(peer.state(), QAbstractSocket::ConnectedState);
+        int received = 0;
+        bool callbackRan = false, yielded = false;
+        connect(&server, &TcpServer::messageReceived, &server, [&] {
+            if (++received == 1)
+                QTimer::singleShot(0, &server, [&] { callbackRan = true; });
+            if (received == 1000)
+                yielded = callbackRan;
+        });
+        peer.write(burst);
+        peer.flush();
+        QTRY_COMPARE(received, 1000);
+        QVERIFY(yielded);
+        peer.write(burst);
+        peer.disconnectFromHost();
+        QTRY_COMPARE(received, 2000);
+        server.stopServer();
+        QTcpServer remote;
+        QVERIFY(remote.listen(QHostAddress::LocalHost));
+        TcpClient client;
+        client.setFormat(DataFormatType::TEXT);
+        client.setFraming(StreamFramer::Newline);
+        client.connectToHost("127.0.0.1", remote.serverPort());
+        QTRY_VERIFY(remote.hasPendingConnections());
+        auto* socket = remote.nextPendingConnection();
+        int clientReceived = 0;
+        bool clientYielded = false, clientCallback = false;
+        connect(&client, &TcpClient::messageReceived, &client, [&] {
+            if (++clientReceived == 1)
+                QTimer::singleShot(0, &client, [&] { clientCallback = true; });
+            if (clientReceived == 1000)
+                clientYielded = clientCallback;
+        });
+        socket->write(burst);
+        socket->flush();
+        QTRY_COMPARE(clientReceived, 1000);
+        QVERIFY(clientYielded);
+        socket->write(burst);
+        socket->disconnectFromHost();
+        QTRY_COMPARE(clientReceived, 2000);
+    }
     void fragmentedLoopbackAndRouting() {
         TcpServer server;
         server.setFormat(DataFormatType::TEXT);

@@ -18,6 +18,9 @@ public:
     }
     void setProfiles(const QStringList& names);
     QString profileName() const;
+    void setProfileName(const QString& name) {
+        profiles->setCurrentText(name);
+    }
     QString authorizationHeader() const {
         return authorization;
     }

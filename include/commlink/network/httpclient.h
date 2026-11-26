@@ -3,6 +3,7 @@
 
 #include "../core/dataformat.h"
 
+#include <QElapsedTimer>
 #include <QMap>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -17,8 +18,9 @@ public:
     enum Method { GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS };
 
     explicit HttpClient(QObject *parent = nullptr);
-    
-    void sendRequest(const QString& url, Method method, const DataMessage& message = DataMessage());
+
+    quint64 sendRequest(const QString& url, Method method,
+                        const DataMessage& message = DataMessage());
     void setFormat(DataFormatType format) { m_format = format; }
     void setMethod(Method method) { m_method = method; }
     void addHeader(const QString& key, const QString& value);
@@ -38,8 +40,13 @@ public:
     static QString methodToString(Method method);
 
 signals:
+    void requestQueued(quint64 requestId, const DataMessage& message, const QString& method,
+                       const QString& url, bool polling);
+    void responseForRequest(quint64 requestId, const QByteArray& payload);
+    void requestFailed(quint64 requestId, const QString& error);
     void responseInspected(const QByteArray& payload, const QString& url, int status,
-                           const QVariantMap& headers, qint64 elapsedMs, const QString& error);
+                           const QVariantMap& headers, qint64 elapsedMs, const QString& error,
+                           bool complete);
     void connected();
     void disconnected();
     void responseReceived(const DataMessage& message, const QString& source, const QString& timestamp);
@@ -52,6 +59,9 @@ private slots:
     void onPollTimeout();
 
 private:
+    quint64 dispatch(const QString& url, Method method, const DataMessage& message, bool polling);
+    quint64 nextRequestId = 1;
+    QElapsedTimer clock;
     QNetworkRequest buildRequest(const QString& url);
     QString getContentType() const;
     void sendPollRequest();

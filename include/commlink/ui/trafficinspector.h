@@ -12,7 +12,8 @@ class TrafficInspector : public QWidget {
 public:
     explicit TrafficInspector(QWidget* parent = nullptr);
     void append(const DataMessage& message, const QString& direction, const QString& protocol,
-                const QString& peer, const QString& detail = QString(), qint64 elapsed = -1);
+                const QString& peer, const QString& detail = QString(), qint64 elapsed = -1,
+                const QString& timestamp = QString());
     void clear();
     QJsonArray records() const;
 signals:

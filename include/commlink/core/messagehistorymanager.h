@@ -18,9 +18,10 @@ public:
     ~MessageHistoryManager();
 
     bool initializeDatabase(const QString& filename = QString());
-    bool saveMessage(const QString &direction, const QString &protocol,
-                     const QString &host, int port, const DataMessage &message,
-                     const QString &senderInfo = QString());
+    bool saveMessage(const QString& direction, const QString& protocol, const QString& host,
+                     int port, const DataMessage& message, const QString& senderInfo = QString(),
+                     const QDateTime& timestamp = QDateTime(),
+                     const QVariantMap& metadata = QVariantMap());
     QList<QVariantMap> getMessages(const QString &filter = QString(),
                                    const QDateTime &startDate = QDateTime(),
                                    const QDateTime &endDate = QDateTime(),
@@ -33,6 +34,7 @@ public:
 
     QString getCurrentSessionId() const { return currentSessionId; }
     void startNewSession();
+    bool restoreSession(const QString& sessionId);
 
     static QString generateSessionId();
 

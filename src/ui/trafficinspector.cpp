@@ -76,7 +76,7 @@ TrafficInspector::TrafficInspector(QWidget* parent) : QWidget(parent) {
 }
 void TrafficInspector::append(const DataMessage& message, const QString& direction,
                               const QString& protocol, const QString& peer, const QString& detail,
-                              qint64 elapsed) {
+                              qint64 elapsed, const QString& timestamp) {
     const auto payload = message.serialize();
     const auto originalWire = message.wireBytes.isNull() ? payload : message.wireBytes;
     if (payload.size() + originalWire.size() > 32 * 1024 * 1024)
@@ -91,7 +91,10 @@ void TrafficInspector::append(const DataMessage& message, const QString& directi
     DataMessage retained = message;
     retained.wireBytes = originalWire;
     entries.append({retained, direction, protocol, peer, detail,
-                    QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs), elapsed});
+                    timestamp.isEmpty()
+                        ? QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)
+                        : timestamp,
+                    elapsed});
     const auto& entry = entries.last();
     const int row = table->rowCount();
     table->insertRow(row);
@@ -111,8 +114,11 @@ void TrafficInspector::append(const DataMessage& message, const QString& directi
 }
 void TrafficInspector::selectRecord() {
     const int row = table->currentRow();
-    if (row < 0 || row >= entries.size())
+    if (row < 0 || row >= entries.size()) {
+        for (auto* edit : {text, hex, formatted, wire})
+            edit->clear();
         return;
+    }
     const auto& entry = entries[row];
     const auto payload = entry.message.serialize();
     text->setPlainText(QString::fromUtf8(payload));

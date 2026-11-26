@@ -78,7 +78,7 @@ bool MessageHistoryManager::createTables()
         protocol TEXT CHECK(protocol IN ('TCP','UDP','WebSocket','HTTP')),
         host TEXT NOT NULL, port INTEGER NOT NULL, content TEXT NOT NULL,
         sender_info TEXT, session_id TEXT, format_type INTEGER DEFAULT 0,
-        raw_payload BLOB, raw_wire BLOB))";
+        raw_payload BLOB, raw_wire BLOB, metadata_json TEXT DEFAULT '{}'))";
     if (!db.transaction())
         return false;
     auto fail = [this] {
@@ -102,7 +102,8 @@ bool MessageHistoryManager::createTables()
         QStringList shared;
         for (const auto& column :
              QStringList{"id", "timestamp", "direction", "protocol", "host", "port", "content",
-                         "sender_info", "session_id", "format_type", "raw_payload", "raw_wire"})
+                         "sender_info", "session_id", "format_type", "raw_payload", "raw_wire",
+                         "metadata_json"})
             if (oldColumns.contains(column))
                 shared << column;
         const auto names = shared.join(',');
@@ -116,15 +117,18 @@ bool MessageHistoryManager::createTables()
     columns.exec("PRAGMA table_info(messages)");
     while (columns.next())
         present << columns.value(1).toString();
-    for (const auto& column : QStringList{"format_type", "raw_payload", "raw_wire"}) {
+    for (const auto& column :
+         QStringList{"format_type", "raw_payload", "raw_wire", "metadata_json"}) {
         if (!present.contains(column) &&
             !executeQuery("ALTER TABLE messages ADD COLUMN " + column +
-                          (column == "format_type" ? " INTEGER DEFAULT 0" : " BLOB")))
+                          (column == "format_type"     ? " INTEGER DEFAULT 0"
+                           : column == "metadata_json" ? " TEXT DEFAULT '{}'"
+                                                       : " BLOB")))
             return fail();
     }
     if (!executeQuery("CREATE INDEX IF NOT EXISTS idx_timestamp ON messages(timestamp)") ||
         !executeQuery("CREATE INDEX IF NOT EXISTS idx_session ON messages(session_id)") ||
-        !executeQuery("PRAGMA user_version=1"))
+        !executeQuery("PRAGMA user_version=2"))
         return fail();
     return db.commit();
 }
@@ -139,10 +143,10 @@ bool MessageHistoryManager::executeQuery(const QString &query)
     return true;
 }
 
-bool MessageHistoryManager::saveMessage(const QString &direction, const QString &protocol,
-                                       const QString &host, int port, const DataMessage &message,
-                                       const QString &senderInfo)
-{
+bool MessageHistoryManager::saveMessage(const QString& direction, const QString& protocol,
+                                        const QString& host, int port, const DataMessage& message,
+                                        const QString& senderInfo, const QDateTime& timestamp,
+                                        const QVariantMap& metadata) {
     QMutexLocker locker(&dbMutex);
 
     if (!db.isOpen()) {
@@ -158,8 +162,8 @@ bool MessageHistoryManager::saveMessage(const QString &direction, const QString 
 
     QSqlQuery query(db);
     query.prepare("INSERT INTO messages (direction, protocol, host, port, content, sender_info, "
-                  "session_id, format_type, raw_payload, raw_wire) "
-                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                  "session_id, format_type, raw_payload, raw_wire, timestamp, metadata_json) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     query.addBindValue(direction);
     query.addBindValue(protocol);
     query.addBindValue(host);
@@ -171,6 +175,11 @@ bool MessageHistoryManager::saveMessage(const QString &direction, const QString 
 
     query.addBindValue(message.serialize());
     query.addBindValue(message.wireBytes.isNull() ? message.serialize() : message.wireBytes);
+    query.addBindValue((timestamp.isValid() ? timestamp : QDateTime::currentDateTimeUtc())
+                           .toUTC()
+                           .toString(Qt::ISODateWithMs));
+    query.addBindValue(QString::fromUtf8(
+        QJsonDocument(QJsonObject::fromVariantMap(metadata)).toJson(QJsonDocument::Compact)));
     if (!query.exec()) {
         qCritical() << "Failed to save message:" << query.lastError().text();
         return false;
@@ -194,7 +203,7 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
     }
 
     QString queryStr = "SELECT id, timestamp, direction, protocol, host, port, content, "
-                       "sender_info, session_id, format_type, raw_payload, raw_wire "
+                       "sender_info, session_id, format_type, raw_payload, raw_wire, metadata_json "
                        "FROM messages WHERE 1=1";
     QStringList conditions;
     QVariantList params;
@@ -209,6 +218,9 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
             } else if (part.startsWith("protocol:")) {
                 conditions << "protocol = ?";
                 params << part.mid(PROTOCOL_PREFIX_LENGTH); // Remove "protocol:"
+            } else if (part.startsWith("session:")) {
+                conditions << "session_id = ?";
+                params << part.mid(8);
             } else if (part.startsWith("host:")) {
                 conditions << "host LIKE ?";
                 params << "%" + part.mid(HOST_PREFIX_LENGTH) + "%"; // Remove "host:"
@@ -266,6 +278,8 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
         message["format_type"] = query.value(COL_FORMAT_TYPE);
         message["raw_payload"] = query.value(10);
         message["raw_wire"] = query.value(11);
+        message["metadata"] =
+            QJsonDocument::fromJson(query.value(12).toByteArray()).object().toVariantMap();
         messages.append(message);
     }
 
@@ -340,6 +354,14 @@ bool MessageHistoryManager::exportMessages(const QString &filePath, const QStrin
 void MessageHistoryManager::startNewSession()
 {
     currentSessionId = MessageHistoryManager::generateSessionId();
+}
+
+bool MessageHistoryManager::restoreSession(const QString& sessionId) {
+    const QUuid id(sessionId);
+    if (id.isNull())
+        return false;
+    currentSessionId = id.toString(QUuid::WithoutBraces);
+    return true;
 }
 
 QString MessageHistoryManager::generateSessionId()

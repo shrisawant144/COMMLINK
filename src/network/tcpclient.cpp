@@ -55,28 +55,47 @@ bool TcpClient::isConnected() const {
 void TcpClient::onConnected() {
     m_connectionTimer->stop();
     m_connected = true;
+    peerEndpoint = m_socket->peerAddress().toString() + ":" + QString::number(m_socket->peerPort());
     emit connected();
 }
 
 void TcpClient::onDisconnected() {
+    while (readBatch()) {
+    }
     m_connectionTimer->stop();
     m_connected = false;
     emit disconnected();
 }
 
 void TcpClient::onReadyRead() {
-    const auto frames = m_framer.feed(m_socket->readAll());
+    if (readBatch() && !readScheduled) {
+        readScheduled = true;
+        QTimer::singleShot(0, this, [this] {
+            readScheduled = false;
+            onReadyRead();
+        });
+    }
+}
+bool TcpClient::readBatch() {
+    const auto frames = m_framer.feed(m_socket->bytesAvailable() > 0
+                                          ? m_socket->read(m_framer.mode == StreamFramer::Raw
+                                                               ? StreamFramer::MaximumPayload
+                                                               : StreamFramer::MaximumPayload + 32)
+                                          : QByteArray());
+    const auto endpoint = peerEndpoint;
+    const auto error = m_framer.error;
     for (const auto& frame : frames) {
-        DataMessage msg = DataMessage::deserialize(frame.payload, m_format);
-        msg.wireBytes = frame.wire;
-        emit messageReceived(
-            msg, m_socket->peerAddress().toString() + ":" + QString::number(m_socket->peerPort()),
-            QDateTime::currentDateTime().toString(Qt::ISODateWithMs));
+        auto message = DataMessage::deserialize(frame.payload, m_format);
+        message.wireBytes = frame.wire;
+        emit messageReceived(message, endpoint,
+                             QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
     }
-    if (!m_framer.error.isEmpty()) {
-        emit errorOccurred(m_framer.error);
+    if (!error.isEmpty()) {
+        emit errorOccurred(error);
         m_socket->abort();
+        return false;
     }
+    return frames.size() == StreamFramer::FrameBatchSize || m_socket->bytesAvailable() > 0;
 }
 
 void TcpClient::onError(QAbstractSocket::SocketError error) {

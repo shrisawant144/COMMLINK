@@ -65,6 +65,8 @@ void WorkbenchPanel::setConnectionActive(bool active) {
 }
 void WorkbenchPanel::setReplayState(bool active, const QString& message) {
     replayButton->setEnabled(!active);
+    if (active)
+        optionsButton->setEnabled(false);
     stopButton->setEnabled(active);
     replayStatus->setText(message);
 }

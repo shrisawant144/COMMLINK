@@ -115,6 +115,9 @@ private slots:
     void onConnectionTimeout();
 
 private:
+    bool readBatch();
+    bool readScheduled = false;
+    QString peerEndpoint;
     StreamFramer m_framer;
     QTcpSocket *m_socket;
     QTimer *m_connectionTimer;

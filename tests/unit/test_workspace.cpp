@@ -49,12 +49,23 @@ private slots:
         QCOMPARE(history.getMessageCount(), 1);
         auto msg = DataMessage::deserialize(QByteArray::fromHex("00ff80"), DataFormatType::HEX);
         msg.wireBytes = QByteArray::fromHex("0000000300ff80");
-        QVERIFY(history.saveMessage("sent", "WebSocket", "localhost", 12, msg));
+        const auto captured = QDateTime::currentDateTimeUtc();
+        QVERIFY(history.saveMessage("sent", "WebSocket", "localhost", 12, msg, "peer", captured,
+                                    {{"elapsedMs", 42}, {"details", "HTTP 200"}}));
         const auto rows = history.getMessages();
         QCOMPARE(rows.size(), 2);
         QCOMPARE(rows[0]["raw_payload"].toByteArray(), msg.serialize());
         QCOMPARE(rows[0]["raw_wire"].toByteArray(), msg.wireBytes);
         QCOMPARE(rows[1]["content"].toString(), QString("saved"));
+        QCOMPARE(rows[0]["timestamp"].toString(), captured.toString(Qt::ISODateWithMs));
+        QCOMPARE(rows[0]["metadata"].toMap()["elapsedMs"].toInt(), 42);
+        QCOMPARE(rows[0]["metadata"].toMap()["details"].toString(), QString("HTTP 200"));
+        const auto session = history.getCurrentSessionId();
+        history.startNewSession();
+        QVERIFY(history.getMessages("session:" + history.getCurrentSessionId()).isEmpty());
+        QVERIFY(history.restoreSession(session));
+        QCOMPARE(history.getMessages("session:" + session).size(), 1);
+        QVERIFY(!history.restoreSession("invalid"));
         QVERIFY(history.deleteOldMessages(0));
         QCOMPARE(history.getMessageCount(), 2);
         QVERIFY(history.deleteOldMessages(1));

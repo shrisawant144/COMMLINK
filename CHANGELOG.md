@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Eight test suites, Linux Debug/Release CI and Debian packaging with desktop integration.
 
 ### Fixed
+- Workspace names and saved conversation sessions now restore original timestamps, bytes and response details.
+- HTTP DELETE/OPTIONS preserve bodies; GET/HEAD inspection reflects their empty request bodies.
+- Polling uses validated headers and request limits, and stopping it cancels outstanding poll responses.
+- Replay assertions ignore unrelated HTTP requests and incomplete responses.
+- TCP receive bursts yield to other event-loop work between bounded batches.
 - Overlapping panels and headers, including small-window layouts.
 - Startup failures from inherited Snap desktop settings schemas.
 - History migrations now preserve records and store original payload bytes.

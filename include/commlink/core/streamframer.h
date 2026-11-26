@@ -13,7 +13,8 @@ public:
     Mode mode = Raw;
     QByteArray delimiter = "\n";
     static constexpr int MaximumPayload = 8 * 1024 * 1024;
-    QList<Frame> feed(const QByteArray& bytes);
+    static constexpr int FrameBatchSize = 64;
+    QList<Frame> feed(const QByteArray& bytes, int maximumFrames = FrameBatchSize);
     QByteArray encode(const QByteArray& payload) const;
     QString error;
     void reset() {
