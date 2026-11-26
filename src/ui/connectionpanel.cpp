@@ -14,6 +14,8 @@ ConnectionPanel::ConnectionPanel(QWidget *parent)
     , connectBtn(nullptr)
     , httpPollingCheckbox(nullptr)
     , infoLabel(nullptr)
+    , httpMethodLabel(nullptr)
+    , portLabel(nullptr)
     , connected(false)
 {
     setupUI();
@@ -28,6 +30,10 @@ void ConnectionPanel::setupUI()
 
     auto *group = new QGroupBox("Client Configuration");
     auto *gridLayout = new QGridLayout(group);
+    gridLayout->setColumnStretch(1, 1);
+    gridLayout->setColumnMinimumWidth(0, fontMetrics().horizontalAdvance("HTTP Method:"));
+    gridLayout->setHorizontalSpacing(12);
+    gridLayout->setVerticalSpacing(8);
 
     // Protocol selection
     protocolCombo = new QComboBox();
@@ -94,17 +100,20 @@ void ConnectionPanel::setupUI()
     // Layout
     gridLayout->addWidget(new QLabel("Protocol:"), 0, 0);
     gridLayout->addWidget(protocolCombo, 0, 1);
-    gridLayout->addWidget(new QLabel("HTTP Method:"), 1, 0);
+    httpMethodLabel = new QLabel("HTTP Method:");
+    gridLayout->addWidget(httpMethodLabel, 1, 0);
     gridLayout->addWidget(httpMethodCombo, 1, 1);
     gridLayout->addWidget(httpPollingCheckbox, 2, 0, 1, 2);
     gridLayout->addWidget(infoLabel, 3, 0, 1, 2);
     gridLayout->addWidget(new QLabel("Host:"), 4, 0);
     gridLayout->addWidget(hostEdit, 4, 1);
-    gridLayout->addWidget(new QLabel("Port:"), 5, 0);
+    portLabel = new QLabel("Port:");
+    gridLayout->addWidget(portLabel, 5, 0);
     gridLayout->addWidget(portEdit, 5, 1);
     gridLayout->addWidget(connectBtn, 6, 0, 1, 2);
 
     mainLayout->addWidget(group);
+    updateFieldVisibility();
 }
 
 void ConnectionPanel::applyStyles()
@@ -137,21 +146,14 @@ void ConnectionPanel::updateFieldVisibility()
     bool isHttp = (protocol == "HTTP");
     bool isWebSocket = (protocol == "WebSocket");
 
+    httpMethodLabel->setVisible(isHttp);
     httpMethodCombo->setVisible(isHttp);
     httpPollingCheckbox->setVisible(isHttp);
     
     // Update port visibility based on protocol
     bool showPort = !(isWebSocket || isHttp);
     portEdit->setVisible(showPort);
-    
-    // Find and update port label visibility
-    auto labels = findChildren<QLabel*>();
-    for (auto *label : labels) {
-        if (label->text() == "Port:") {
-            label->setVisible(showPort);
-            break;
-        }
-    }
+    portLabel->setVisible(showPort);
     
     // Update placeholder text based on protocol
     if (isHttp) {

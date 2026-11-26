@@ -2,6 +2,7 @@
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QSplitter>
+#include <QtWidgets/QScrollArea>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QShortcut>
@@ -203,11 +204,14 @@ void MainWindow::setupUI()
     // Main splitter for left and right panels
     auto *mainSplitter = new QSplitter(Qt::Horizontal);
     mainSplitter->setChildrenCollapsible(false);
+    mainSplitter->setHandleWidth(8);
     
     // Left panel - Controls
     auto *leftWidget = new QWidget();
     auto *leftLayout = new QVBoxLayout(leftWidget);
+    leftLayout->setContentsMargins(0, 0, 0, 0);
     leftLayout->setSpacing(12);
+    leftLayout->setSizeConstraint(QLayout::SetMinimumSize);
     
     connectionPanel = new ConnectionPanel();
     serverPanel = new ServerPanel();
@@ -219,10 +223,20 @@ void MainWindow::setupUI()
     leftLayout->addWidget(networkInfoPanel);
     leftLayout->addWidget(messagePanel);
     leftLayout->addStretch();
+
+    // Keep each control at its natural height instead of compressing the entire
+    // column when the window is shorter than the combined panels.
+    auto *controlsScroll = new QScrollArea();
+    controlsScroll->setObjectName("controlsScrollArea");
+    controlsScroll->setFrameShape(QFrame::NoFrame);
+    controlsScroll->setWidgetResizable(true);
+    controlsScroll->setMinimumWidth(420);
+    controlsScroll->setWidget(leftWidget);
     
     // Right panel - Display and Status
     auto *rightWidget = new QWidget();
     auto *rightLayout = new QVBoxLayout(rightWidget);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->setSpacing(12);
     
     displayPanel = new DisplayPanel(&historyManager);
@@ -232,10 +246,11 @@ void MainWindow::setupUI()
     rightLayout->addWidget(statusPanel);
     
     // Add to splitter
-    mainSplitter->addWidget(leftWidget);
+    mainSplitter->addWidget(controlsScroll);
     mainSplitter->addWidget(rightWidget);
-    mainSplitter->setStretchFactor(0, 1);
-    mainSplitter->setStretchFactor(1, 2);
+    mainSplitter->setStretchFactor(0, 0);
+    mainSplitter->setStretchFactor(1, 1);
+    mainSplitter->setSizes({440, DEFAULT_WIDTH - 440});
     
     mainLayout->addWidget(mainSplitter);
 }

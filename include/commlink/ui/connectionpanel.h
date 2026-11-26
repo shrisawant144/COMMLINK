@@ -59,6 +59,8 @@ private:
     QPushButton *connectBtn;
     QCheckBox *httpPollingCheckbox;
     QLabel *infoLabel;
+    QLabel *httpMethodLabel;
+    QLabel *portLabel;
 
     // State
     bool connected;

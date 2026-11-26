@@ -53,13 +53,15 @@ QString ThemeManager::getLightStyleSheet() const {
             font-weight: bold;
             border: 2px solid #cccccc;
             border-radius: 5px;
-            margin-top: 1ex;
+            margin-top: 0.6em;
+            padding-top: 0.5em;
             background-color: #f9f9f9;
         }
         QGroupBox::title {
             subcontrol-origin: margin;
+            subcontrol-position: top left;
             left: 10px;
-            padding: 0 10px 0 10px;
+            padding: 0 6px;
         }
         QPushButton {
             padding: 8px 16px;
@@ -153,13 +155,15 @@ QString ThemeManager::getDarkStyleSheet() const {
             font-weight: bold;
             border: 2px solid #555555;
             border-radius: 5px;
-            margin-top: 1ex;
+            margin-top: 0.6em;
+            padding-top: 0.5em;
             background-color: #3c3c3c;
         }
         QGroupBox::title {
             subcontrol-origin: margin;
+            subcontrol-position: top left;
             left: 10px;
-            padding: 0 10px 0 10px;
+            padding: 0 6px;
             color: #ffffff;
         }
         QPushButton {

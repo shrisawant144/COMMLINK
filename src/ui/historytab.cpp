@@ -1,6 +1,7 @@
 #include "commlink/ui/historytab.h"
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QFileDialog>
@@ -29,6 +30,7 @@ HistoryTab::~HistoryTab()
 void HistoryTab::setupUI()
 {
     auto *mainLayout = new QVBoxLayout(this);
+    mainLayout->setSizeConstraint(QLayout::SetMinimumSize);
 
     // Search and filter controls
     auto *controlsLayout = new QHBoxLayout();
@@ -36,46 +38,52 @@ void HistoryTab::setupUI()
     searchEdit = new QLineEdit();
     searchEdit->setPlaceholderText("Search messages...");
     controlsLayout->addWidget(new QLabel("Search:"));
-    controlsLayout->addWidget(searchEdit);
+    controlsLayout->addWidget(searchEdit, 1);
 
     directionCombo = new QComboBox();
     directionCombo->addItem("All Directions", "");
     directionCombo->addItem("Sent", "sent");
     directionCombo->addItem("Received", "received");
-    controlsLayout->addWidget(new QLabel("Direction:"));
-    controlsLayout->addWidget(directionCombo);
 
     protocolCombo = new QComboBox();
     protocolCombo->addItem("All Protocols", "");
     protocolCombo->addItem("TCP", "TCP");
     protocolCombo->addItem("UDP", "UDP");
-    controlsLayout->addWidget(new QLabel("Protocol:"));
-    controlsLayout->addWidget(protocolCombo);
 
     refreshBtn = new QPushButton("🔄 Refresh");
     controlsLayout->addWidget(refreshBtn);
 
     mainLayout->addLayout(controlsLayout);
 
-    // Date filters
-    auto *dateLayout = new QHBoxLayout();
+    // Keep filters in equal columns so their labels and date editors fit even
+    // when the messages pane is narrow.
+    auto *filterLayout = new QGridLayout();
+    filterLayout->setHorizontalSpacing(12);
+    filterLayout->setVerticalSpacing(8);
+    filterLayout->setColumnStretch(0, 1);
+    filterLayout->setColumnStretch(1, 1);
     startDateEdit = new QDateTimeEdit(QDateTime::currentDateTime().addDays(-7));
     startDateEdit->setCalendarPopup(true);
     endDateEdit = new QDateTimeEdit(QDateTime::currentDateTime());
     endDateEdit->setCalendarPopup(true);
 
-    dateLayout->addWidget(new QLabel("From:"));
-    dateLayout->addWidget(startDateEdit);
-    dateLayout->addWidget(new QLabel("To:"));
-    dateLayout->addWidget(endDateEdit);
-    dateLayout->addStretch();
-
-    mainLayout->addLayout(dateLayout);
+    filterLayout->addWidget(new QLabel("Direction:"), 0, 0);
+    filterLayout->addWidget(new QLabel("Protocol:"), 0, 1);
+    filterLayout->addWidget(directionCombo, 1, 0);
+    filterLayout->addWidget(protocolCombo, 1, 1);
+    filterLayout->addWidget(new QLabel("From:"), 2, 0);
+    filterLayout->addWidget(new QLabel("To:"), 2, 1);
+    filterLayout->addWidget(startDateEdit, 3, 0);
+    filterLayout->addWidget(endDateEdit, 3, 1);
+    mainLayout->addLayout(filterLayout);
 
     // Table
     tableWidget = new QTableWidget();
     tableWidget->setColumnCount(7);
     tableWidget->setHorizontalHeaderLabels({"ID", "Timestamp", "Direction", "Protocol", "Host", "Port", "Content"});
+    for (int column = 0; column < 6; ++column) {
+        tableWidget->horizontalHeader()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
+    }
     tableWidget->horizontalHeader()->setStretchLastSection(true);
     tableWidget->setAlternatingRowColors(true);
     tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);

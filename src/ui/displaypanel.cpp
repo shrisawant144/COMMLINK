@@ -5,6 +5,8 @@
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QTabBar>
+#include <QtWidgets/QScrollArea>
 #include <QtCore/QDateTime>
 
 DisplayPanel::DisplayPanel(MessageHistoryManager *historyMgr, QWidget *parent)
@@ -31,11 +33,15 @@ void DisplayPanel::setupUI()
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
 
-    auto *group = new QGroupBox("Messages & Logs");
+    auto *group = new QGroupBox("Messages && Logs");
     auto *layout = new QVBoxLayout(group);
 
     // Tab widget for different views
     tabWidget = new QTabWidget();
+    tabWidget->setTabPosition(QTabWidget::North);
+    tabWidget->setUsesScrollButtons(true);
+    tabWidget->setElideMode(Qt::ElideNone);
+    tabWidget->tabBar()->setExpanding(false);
     
     // Client received messages tab
     clientReceivedEdit = new QTextEdit();
@@ -75,13 +81,18 @@ void DisplayPanel::setupUI()
     // History tab (if history manager is available)
     if (historyManager) {
         historyTab = new HistoryTab(historyManager);
-        tabWidget->addTab(historyTab, "History");
+        auto *historyScroll = new QScrollArea();
+        historyScroll->setFrameShape(QFrame::NoFrame);
+        historyScroll->setWidgetResizable(true);
+        historyScroll->setWidget(historyTab);
+        tabWidget->addTab(historyScroll, "History");
     }
 
     layout->addWidget(tabWidget);
 
     // Control buttons
     auto *btnLayout = new QHBoxLayout();
+    btnLayout->setSpacing(8);
 
     clearBtn = new QPushButton("Clear Messages");
     clearBtn->setMinimumHeight(BTN_HEIGHT);

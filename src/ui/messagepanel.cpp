@@ -83,9 +83,9 @@ void MessagePanel::setupUI()
     btnLayout->addWidget(saveBtn);
     btnLayout->addWidget(clearBtn);
     btnLayout->addStretch();
-    btnLayout->addWidget(sendBtn);
     
     layout->addLayout(btnLayout);
+    layout->addWidget(sendBtn);
 
     mainLayout->addWidget(group);
 }

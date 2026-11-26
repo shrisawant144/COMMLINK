@@ -1,4 +1,16 @@
+# UI layout regression
+add_executable(test_layout ui/test_layout.cpp)
+target_link_libraries(test_layout PRIVATE commlink_ui)
+add_test(NAME UILayoutTest COMMAND test_layout)
+set_tests_properties(UILayoutTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # Unit tests
+add_executable(test_startupenvironment unit/test_startupenvironment.cpp
+    ${CMAKE_SOURCE_DIR}/src/startupenvironment.cpp)
+target_include_directories(test_startupenvironment PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_startupenvironment PRIVATE Qt5::Core)
+add_test(NAME StartupEnvironmentTest COMMAND test_startupenvironment)
+
 # add_executable(test_dataformat unit/test_dataformat.cpp)
 # target_include_directories(test_dataformat PRIVATE ${CMAKE_SOURCE_DIR}/include)
 # target_link_libraries(test_dataformat commlink_core Qt5::Core)

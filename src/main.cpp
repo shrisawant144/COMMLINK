@@ -1,9 +1,12 @@
 #include "commlink/ui/gui.h"
 #include "commlink/ui/mainwindow.h"
+#include "startupenvironment.h"
 #include <QApplication>
 #include <QCommandLineParser>
 
 int main(int argc, char* argv[]) {
+    StartupEnvironment::prepareDesktopEnvironment();
+
     // Enable High DPI scaling for better display on 4K/5K monitors
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);

@@ -30,9 +30,14 @@ void ServerPanel::setupUI()
 {
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(12);
 
     auto *group = new QGroupBox("Server Configuration");
     auto *gridLayout = new QGridLayout(group);
+    gridLayout->setColumnStretch(1, 1);
+    gridLayout->setColumnMinimumWidth(0, fontMetrics().horizontalAdvance("HTTP Method:"));
+    gridLayout->setHorizontalSpacing(12);
+    gridLayout->setVerticalSpacing(8);
 
     // Protocol selection
     protocolCombo = new QComboBox();
@@ -48,6 +53,9 @@ void ServerPanel::setupUI()
             this, &ServerPanel::onProtocolChanged);
 
     bindAddressCombo = new QComboBox();
+    // Interface names can be very long; keep them from widening the sidebar.
+    bindAddressCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    bindAddressCombo->setMinimumContentsLength(16);
     bindAddressCombo->setMinimumHeight(MIN_HEIGHT);
     bindAddressCombo->setToolTip(
         "Select which local address the server should listen on.\n"
@@ -86,6 +94,7 @@ void ServerPanel::setupUI()
     clientCountLabel->setStyleSheet("font-weight: bold; color: #007bff;");
 
     clientsList = new QListWidget();
+    clientsList->setMinimumHeight(80);
     clientsList->setMaximumHeight(150);
     clientsList->setToolTip("List of currently connected clients");
 
@@ -109,16 +118,15 @@ void ServerPanel::setupUI()
     targetClientCombo->setEnabled(false);
     targetClientCombo->setToolTip("Select specific client to send message to (Send to Selected mode only)");
     
-    auto *sendModeLayout = new QHBoxLayout();
-    sendModeLayout->addWidget(new QLabel("Send Mode:"));
-    sendModeLayout->addWidget(sendModeCombo, 1);
-    
-    auto *targetLayout = new QHBoxLayout();
-    targetLayout->addWidget(new QLabel("Target Client:"));
-    targetLayout->addWidget(targetClientCombo, 1);
-    
-    clientsLayout->addLayout(sendModeLayout);
-    clientsLayout->addLayout(targetLayout);
+    auto *routingLayout = new QGridLayout();
+    routingLayout->setColumnStretch(1, 1);
+    routingLayout->setHorizontalSpacing(12);
+    routingLayout->setVerticalSpacing(8);
+    routingLayout->addWidget(new QLabel("Send Mode:"), 0, 0);
+    routingLayout->addWidget(sendModeCombo, 0, 1);
+    routingLayout->addWidget(new QLabel("Target Client:"), 1, 0);
+    routingLayout->addWidget(targetClientCombo, 1, 1);
+    clientsLayout->addLayout(routingLayout);
 
     // Layout
     gridLayout->addWidget(new QLabel("Protocol:"), 0, 0);

@@ -167,10 +167,10 @@ This section is intentionally explicit because it matters for contributor expect
 
 ### Current state
 
-- The repository contains test source files under `tests/unit/`.
-- The current `tests/CMakeLists.txt` has test targets commented out.
-- Running `ctest` against the shipped build configuration currently reports no tests.
-- Some checked-in test sources appear to target older APIs and should be treated as stale until refreshed.
+- `BUILD_TESTS=ON` enables `UILayoutTest`, a headless check for overlapping controls, header clearance, tab navigation, and scroll access across both themes, supported window sizes, and client protocols.
+- `StartupEnvironmentTest` checks inherited Snap schema paths with and without Snap marker variables, plus preservation of bundled and explicitly configured schemas.
+- Run it with `ctest --test-dir build --output-on-failure` after building.
+- The older sources under `tests/unit/` still have their CMake targets commented out. Some target older APIs and should be refreshed before enabling them.
 
 ### What this means for contributors
 

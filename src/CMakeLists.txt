@@ -63,7 +63,7 @@ target_include_directories(commlink_ui PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(commlink_ui Qt5::Widgets Qt5::Sql commlink_core commlink_network)
 
 # Main executable
-add_executable(commlink main.cpp)
+add_executable(commlink main.cpp startupenvironment.cpp)
 target_include_directories(commlink PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(commlink 
     commlink_ui

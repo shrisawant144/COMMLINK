@@ -111,11 +111,13 @@ cmake --build . -j"$(nproc)"
 ./bin/commlink
 ```
 
+When a native Linux build inherits Snap schema paths from an editor such as VS Code, CommLink uses the host GNOME settings schemas to avoid GTK startup crashes. This also covers terminals without `SNAP` or `GSETTINGS_SCHEMA_DIR` when `XDG_DATA_DIRS` still contains Snap paths. The adjustment applies only to the CommLink process.
+
 ## Development Notes
 
 - The default executable target is `commlink`.
 - The project currently builds successfully with the checked-in `build/` directory configuration.
-- Test sources exist, but the test targets are not currently enabled in CMake. See the developer guide for the current testing status and recommended next steps.
+- With `BUILD_TESTS=ON` (the default), run `ctest --test-dir build --output-on-failure` to check startup environment handling and UI layouts across themes, window sizes, protocols, and tabs. See the developer guide for the status of other test sources.
 
 ## Documentation Map
 
