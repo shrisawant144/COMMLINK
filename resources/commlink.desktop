@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=CommLink
+Comment=Inspect and replay network conversations
+Exec=commlink
+Icon=commlink
+Terminal=false
+Categories=Development;Network;

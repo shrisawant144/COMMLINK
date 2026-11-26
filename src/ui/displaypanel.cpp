@@ -1,13 +1,33 @@
 #include "commlink/ui/displaypanel.h"
+
 #include "commlink/ui/historytab.h"
-#include <QtWidgets/QVBoxLayout>
-#include <QtWidgets/QHBoxLayout>
+
+#include <QTextCursor>
+#include <QtCore/QDateTime>
 #include <QtWidgets/QGroupBox>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QTabBar>
 #include <QtWidgets/QScrollArea>
-#include <QtCore/QDateTime>
+#include <QtWidgets/QTabBar>
+#include <QtWidgets/QVBoxLayout>
+
+namespace {
+void appendPreview(QTextEdit* edit, const QString& message) {
+    edit->append(
+        message.size() > 65536
+            ? message.left(65536) +
+                  "\n[Preview truncated; original bytes are available in Traffic / History]"
+            : message);
+    if (edit->document()->characterCount() > 2 * 1024 * 1024) {
+        QTextCursor cursor(edit->document());
+        cursor.movePosition(QTextCursor::Start);
+        cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor,
+                            edit->document()->characterCount() - 1024 * 1024);
+        cursor.removeSelectedText();
+    }
+}
+} // namespace
 
 DisplayPanel::DisplayPanel(MessageHistoryManager *historyMgr, QWidget *parent)
     : QWidget(parent)
@@ -89,10 +109,16 @@ void DisplayPanel::setupUI()
     }
 
     traffic = new TrafficInspector;
-    auto *trafficScroll = new QScrollArea;
-    trafficScroll->setFrameShape(QFrame::NoFrame); trafficScroll->setWidgetResizable(true); trafficScroll->setWidget(traffic);
+    if (historyTab)
+        connect(historyTab, &HistoryTab::payloadSelected, traffic,
+                &TrafficInspector::replayRequested);
+    auto* trafficScroll = new QScrollArea;
+    trafficScroll->setFrameShape(QFrame::NoFrame);
+    trafficScroll->setWidgetResizable(true);
+    trafficScroll->setWidget(traffic);
     tabWidget->addTab(trafficScroll, "Traffic");
-    for (auto *edit : {clientReceivedEdit, serverReceivedEdit, sentEdit, allMessagesEdit, logsEdit}) edit->document()->setMaximumBlockCount(4000);
+    for (auto* edit : {clientReceivedEdit, serverReceivedEdit, sentEdit, allMessagesEdit, logsEdit})
+        edit->document()->setMaximumBlockCount(4000);
     layout->addWidget(tabWidget);
 
     // Control buttons
@@ -167,9 +193,9 @@ void DisplayPanel::appendReceivedMessage(const QString &message, bool isServerMe
     QString formattedMsg = QString("[%1] %2\n").arg(timestamp, message);
 
     if (isServerMessage) {
-        serverReceivedEdit->append(formattedMsg);
+        appendPreview(serverReceivedEdit, formattedMsg);
     } else {
-        clientReceivedEdit->append(formattedMsg);
+        appendPreview(clientReceivedEdit, formattedMsg);
     }
     
     allMessagesEdit->append(QString("[RCV] %1").arg(formattedMsg));
@@ -179,8 +205,8 @@ void DisplayPanel::appendSentMessage(const QString &message)
 {
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
     QString formattedMsg = QString("[%1] %2\n").arg(timestamp, message);
-    
-    sentEdit->append(formattedMsg);
+
+    appendPreview(sentEdit, formattedMsg);
     allMessagesEdit->append(QString("[SENT] %1").arg(formattedMsg));
 }
 

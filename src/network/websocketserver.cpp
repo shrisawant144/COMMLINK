@@ -26,7 +26,7 @@ bool WebSocketServer::startServer(quint16 port, const QHostAddress& bindAddress)
 }
 
 void WebSocketServer::stopServer() {
-    for (QWebSocket *client : QList<QWebSocket *>(m_clients)) {
+    for (QWebSocket* client : QList<QWebSocket*>(m_clients)) {
         client->close();
         client->deleteLater();
     }
@@ -41,6 +41,7 @@ bool WebSocketServer::isListening() const {
 void WebSocketServer::sendToClient(QWebSocket* client, const DataMessage& message, bool binary) {
     if (!client || !m_clients.contains(client)) return;
     QByteArray data = message.serialize();
+    if (client->bytesToWrite() + data.size() > 16 * 1024 * 1024) { emit errorOccurred("WebSocket client send buffer is full"); return; }
     bool success = false;
     if (binary || message.type == DataFormatType::BINARY || message.type == DataFormatType::HEX) {
         success = client->sendBinaryMessage(data) >= 0;
@@ -64,13 +65,15 @@ void WebSocketServer::sendToAll(const DataMessage& message, bool binary) {
     for (QWebSocket* client : m_clients) {
         if (!client) continue;
         
+        if (client->bytesToWrite() + data.size() > 16 * 1024 * 1024) { emit errorOccurred("WebSocket client send buffer is full"); continue; }
         bool success = false;
-        if (binary || message.type == DataFormatType::BINARY || message.type == DataFormatType::HEX) {
+        if (binary || message.type == DataFormatType::BINARY ||
+            message.type == DataFormatType::HEX) {
             success = client->sendBinaryMessage(data) >= 0;
         } else {
             success = client->sendTextMessage(QString::fromUtf8(data)) >= 0;
         }
-        
+
         if (success) {
             successCount++;
         } else {
@@ -105,6 +108,7 @@ void WebSocketServer::onNewConnection() {
     connect(client, &QWebSocket::textMessageReceived, this, &WebSocketServer::onTextMessageReceived);
     connect(client, &QWebSocket::binaryMessageReceived, this, &WebSocketServer::onBinaryMessageReceived);
     connect(client, &QWebSocket::disconnected, this, &WebSocketServer::onClientDisconnected);
+    client->setMaxAllowedIncomingMessageSize(8 * 1024 * 1024);
     m_clients.append(client);
     QString clientInfo = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
     emit clientConnected(clientInfo);

@@ -1,12 +1,13 @@
 #ifndef TCPCLIENT_H
 #define TCPCLIENT_H
 
-#include <QObject>
-#include "../core/streamframer.h"
-#include <QTcpSocket>
-#include <QHostAddress>
-#include <QTimer>
 #include "../core/dataformat.h"
+#include "../core/streamframer.h"
+
+#include <QHostAddress>
+#include <QObject>
+#include <QTcpSocket>
+#include <QTimer>
 
 /**
  * @brief TCP client for connection-oriented network communication
@@ -96,7 +97,7 @@ public:
      */
     void setFormat(DataFormatType format) { m_format = format; }
 
-    void setFraming(StreamFramer::Mode mode, const QByteArray &delimiter = "\n");
+    void setFraming(StreamFramer::Mode mode, const QByteArray& delimiter = "\n");
     void setKeepAlive(bool enabled);
     quint16 localPort() const;
 

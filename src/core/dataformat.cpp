@@ -11,7 +11,8 @@
 DataMessage::DataMessage(DataFormatType t, const QVariant& d) : type(t), data(d) {}
 
 QByteArray DataMessage::serialize() const {
-    if (hasRawBytes) return rawBytes;
+    if (hasRawBytes)
+        return rawBytes;
     switch (type) {
     case DataFormatType::JSON: {
         if (data.canConvert<QJsonDocument>()) {
@@ -61,6 +62,7 @@ DataMessage DataMessage::deserialize(const QByteArray& bytes, DataFormatType typ
         if (error.error == QJsonParseError::NoError) {
             msg.data = doc;
         } else {
+            msg.decodeError = QString("JSON at byte %1: %2").arg(error.offset).arg(error.errorString());
             // If JSON parsing fails, store as text
             msg.data = QString::fromUtf8(bytes);
         }
@@ -151,7 +153,8 @@ bool DataMessage::validateInput(const QString& input, DataFormatType type) {
     }
     case DataFormatType::XML: {
         QXmlStreamReader reader(input);
-        while (!reader.atEnd()) reader.readNext();
+        while (!reader.atEnd())
+            reader.readNext();
         return !reader.hasError() && !input.trimmed().isEmpty();
     }
     case DataFormatType::CSV:

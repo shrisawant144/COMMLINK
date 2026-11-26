@@ -1,13 +1,15 @@
 #ifndef HTTPCLIENT_H
 #define HTTPCLIENT_H
 
-#include <QObject>
+#include "../core/dataformat.h"
+
+#include <QMap>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QMap>
+#include <QObject>
+#include <QSet>
 #include <QTimer>
-#include "../core/dataformat.h"
 
 class HttpClient : public QObject {
     Q_OBJECT
@@ -36,6 +38,8 @@ public:
     static QString methodToString(Method method);
 
 signals:
+    void responseInspected(const QByteArray& payload, const QString& url, int status,
+                           const QVariantMap& headers, qint64 elapsedMs, const QString& error);
     void connected();
     void disconnected();
     void responseReceived(const DataMessage& message, const QString& source, const QString& timestamp);
@@ -51,7 +55,11 @@ private:
     QNetworkRequest buildRequest(const QString& url);
     QString getContentType() const;
     void sendPollRequest();
-    
+    void watchReply(QNetworkReply* reply, bool polling = false);
+    QSet<QNetworkReply*> activeReplies;
+    QHash<QNetworkReply*, QByteArray> replyBodies;
+    bool headersValid = true;
+
     QNetworkAccessManager *m_manager;
     DataFormatType m_format;
     Method m_method;

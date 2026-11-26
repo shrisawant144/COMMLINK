@@ -34,6 +34,12 @@ public:
     void setProtocol(const QString &protocol);
     void setHost(const QString &host);
     void setPort(int port);
+    void setHttpMethod(const QString& method) {
+        httpMethodCombo->setCurrentText(method);
+    }
+    void setHttpPollingEnabled(bool enabled) {
+        httpPollingCheckbox->setChecked(enabled);
+    }
 
 signals:
     void connectRequested();

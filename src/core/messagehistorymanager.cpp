@@ -41,17 +41,19 @@ MessageHistoryManager::MessageHistoryManager(QObject *parent)
 
 MessageHistoryManager::~MessageHistoryManager()
 {
-    if (db.isOpen()) {
-        db.close();
-    }
+    const auto connection = db.connectionName();
+    db.close();
+    db = QSqlDatabase();
+    if (!connection.isEmpty())
+        QSqlDatabase::removeDatabase(connection);
 }
 
-bool MessageHistoryManager::initializeDatabase(const QString &filename)
-{
+bool MessageHistoryManager::initializeDatabase(const QString& filename) {
     QString dbPath = filename;
     if (dbPath.isEmpty()) {
         dbPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-        QDir().mkpath(dbPath); dbPath += "/message_history.db";
+        QDir().mkpath(dbPath);
+        dbPath += "/message_history.db";
     }
 
     db = QSqlDatabase::addDatabase("QSQLITE", QUuid::createUuid().toString());
@@ -62,6 +64,9 @@ bool MessageHistoryManager::initializeDatabase(const QString &filename)
         return false;
     }
 
+    QSqlQuery tuning(db);
+    tuning.exec("PRAGMA journal_mode=WAL");
+    tuning.exec("PRAGMA synchronous=NORMAL");
     return createTables();
 }
 
@@ -74,28 +79,53 @@ bool MessageHistoryManager::createTables()
         host TEXT NOT NULL, port INTEGER NOT NULL, content TEXT NOT NULL,
         sender_info TEXT, session_id TEXT, format_type INTEGER DEFAULT 0,
         raw_payload BLOB, raw_wire BLOB))";
-    if (!db.transaction()) return false;
-    auto fail = [this] { db.rollback(); return false; };
-    QSqlQuery definition(db); definition.exec("SELECT sql FROM sqlite_master WHERE type='table' AND name='messages'");
+    if (!db.transaction())
+        return false;
+    auto fail = [this] {
+        db.rollback();
+        return false;
+    };
+    QSqlQuery definition(db);
+    definition.exec("SELECT sql FROM sqlite_master WHERE type='table' AND name='messages'");
     bool legacy = definition.next() && !definition.value(0).toString().contains("WebSocket");
     definition.finish();
-    if (legacy && !executeQuery("ALTER TABLE messages RENAME TO messages_legacy")) return fail();
-    if (!executeQuery(schema)) return fail();
+    if (legacy && !executeQuery("ALTER TABLE messages RENAME TO messages_legacy"))
+        return fail();
+    if (!executeQuery(schema))
+        return fail();
     if (legacy) {
-        QStringList oldColumns; QSqlQuery columns(db); columns.exec("PRAGMA table_info(messages_legacy)");
-        while (columns.next()) oldColumns << columns.value(1).toString();
+        QStringList oldColumns;
+        QSqlQuery columns(db);
+        columns.exec("PRAGMA table_info(messages_legacy)");
+        while (columns.next())
+            oldColumns << columns.value(1).toString();
         QStringList shared;
-        for (const auto &column : QStringList{"id","timestamp","direction","protocol","host","port","content","sender_info","session_id","format_type","raw_payload","raw_wire"})
-            if (oldColumns.contains(column)) shared << column;
+        for (const auto& column :
+             QStringList{"id", "timestamp", "direction", "protocol", "host", "port", "content",
+                         "sender_info", "session_id", "format_type", "raw_payload", "raw_wire"})
+            if (oldColumns.contains(column))
+                shared << column;
         const auto names = shared.join(',');
-        if (!executeQuery("INSERT INTO messages (" + names + ") SELECT " + names + " FROM messages_legacy") || !executeQuery("DROP TABLE messages_legacy")) return fail();
+        if (!executeQuery("INSERT INTO messages (" + names + ") SELECT " + names +
+                          " FROM messages_legacy") ||
+            !executeQuery("DROP TABLE messages_legacy"))
+            return fail();
     }
-    QStringList present; QSqlQuery columns(db); columns.exec("PRAGMA table_info(messages)");
-    while (columns.next()) present << columns.value(1).toString();
-    for (const auto &column : QStringList{"format_type", "raw_payload", "raw_wire"}) {
-        if (!present.contains(column) && !executeQuery("ALTER TABLE messages ADD COLUMN " + column + (column == "format_type" ? " INTEGER DEFAULT 0" : " BLOB"))) return fail();
+    QStringList present;
+    QSqlQuery columns(db);
+    columns.exec("PRAGMA table_info(messages)");
+    while (columns.next())
+        present << columns.value(1).toString();
+    for (const auto& column : QStringList{"format_type", "raw_payload", "raw_wire"}) {
+        if (!present.contains(column) &&
+            !executeQuery("ALTER TABLE messages ADD COLUMN " + column +
+                          (column == "format_type" ? " INTEGER DEFAULT 0" : " BLOB")))
+            return fail();
     }
-    if (!executeQuery("CREATE INDEX IF NOT EXISTS idx_timestamp ON messages(timestamp)") || !executeQuery("CREATE INDEX IF NOT EXISTS idx_session ON messages(session_id)") || !executeQuery("PRAGMA user_version=1")) return fail();
+    if (!executeQuery("CREATE INDEX IF NOT EXISTS idx_timestamp ON messages(timestamp)") ||
+        !executeQuery("CREATE INDEX IF NOT EXISTS idx_session ON messages(session_id)") ||
+        !executeQuery("PRAGMA user_version=1"))
+        return fail();
     return db.commit();
 }
 
@@ -127,7 +157,8 @@ bool MessageHistoryManager::saveMessage(const QString &direction, const QString 
     }
 
     QSqlQuery query(db);
-    query.prepare("INSERT INTO messages (direction, protocol, host, port, content, sender_info, session_id, format_type, raw_payload, raw_wire) "
+    query.prepare("INSERT INTO messages (direction, protocol, host, port, content, sender_info, "
+                  "session_id, format_type, raw_payload, raw_wire) "
                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     query.addBindValue(direction);
     query.addBindValue(protocol);
@@ -162,7 +193,8 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
         return messages;
     }
 
-    QString queryStr = "SELECT id, timestamp, direction, protocol, host, port, content, sender_info, session_id, format_type, raw_payload, raw_wire "
+    QString queryStr = "SELECT id, timestamp, direction, protocol, host, port, content, "
+                       "sender_info, session_id, format_type, raw_payload, raw_wire "
                        "FROM messages WHERE 1=1";
     QStringList conditions;
     QVariantList params;
@@ -194,13 +226,13 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
     }
 
     if (startDate.isValid()) {
-        queryStr += " AND timestamp >= ?";
-        params << startDate.toString(Qt::ISODate);
+        queryStr += " AND datetime(timestamp) >= datetime(?)";
+        params << startDate.toUTC().toString(Qt::ISODate);
     }
 
     if (endDate.isValid()) {
-        queryStr += " AND timestamp <= ?";
-        params << endDate.toString(Qt::ISODate);
+        queryStr += " AND datetime(timestamp) <= datetime(?)";
+        params << endDate.toUTC().toString(Qt::ISODate);
     }
 
     queryStr += " ORDER BY id DESC LIMIT ? OFFSET ?";
@@ -242,10 +274,13 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
 
 bool MessageHistoryManager::deleteOldMessages(int daysToKeep)
 {
+    if (daysToKeep <= 0)
+        return true;
+    QMutexLocker locker(&dbMutex);
     QDateTime cutoff = QDateTime::currentDateTime().addDays(-daysToKeep);
     QSqlQuery query(db);
-    query.prepare("DELETE FROM messages WHERE timestamp < ?");
-    query.addBindValue(cutoff.toString(Qt::ISODate));
+    query.prepare("DELETE FROM messages WHERE datetime(timestamp) < datetime(?)");
+    query.addBindValue(cutoff.toUTC().toString(Qt::ISODate));
 
     if (!query.exec()) {
         qCritical() << "Failed to delete old messages:" << query.lastError().text();
@@ -271,7 +306,11 @@ bool MessageHistoryManager::exportMessages(const QString &filePath, const QStrin
         for (const QVariantMap &msg : messages) {
             QJsonObject obj;
             for (auto it = msg.begin(); it != msg.end(); ++it) {
-                obj[it.key()] = QJsonValue::fromVariant(it.value());
+                if (it.key() == "raw_payload" || it.key() == "raw_wire")
+                    obj[it.key() + "_base64"] =
+                        QString::fromLatin1(it.value().toByteArray().toBase64());
+                else
+                    obj[it.key()] = QJsonValue::fromVariant(it.value());
             }
             array.append(obj);
         }

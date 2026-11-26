@@ -6,6 +6,9 @@ It is designed for developers, QA engineers, students, and integrators who need 
 
 ## Highlights
 
+- Named workspaces with payloads, variables, framing and protocol options.
+- Original payload inspection in text, hex and decoded views, with conversation export.
+- Timed replay with text, exact-byte and JSON-field assertions.
 - Multi-protocol support: TCP, UDP, WebSocket, and HTTP in both client and server workflows where applicable.
 - Multiple payload formats: JSON, XML, CSV, plain text, binary, and hex.
 - Modular desktop UI: a panel-based interface centered around a `MainWindow` orchestrator.
@@ -89,7 +92,7 @@ COMMLINK/
 
 - CMake 3.8.2 or newer
 - A C++17 compiler
-- Qt5 with `Core`, `Widgets`, `Network`, `Sql`, and `WebSockets`
+- Qt 5.15 with `Core`, `Widgets`, `Network`, `Sql`, and `WebSockets` (`Test` for automated tests)
 
 ## Quick Start
 
@@ -113,10 +116,40 @@ cmake --build . -j"$(nproc)"
 
 When a native Linux build inherits Snap schema paths from an editor such as VS Code, CommLink uses the host GNOME settings schemas to avoid GTK startup crashes. This also covers terminals without `SNAP` or `GSETTINGS_SCHEMA_DIR` when `XDG_DATA_DIRS` still contains Snap paths. The adjustment applies only to the CommLink process.
 
+## Workbench workflow
+
+1. Configure the client and server, then choose the send destination in **Send Mode**: Remote Server, Broadcast, or Selected Client.
+2. In **Workspace → Options**, choose TCP framing (raw chunks, newline, custom delimiter in hex, or a network-order 32-bit length prefix), keep-alive, HTTP headers/timeouts/authentication, and WebSocket ping interval. Disconnect before changing transport options.
+3. Define variables such as `HOST=127.0.0.1` and use `${HOST}` in endpoints, headers and payloads. Variables are expanded once; missing variables are reported.
+4. Enter a workspace name and **Save**. **Open** restores its connection settings, payload, variables, framing, HTTP method and polling preference. The last working state is restored on startup.
+5. Open **Traffic** to filter messages and inspect original bytes, decoded content, endpoints, UTC timestamps and HTTP status/headers/timing. **Use Payload** fills the composer without transmitting. **Export Conversation** writes byte-safe Base64 payloads to JSON.
+6. **Replay** repeats the current payload to the selected destination. Choose a count, interval and optional response assertion: contains text, equals hexadecimal bytes, or JSON field equals a value. JSON paths use dots, including numeric array indices. **Stop** cancels pending sends. Assertions use the first response from the selected transport after each send; raw TCP mode observes chunks rather than complete messages.
+7. History survives restarts, preserves new payloads as bytes and supports **Use Payload** in message details. Older records remain available after migration; original bytes cannot be recovered for records created before byte capture was added.
+
+Workspaces live under the application's data directory in `workspaces/` and are written atomically with owner-only file permissions. Authentication fields are session-only and cleared when opening a workspace. Explicit headers and variables are saved as entered, so avoid saving credentials there unless intended.
+
+Traffic retains at most 2,000 records and 64 MiB of captured payload/wire bytes. Text previews are bounded and may be truncated; retained originals remain available in Traffic and History. TCP frames and HTTP bodies are limited to 8 MiB. TCP/WebSocket outgoing queues are limited to 16 MiB per peer. HTTP permits up to 16 concurrent client requests, with a 32 MiB total limit on queued mock-server payloads. Optional history retention is configured in Options (0 keeps all records; positive values delete older history on startup).
+
+TCP captures include configured framing; UDP captures contain the datagram payload. HTTP and WebSocket captures contain application payloads provided by Qt, with HTTP response metadata shown separately; they are not packet captures of TLS or protocol framing. The built-in HTTP server is a bounded local mock server: it supports Content-Length requests and explicitly rejects transfer encoding, including chunked requests. HTTPS/WSS clients use Qt's normal certificate verification; local servers currently use plain TCP/HTTP/WS.
+
+## Tests and packages
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+# Create an archive; it requires the platform's Qt runtime packages.
+(cd build && cpack -G TGZ -B packages)
+# Debian/Ubuntu package with desktop entry, icon and runtime dependencies:
+(cd build && cpack -G DEB -B packages)
+```
+
+GitHub Actions builds Debug and Release on Linux, runs the headless and loopback suites, and builds a Debian package. Remote workflow runs start when the branches are pushed.
+
 ## Development Notes
 
 - The default executable target is `commlink`.
-- The project currently builds successfully with the checked-in `build/` directory configuration.
+- Build outputs are generated locally in `build/`.
 - With `BUILD_TESTS=ON` (the default), run `ctest --test-dir build --output-on-failure` to check startup environment handling and UI layouts across themes, window sizes, protocols, and tabs. See the developer guide for the status of other test sources.
 
 ## Documentation Map

@@ -15,6 +15,9 @@ public:
     bool startServer(quint16 port, const QHostAddress& bindAddress = QHostAddress::Any);
     void stopServer();
     bool isListening() const;
+    quint16 localPort() const {
+        return m_server->serverPort();
+    }
     void setFormat(DataFormatType format) { m_format = format; }
     void sendToClient(QWebSocket* client, const DataMessage& message, bool binary = false);
     void sendToAll(const DataMessage& message, bool binary = false);

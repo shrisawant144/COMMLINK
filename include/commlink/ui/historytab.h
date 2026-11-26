@@ -22,6 +22,9 @@ public:
     explicit HistoryTab(MessageHistoryManager *msgHistoryManager, QWidget *parent = nullptr);
     ~HistoryTab();
 
+signals:
+    void payloadSelected(const QByteArray& payload, int format);
+
 private slots:
     void refreshMessages();
     void onSearchTextChanged();

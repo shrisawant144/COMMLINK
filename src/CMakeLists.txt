@@ -3,6 +3,8 @@ add_library(commlink_core STATIC
     core/dataformat.cpp
     core/streamframer.cpp
     core/workspacestore.cpp
+    core/replayengine.cpp
+    ${CMAKE_SOURCE_DIR}/include/commlink/core/replayengine.h
     core/filemanager.cpp
     core/exportmanager.cpp
     core/logger.cpp
@@ -69,7 +71,7 @@ target_include_directories(commlink_ui PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(commlink_ui Qt5::Widgets Qt5::Sql commlink_core commlink_network)
 
 # Main executable
-add_executable(commlink main.cpp startupenvironment.cpp)
+add_executable(commlink main.cpp startupenvironment.cpp ${CMAKE_SOURCE_DIR}/resources/CommLink.qrc)
 target_include_directories(commlink PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(commlink 
     commlink_ui
@@ -83,3 +85,7 @@ install(TARGETS commlink
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
+
+install(FILES ${CMAKE_SOURCE_DIR}/resources/commlink.desktop DESTINATION share/applications)
+install(FILES ${CMAKE_SOURCE_DIR}/resources/logo/CommLink_256.png DESTINATION share/icons/hicolor/256x256/apps RENAME commlink.png)
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE ${CMAKE_SOURCE_DIR}/README.md DESTINATION share/doc/commlink)

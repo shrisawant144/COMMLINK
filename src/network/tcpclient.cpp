@@ -4,6 +4,7 @@
 TcpClient::TcpClient(QObject *parent) 
     : QObject(parent), m_format(DataFormatType::JSON), m_connected(false) {
     m_socket = new QTcpSocket(this);
+    m_socket->setReadBufferSize(StreamFramer::MaximumPayload + 32);
     m_connectionTimer = new QTimer(this);
     m_connectionTimer->setSingleShot(true);
     
@@ -30,8 +31,14 @@ void TcpClient::disconnect() {
 
 void TcpClient::sendMessage(const DataMessage& message) {
     QByteArray data = m_framer.encode(message.serialize());
-    if (!m_connected || message.serialize().size() > StreamFramer::MaximumPayload || (m_framer.mode == StreamFramer::Delimiter && m_framer.delimiter.isEmpty())) {
-        emit errorOccurred("TCP client is not connected or payload is too large"); return;
+    if (!m_connected || message.serialize().size() > StreamFramer::MaximumPayload ||
+        (m_framer.mode == StreamFramer::Delimiter && m_framer.delimiter.isEmpty())) {
+        emit errorOccurred("TCP client is not connected or payload is too large");
+        return;
+    }
+    if (m_socket->bytesToWrite() + data.size() > 16 * 1024 * 1024) {
+        emit errorOccurred("TCP send buffer is full; wait for the peer to read");
+        return;
     }
     qint64 bytesWritten = m_socket->write(data);
     if (bytesWritten == -1) {
@@ -59,13 +66,17 @@ void TcpClient::onDisconnected() {
 
 void TcpClient::onReadyRead() {
     const auto frames = m_framer.feed(m_socket->readAll());
-    for (const auto &frame : frames) {
+    for (const auto& frame : frames) {
         DataMessage msg = DataMessage::deserialize(frame.payload, m_format);
         msg.wireBytes = frame.wire;
-        emit messageReceived(msg, m_socket->peerAddress().toString() + ":" + QString::number(m_socket->peerPort()),
-                             QDateTime::currentDateTime().toString(Qt::ISODateWithMs));
+        emit messageReceived(
+            msg, m_socket->peerAddress().toString() + ":" + QString::number(m_socket->peerPort()),
+            QDateTime::currentDateTime().toString(Qt::ISODateWithMs));
     }
-    if (!m_framer.error.isEmpty()) { emit errorOccurred(m_framer.error); m_socket->abort(); }
+    if (!m_framer.error.isEmpty()) {
+        emit errorOccurred(m_framer.error);
+        m_socket->abort();
+    }
 }
 
 void TcpClient::onError(QAbstractSocket::SocketError error) {
@@ -81,8 +92,16 @@ void TcpClient::onConnectionTimeout() {
     }
 }
 
-void TcpClient::setFraming(StreamFramer::Mode mode, const QByteArray &delimiter) {
-    m_framer.reset(); m_framer.mode = mode; m_framer.delimiter = delimiter;
+void TcpClient::setFraming(StreamFramer::Mode mode, const QByteArray& delimiter) {
+    if (m_framer.mode == mode && m_framer.delimiter == delimiter)
+        return;
+    m_framer.reset();
+    m_framer.mode = mode;
+    m_framer.delimiter = delimiter;
 }
-void TcpClient::setKeepAlive(bool enabled) { m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, enabled ? 1 : 0); }
-quint16 TcpClient::localPort() const { return m_socket->localPort(); }
+void TcpClient::setKeepAlive(bool enabled) {
+    m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, enabled ? 1 : 0);
+}
+quint16 TcpClient::localPort() const {
+    return m_socket->localPort();
+}

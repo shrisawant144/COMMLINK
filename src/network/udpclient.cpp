@@ -4,17 +4,27 @@
 UdpClient::UdpClient(QObject *parent) 
     : QObject(parent), m_port(0), m_connected(false), m_format(DataFormatType::JSON) {
     m_socket = new QUdpSocket(this);
+    connect(m_socket, &QUdpSocket::connected, this, [this] {
+        m_connected = true;
+        emit connected();
+    });
+    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QUdpSocket::error), this,
+            [this](QAbstractSocket::SocketError) {
+                m_connected = false;
+                emit errorOccurred(m_socket->errorString());
+            });
     connect(m_socket, &QUdpSocket::readyRead, this, &UdpClient::onReadyRead);
 }
 
 bool UdpClient::connectToHost(const QString& host, quint16 port) {
-    m_host = QHostAddress(host);
+    m_socket->abort();
+    m_connected = false;
     m_port = port;
-    
-    // UDP is connectionless - no actual connection needed
-    // Just store the target address and mark as "connected"
-    m_connected = true;
-    emit connected();
+    if (host.trimmed().isEmpty() || !port) {
+        emit errorOccurred("Invalid UDP endpoint");
+        return false;
+    }
+    m_socket->connectToHost(host, port);
     return true;
 }
 
@@ -25,8 +35,12 @@ void UdpClient::disconnect() {
 }
 
 void UdpClient::sendMessage(const DataMessage& message) {
+    if (!m_connected) {
+        emit errorOccurred("UDP endpoint is not ready");
+        return;
+    }
     QByteArray data = message.serialize();
-    qint64 bytesWritten = m_socket->writeDatagram(data, m_host, m_port);
+    qint64 bytesWritten = m_socket->write(data);
     if (bytesWritten == -1) {
         emit errorOccurred("Failed to send datagram: " + m_socket->errorString());
     }

@@ -6,6 +6,16 @@ set_tests_properties(UILayoutTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscr
 
 # Unit tests
 find_package(Qt5 REQUIRED COMPONENTS Test)
+add_executable(test_traffic ui/test_traffic.cpp)
+target_link_libraries(test_traffic PRIVATE commlink_ui Qt5::Test)
+add_test(NAME TrafficTest COMMAND test_traffic)
+set_tests_properties(TrafficTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_executable(test_replay unit/test_replay.cpp)
+target_link_libraries(test_replay PRIVATE commlink_core Qt5::Test)
+add_test(NAME ReplayTest COMMAND test_replay)
+add_executable(test_protocols unit/test_protocols.cpp)
+target_link_libraries(test_protocols PRIVATE commlink_network Qt5::Test)
+add_test(NAME ProtocolTest COMMAND test_protocols)
 add_executable(test_workflow ui/test_workflow.cpp)
 target_link_libraries(test_workflow PRIVATE commlink_ui Qt5::Test)
 add_test(NAME WorkflowTest COMMAND test_workflow)

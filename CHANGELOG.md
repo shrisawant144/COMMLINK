@@ -33,8 +33,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Named workspaces with payloads, variables and protocol settings.
+- Buffered TCP framing, original payload capture, traffic inspection and byte-safe exports.
+- Explicit remote, broadcast and selected-client destinations.
+- Timed replay with text, byte and JSON-field assertions, cancellation and timeouts.
+- HTTP authentication, headers, response metadata, WebSocket ping/close diagnostics and UDP peer tracking.
+- Eight test suites, Linux Debug/Release CI and Debian packaging with desktop integration.
+
+### Fixed
+- Overlapping panels and headers, including small-window layouts.
+- Startup failures from inherited Snap desktop settings schemas.
+- History migrations now preserve records and store original payload bytes.
+- Binary/hex wire encoding, malformed HTTP handling and blocking network-error dialogs.
+
 ### Planned
-- Unit tests for core components
-- CI/CD pipeline integration
 - Performance benchmarks
-- Packaging for multiple platforms
+- Native Windows and macOS packaging and verification

@@ -4,6 +4,7 @@ if [ -f /etc/debian_version ]; then
     sudo apt-get update
     sudo apt-get install -y \
         qtbase5-dev \
+        libqt5websockets5-dev \
         libqt5sql5-sqlite \
         cmake \
         build-essential \
@@ -13,6 +14,7 @@ if [ -f /etc/debian_version ]; then
 elif [ -f /etc/redhat-release ]; then
     sudo dnf install -y \
         qt5-qtbase-devel \
+        qt5-qtwebsockets-devel \
         qt5-qtbase-sqlite \
         cmake \
         gcc-c++ \

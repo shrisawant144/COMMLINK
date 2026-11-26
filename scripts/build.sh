@@ -1,15 +1,8 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
+REPO_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_TYPE=${1:-Release}
-BUILD_DIR="build"
-
-echo "Building CommLink (${BUILD_TYPE})..."
-
-mkdir -p ${BUILD_DIR}
-cd ${BUILD_DIR}
-
-cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ..
-cmake --build .
-
-echo "✓ Build complete: ${BUILD_DIR}/bin/commlink"
+cmake -S "$REPO_DIR" -B "$REPO_DIR/build" -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+cmake --build "$REPO_DIR/build" --parallel "${COMMLINK_BUILD_JOBS:-4}"
+echo "Build complete: $REPO_DIR/build/bin/commlink"

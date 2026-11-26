@@ -1,0 +1,35 @@
+name: Build, test and package
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install Qt and build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ dpkg-dev qtbase5-dev libqt5websockets5-dev libqt5sql5-sqlite
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTS=ON
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 60
+      - name: Package
+        if: matrix.build_type == 'Release'
+        working-directory: build
+        run: cpack -G DEB -B packages
+      - uses: actions/upload-artifact@v7
+        if: matrix.build_type == 'Release'
+        with:
+          name: commlink-linux-deb
+          path: build/packages/*.deb
+          if-no-files-found: error

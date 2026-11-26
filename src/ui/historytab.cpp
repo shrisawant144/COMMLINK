@@ -49,6 +49,8 @@ void HistoryTab::setupUI()
     protocolCombo->addItem("All Protocols", "");
     protocolCombo->addItem("TCP", "TCP");
     protocolCombo->addItem("UDP", "UDP");
+    protocolCombo->addItem("WebSocket", "WebSocket");
+    protocolCombo->addItem("HTTP", "HTTP");
 
     refreshBtn = new QPushButton("🔄 Refresh");
     controlsLayout->addWidget(refreshBtn);
@@ -268,8 +270,21 @@ void HistoryTab::showMessageDetails(const QVariantMap &message)
         message["session_id"].toString(),
         message["content"].toString()
     );
-    
+
+    if (!message["raw_payload"].isNull()) {
+        details += "\nOriginal payload (hex):\n" +
+                   QString::fromLatin1(message["raw_payload"].toByteArray().toHex(' '));
+        details += "\nCaptured wire / application bytes (hex):\n" +
+                   QString::fromLatin1(message["raw_wire"].toByteArray().toHex(' '));
+    }
     textEdit->setPlainText(details);
+    auto* usePayload = new QPushButton("Use Payload");
+    usePayload->setEnabled(!message["raw_payload"].isNull());
+    layout->addWidget(usePayload);
+    connect(usePayload, &QPushButton::clicked, &dialog, [this, &dialog, message] {
+        emit payloadSelected(message["raw_payload"].toByteArray(), message["format_type"].toInt());
+        dialog.accept();
+    });
     layout->addWidget(textEdit);
     
     auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok);

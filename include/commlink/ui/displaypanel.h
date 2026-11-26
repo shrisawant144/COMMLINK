@@ -1,12 +1,13 @@
 #pragma once
-#include <QtWidgets/QWidget>
-#include "trafficinspector.h"
-#include <QtWidgets/QTextEdit>
-#include <QtWidgets/QTabWidget>
-#include <QtWidgets/QPushButton>
-#include <QtCore/QString>
 #include "../core/dataformat.h"
 #include "../core/messagehistorymanager.h"
+#include "trafficinspector.h"
+
+#include <QtCore/QString>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QTabWidget>
+#include <QtWidgets/QTextEdit>
+#include <QtWidgets/QWidget>
 
 // Forward declaration
 class HistoryTab;
@@ -30,7 +31,9 @@ public:
     explicit DisplayPanel(MessageHistoryManager *historyMgr = nullptr, QWidget *parent = nullptr);
     ~DisplayPanel() override = default;
 
-    TrafficInspector *inspector() const { return traffic; }
+    TrafficInspector* inspector() const {
+        return traffic;
+    }
     // Message display operations
     void appendReceivedMessage(const QString &message, bool isServerMessage = false);
     void appendSentMessage(const QString &message);
@@ -59,7 +62,7 @@ private:
     void setupAccessibility();
 
     // UI Components
-    TrafficInspector *traffic;
+    TrafficInspector* traffic;
     QTabWidget *tabWidget;
     QTextEdit *clientReceivedEdit;
     QTextEdit *serverReceivedEdit;

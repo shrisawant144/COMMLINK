@@ -44,6 +44,7 @@ enum class DataFormatType {
 class DataMessage {
 public:
     DataFormatType type;  //!< Format type (JSON, XML, CSV, TEXT, BINARY, HEX)
+    QString decodeError;
     QByteArray rawBytes;
     QByteArray wireBytes;
     bool hasRawBytes = false;
@@ -55,12 +56,12 @@ public:
      * @param d Data variant
      */
     DataMessage(DataFormatType t = DataFormatType::TEXT, const QVariant& d = QVariant());
-    
+
     /**
      * @brief Serializes DataMessage to bytes for network transmission
-     * 
+     *
      * @return QByteArray containing serialized data
-     * 
+     *
      * @flow
      * Converts internal data (QVariant) to bytes based on format:
      * - JSON: QJsonDocument::toJson()
@@ -68,19 +69,19 @@ public:
      * - CSV: QString::toUtf8()
      * - TEXT: QString::toUtf8()
      * - BINARY: QByteArray (as-is)
-     * - HEX: QByteArray::toHex()
-     * 
+     * - HEX: QByteArray (raw bytes; hex is the input/display representation)
+     *
      * @note Called by network components before sending
      */
     QByteArray serialize() const;
-    
+
     /**
      * @brief Deserializes bytes to DataMessage
-     * 
+     *
      * @param bytes Raw bytes from network
      * @param type Expected data format type
      * @return DataMessage with deserialized data
-     * 
+     *
      * @flow
      * Converts bytes to internal data format:
      * - JSON: QJsonDocument::fromJson()
@@ -88,8 +89,8 @@ public:
      * - CSV: QString::fromUtf8()
      * - TEXT: QString::fromUtf8()
      * - BINARY: QByteArray (as-is)
-     * - HEX: QByteArray::fromHex()
-     * 
+     * - HEX: QByteArray (preserves received bytes)
+     *
      * @note Called by network components after receiving
      */
     static DataMessage deserialize(const QByteArray& bytes, DataFormatType type);
@@ -109,21 +110,21 @@ public:
      * - HEX: Hex string
      */
     QString toDisplayString() const;
-    
+
     /**
      * @brief Validates input string for given format
-     * 
+     *
      * @param input Input string to validate
      * @param type Format type to validate against
      * @return true if valid, false otherwise
-     * 
+     *
      * @flow
      * Validates format-specific syntax:
      * - JSON: Valid JSON syntax
-     * - XML: Non-empty string
+     * - XML: Well-formed XML
      * - CSV: Non-empty string
      * - TEXT: Always valid
-     * - HEX: Only hex characters (0-9, A-F)
+     * - HEX/BINARY: Complete hexadecimal bytes, with optional whitespace
      */
     static bool validateInput(const QString& input, DataFormatType type);
     

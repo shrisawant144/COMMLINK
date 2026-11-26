@@ -15,6 +15,9 @@ public:
     bool startServer(quint16 port, const QHostAddress& bindAddress = QHostAddress::Any);
     void stopServer();
     bool isListening() const;
+    quint16 localPort() const {
+        return m_server->serverPort();
+    }
     void setFormat(DataFormatType format) { m_format = format; }
     void setSSLEnabled(bool enabled) { m_sslEnabled = enabled; }
     bool isSSLEnabled() const { return m_sslEnabled; }
@@ -55,6 +58,7 @@ private:
     DataFormatType detectAcceptType(const QString& accept);
     QByteArray buildResponseBody(const HttpRequest& request, DataFormatType format);
     
+    qint64 queuedBytes = 0;
     QTcpServer *m_server;
     DataFormatType m_format;
     bool m_sslEnabled;

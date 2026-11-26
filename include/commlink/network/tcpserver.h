@@ -1,15 +1,16 @@
 #ifndef TCPSERVER_H
 #define TCPSERVER_H
 
-#include <QObject>
+#include "../core/dataformat.h"
 #include "../core/streamframer.h"
+
+#include <QList>
+#include <QMap>
+#include <QObject>
+#include <QSslSocket>
 #include <QTcpServer>
 #include <QTcpSocket>
-#include <QSslSocket>
-#include <QList>
 #include <QTimer>
-#include <QMap>
-#include "../core/dataformat.h"
 
 class TcpServer : public QObject {
     Q_OBJECT
@@ -28,7 +29,7 @@ public:
     void setIdleTimeout(int seconds) { m_idleTimeout = seconds; }
     int getIdleTimeout() const { return m_idleTimeout; }
 
-    void setFraming(StreamFramer::Mode mode, const QByteArray &delimiter = "\n");
+    void setFraming(StreamFramer::Mode mode, const QByteArray& delimiter = "\n");
     void setKeepAlive(bool enabled);
     quint16 localPort() const;
 
@@ -46,7 +47,7 @@ private slots:
 
 private:
     StreamFramer m_framing;
-    QMap<QTcpSocket *, StreamFramer> m_framers;
+    QMap<QTcpSocket*, StreamFramer> m_framers;
     bool m_keepAlive = false;
     QTcpServer *m_server;
     QList<QTcpSocket*> m_clients;

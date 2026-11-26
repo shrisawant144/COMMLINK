@@ -10,6 +10,7 @@ UdpServer::UdpServer(QObject *parent)
 bool UdpServer::startServer(quint16 port, const QHostAddress& bindAddress) {
     // Close existing socket if bound
     if (m_socket->state() == QAbstractSocket::BoundState) {
+        peers.clear();
         m_socket->close();
     }
     
@@ -23,6 +24,7 @@ bool UdpServer::startServer(quint16 port, const QHostAddress& bindAddress) {
 }
 
 void UdpServer::stopServer() {
+    peers.clear();
     m_socket->close();
     m_listening = false;
 }
@@ -53,6 +55,15 @@ void UdpServer::onReadyRead() {
         DataMessage msg = DataMessage::deserialize(buffer, m_format);
         QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
         QString source = sender.toString() + ":" + QString::number(senderPort);
+        if (!peers.contains(source) && peers.size() < 100) {
+            peers[source] = qMakePair(sender, senderPort);
+            emit peerDiscovered(source);
+        }
         emit messageReceived(msg, source, timestamp);
     }
+}
+
+void UdpServer::sendToAll(const DataMessage& message) {
+    for (auto it = peers.begin(); it != peers.end(); ++it)
+        sendTo(it.value().first, it.value().second, message);
 }

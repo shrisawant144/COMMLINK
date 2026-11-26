@@ -1,6 +1,8 @@
 #include "commlink/network/httpclient.h"
-#include <QNetworkRequest>
+
 #include <QDateTime>
+#include <QNetworkRequest>
+#include <QRegularExpression>
 #include <QTimer>
 
 HttpClient::HttpClient(QObject *parent)
@@ -15,6 +17,10 @@ HttpClient::HttpClient(QObject *parent)
 }
 
 void HttpClient::sendRequest(const QString& url, Method method, const DataMessage& message) {
+    if (activeReplies.size() >= 16 || !headersValid) {
+        emit errorOccurred("HTTP request limit reached or headers are invalid");
+        return;
+    }
     QNetworkRequest request = buildRequest(url);
     QByteArray data = message.serialize();
     
@@ -47,17 +53,23 @@ void HttpClient::sendRequest(const QString& url, Method method, const DataMessag
             break;
     }
 
-    if (reply != nullptr && m_timeout > 0) {
-        QTimer::singleShot(m_timeout, reply, &QNetworkReply::abort);
-    }
+    if (reply)
+        watchReply(reply);
 }
 
 void HttpClient::addHeader(const QString& key, const QString& value) {
+    if (!QRegularExpression("^[!#$%&'*+.^_`|~0-9A-Za-z-]+$").match(key).hasMatch() ||
+        value.contains('\r') || value.contains('\n')) {
+        headersValid = false;
+        emit errorOccurred("Invalid HTTP header");
+        return;
+    }
     m_headers[key] = value;
 }
 
 void HttpClient::clearHeaders() {
     m_headers.clear();
+    headersValid = true;
 }
 
 QNetworkRequest HttpClient::buildRequest(const QString& url) {
@@ -102,67 +114,84 @@ QString HttpClient::methodToString(Method method) {
     }
 }
 
+void HttpClient::watchReply(QNetworkReply* reply, bool polling) {
+    activeReplies.insert(reply);
+    reply->setProperty("polling", polling);
+    reply->setProperty("started", QDateTime::currentMSecsSinceEpoch());
+    QTimer::singleShot(polling ? m_pollTimeout : m_timeout, reply, [reply] {
+        if (!reply->isFinished()) {
+            reply->setProperty("timedOut", true);
+            reply->abort();
+        }
+    });
+    connect(reply, &QNetworkReply::readyRead, this, [this, reply] {
+        auto& body = replyBodies[reply];
+        const auto bytes = reply->readAll();
+        if (body.size() + bytes.size() > 8 * 1024 * 1024) {
+            reply->setProperty("oversized", true);
+            reply->abort();
+            return;
+        }
+        body += bytes;
+    });
+}
 void HttpClient::onReplyFinished(QNetworkReply* reply) {
-    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    QString source = reply->url().toString();
-    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-
-    if (reply->error() == QNetworkReply::NoError) {
-        // Reset error counter on successful response
-        if (m_isPolling) {
-            m_consecutiveErrors = 0;
-        }
-        
-        QByteArray data = reply->readAll();
-        
-        // Detect format from Content-Type header
-        DataFormatType responseFormat = m_format;
-        QVariant contentTypeVar = reply->header(QNetworkRequest::ContentTypeHeader);
-        if (contentTypeVar.isValid()) {
-            QString contentType = contentTypeVar.toString().toLower();
-            // Remove charset and other parameters
-            contentType = contentType.split(';').first().trimmed();
-            
-            if (contentType == "application/json") {
-                responseFormat = DataFormatType::JSON;
-            } else if (contentType == "application/xml" || contentType == "text/xml") {
-                responseFormat = DataFormatType::XML;
-            } else if (contentType == "text/csv") {
-                responseFormat = DataFormatType::CSV;
-            } else if (contentType == "text/plain") {
-                responseFormat = DataFormatType::TEXT;
-            } else if (contentType == "application/octet-stream") {
-                responseFormat = DataFormatType::BINARY;
-            }
-        }
-        
-        DataMessage msg = DataMessage::deserialize(data, responseFormat);
-        
-        QString statusInfo = QString(" [HTTP %1]").arg(statusCode);
-        emit responseReceived(msg, source + statusInfo, timestamp);
-    } else {
-        // Handle errors
-        if (m_isPolling) {
-            m_consecutiveErrors++;
-            if (m_consecutiveErrors >= MAX_POLL_ERRORS) {
-                stopPolling();
-                QString reason = QString("Server not responding after %1 attempts").arg(MAX_POLL_ERRORS);
-                emit pollingStopped(reason);
-                emit errorOccurred(QString("Polling stopped: %1").arg(reason));
-                return;
-            }
-        }
-        
-        QString error = QString("HTTP Error %1: %2").arg(statusCode).arg(reply->errorString());
-        emit errorOccurred(error);
+    activeReplies.remove(reply);
+    const QByteArray body = replyBodies.take(reply) + reply->readAll();
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    QVariantMap headers;
+    for (const auto& pair : reply->rawHeaderPairs())
+        headers[QString::fromLatin1(pair.first)] = QString::fromLatin1(pair.second);
+    QString error;
+    if (reply->property("oversized").toBool())
+        error = "HTTP response exceeds 8 MiB";
+    else if (reply->property("timedOut").toBool())
+        error = "HTTP request timed out";
+    else if (reply->error() != QNetworkReply::NoError)
+        error = QString("HTTP %1: %2").arg(status).arg(reply->errorString());
+    const qint64 elapsed = qMax(qint64(0), QDateTime::currentMSecsSinceEpoch() -
+                                               reply->property("started").toLongLong());
+    emit responseInspected(body, reply->url().toString(), status, headers, elapsed, error);
+    if (!reply->property("oversized").toBool() &&
+        (status > 0 || reply->error() == QNetworkReply::NoError)) {
+        DataFormatType format = m_format;
+        const auto contentType = reply->header(QNetworkRequest::ContentTypeHeader)
+                                     .toString()
+                                     .toLower()
+                                     .split(';')
+                                     .first()
+                                     .trimmed();
+        if (contentType == "application/json")
+            format = DataFormatType::JSON;
+        else if (contentType == "application/xml" || contentType == "text/xml")
+            format = DataFormatType::XML;
+        else if (contentType == "application/octet-stream")
+            format = DataFormatType::BINARY;
+        else if (contentType == "text/plain")
+            format = DataFormatType::TEXT;
+        else if (contentType == "text/csv")
+            format = DataFormatType::CSV;
+        emit responseReceived(DataMessage::deserialize(body, format),
+                              reply->url().toString() + QString(" [HTTP %1]").arg(status),
+                              QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
     }
-    
-    // Don't auto-disconnect after each request - HTTP can send multiple requests
-    // Only disconnect when explicitly called via disconnect()
+    const bool polling = reply->property("polling").toBool();
     reply->deleteLater();
+    if (!error.isEmpty()) {
+        emit errorOccurred(error);
+        if (polling && m_isPolling && ++m_consecutiveErrors >= MAX_POLL_ERRORS) {
+            stopPolling();
+            emit pollingStopped(error);
+        }
+    } else if (polling)
+        m_consecutiveErrors = 0;
 }
 
 void HttpClient::disconnect() {
+    stopPolling();
+    const auto replies = activeReplies;
+    for (auto* reply : replies)
+        reply->abort();
     if (m_connected) {
         m_connected = false;
         emit disconnected();
@@ -206,15 +235,17 @@ void HttpClient::onPollTimeout() {
 }
 
 void HttpClient::sendPollRequest() {
+    for (auto* reply : activeReplies)
+        if (reply->property("polling").toBool())
+            return;
     if (!m_pollUrl.isEmpty()) {
         // Always use GET for polling requests
         QNetworkRequest request = buildRequest(m_pollUrl);
         
         // Set custom timeout for polling
         QNetworkReply* reply = m_manager->get(request);
-        
-        if (reply && m_pollTimeout > 0) {
-            QTimer::singleShot(m_pollTimeout, reply, &QNetworkReply::abort);
-        }
+
+        if (reply)
+            watchReply(reply, true);
     }
 }

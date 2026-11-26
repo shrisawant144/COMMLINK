@@ -168,6 +168,8 @@ This section is intentionally explicit because it matters for contributor expect
 ### Current state
 
 - `BUILD_TESTS=ON` enables `UILayoutTest`, a headless check for overlapping controls, header clearance, tab navigation, and scroll access across both themes, supported window sizes, and client protocols.
+- `TransportTest` covers fragmented/coalesced TCP frames, routing and binary round trips. `ProtocolTest` exercises HTTP errors/timeouts, bounded parsing, UDP and WebSocket ping/binary messages.
+- `WorkflowTest` saves and reopens a workspace, connects through loopback, sends and inspects original bytes, then replays with assertions. `WorkspaceTest`, `ReplayTest` and `TrafficTest` cover migration/persistence, assertion failure/timeout/cancellation and retention limits.
 - `StartupEnvironmentTest` checks inherited Snap schema paths with and without Snap marker variables, plus preservation of bundled and explicitly configured schemas.
 - Run it with `ctest --test-dir build --output-on-failure` after building.
 - The older sources under `tests/unit/` still have their CMake targets commented out. Some target older APIs and should be refreshed before enabling them.
@@ -257,3 +259,15 @@ Before cutting a release or preparing the repository for wider reuse, verify:
 - Documentation matches current behavior
 - Changelog and version files are updated
 - Legacy versus modular UI behavior is clearly described where relevant
+
+## Implementation branches
+
+The work is staged in dependent local branches. Each feature branch includes the earlier stages:
+
+- `fix/ui-and-startup`: panel/header alignment and Linux desktop startup compatibility.
+- `feature/transport-correctness`: original payload preservation, TCP buffering/framing and typed destinations.
+- `feature/workspaces-and-inspector`: named workspaces, variable expansion, traffic inspection and non-destructive history migration.
+- `feature/replay-and-protocol-controls`: replay/assertions, HTTP/WS/UDP controls, bounded retention, packaging and CI.
+- `integration/professional-workbench`: all completed stages, ready to run and review together.
+
+The UI and core tests run headlessly. Transport and workflow tests require permission to bind loopback sockets. Continuous integration is configured for Linux; other desktop platforms still require native build and startup verification.

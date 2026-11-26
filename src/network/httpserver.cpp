@@ -1,6 +1,10 @@
 #include "commlink/network/httpserver.h"
+
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QRegularExpression>
+#include <QTimer>
 
 HttpServer::HttpServer(QObject *parent)
     : QObject(parent), m_format(DataFormatType::JSON), m_sslEnabled(false) {
@@ -30,6 +34,9 @@ void HttpServer::stopServer() {
         socket->deleteLater();
     }
     m_clients.clear();
+    m_requestBuffers.clear();
+    m_messageQueue.clear();
+    queuedBytes = 0;
     m_server->close();
 }
 
@@ -47,6 +54,12 @@ void HttpServer::onNewConnection() {
     }
     QTcpSocket *socket = m_server->nextPendingConnection();
     QString clientInfo = socket->peerAddress().toString() + ":" + QString::number(socket->peerPort());
+    auto* idle = new QTimer(socket);
+    idle->setSingleShot(true);
+    idle->setInterval(30000);
+    idle->start();
+    connect(socket, &QTcpSocket::readyRead, idle, QOverload<>::of(&QTimer::start));
+    connect(idle, &QTimer::timeout, socket, &QTcpSocket::disconnectFromHost);
     m_clients[socket] = clientInfo;
     connect(socket, &QTcpSocket::readyRead, this, &HttpServer::onReadyRead);
     connect(socket, &QTcpSocket::disconnected, this, &HttpServer::onClientDisconnected);
@@ -63,6 +76,11 @@ void HttpServer::onReadyRead() {
         return;
     }
     m_requestBuffers[socket].append(data);
+    if (m_requestBuffers[socket].size() > 8 * 1024 * 1024 + 65536) {
+        socket->write(buildResponse(413, "Request too large", DataFormatType::TEXT));
+        socket->disconnectFromHost();
+        return;
+    }
     // Try to parse complete requests
     while (tryParseCompleteRequest(socket)) {
         // Continue processing if there are more complete requests
@@ -75,6 +93,8 @@ void HttpServer::onClientDisconnected() {
     
     QString clientInfo = m_clients.take(socket);
     m_requestBuffers.remove(socket);
+    for (const auto &message : m_messageQueue.value(socket)) queuedBytes -= message.serialize().size();
+    m_messageQueue.remove(socket);
     emit clientDisconnected(clientInfo);
     socket->deleteLater();
 }
@@ -107,8 +127,10 @@ DataFormatType HttpServer::detectAcceptType(const QString& accept) {
 QByteArray HttpServer::buildResponseBody(const HttpRequest& request, DataFormatType format) {
     switch (format) {
         case DataFormatType::JSON: {
-            QString jsonResponse = R"({"status":"received","method":")" + request.method + R"(","path":")" + request.path + R"("})";
-            return jsonResponse.toUtf8();
+            return QJsonDocument(QJsonObject{{"status", "received"},
+                                             {"method", request.method},
+                                             {"path", request.path}})
+                .toJson(QJsonDocument::Compact);
         }
         case DataFormatType::XML: {
             QString xmlResponse = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<response>\n  <status>received</status>\n  <method>" + 
@@ -131,104 +153,75 @@ QByteArray HttpServer::buildResponseBody(const HttpRequest& request, DataFormatT
 }
 
 bool HttpServer::tryParseCompleteRequest(QTcpSocket* socket) {
-    QByteArray& buffer = m_requestBuffers[socket];
-    
-    // Find the end of headers (\r\n\r\n)
-    int headerEnd = buffer.indexOf("\r\n\r\n");
-    if (headerEnd == -1) {
-        return false; // Headers not complete yet
-    }
-    
-    // Parse headers
-    QString headerData = QString::fromUtf8(buffer.left(headerEnd));
-    QStringList lines = headerData.split("\r\n");
-    
-    if (lines.isEmpty()) {
+    auto& buffer = m_requestBuffers[socket];
+    auto reject = [this, socket](int status, const QByteArray& reason) {
+        emit errorOccurred(QString::fromLatin1(reason));
+        socket->write(buildResponse(status, reason, DataFormatType::TEXT));
+        socket->disconnectFromHost();
         return false;
-    }
-    
-    // Parse request line
-    QStringList requestLine = lines[0].split(" ");
-    if (requestLine.size() < 2) {
-        return false;
-    }
-    
+    };
+    const int headerEnd = buffer.indexOf("\r\n\r\n");
+    if (headerEnd < 0)
+        return buffer.size() > 65536 ? reject(431, "Headers too large") : false;
+    if (headerEnd > 65536)
+        return reject(431, "Headers too large");
+    const auto lines = buffer.left(headerEnd).split('\n');
+    const auto first = lines.first().trimmed().split(' ');
+    if (first.size() != 3 || !first[2].startsWith("HTTP/1."))
+        return reject(400, "Malformed HTTP request");
     HttpRequest request;
-    request.method = requestLine[0];
-    request.path = requestLine[1];
-    
-    // Parse headers
+    request.method = QString::fromLatin1(first[0]);
+    request.path = QString::fromUtf8(first[1]);
     for (int i = 1; i < lines.size(); ++i) {
-        QString line = lines[i];
-        int colonIndex = line.indexOf(':');
-        if (colonIndex != -1) {
-            QString key = line.left(colonIndex).trimmed();
-            QString value = line.mid(colonIndex + 1).trimmed();
-            request.headers[key] = value;
-        }
+        const auto line = lines[i].trimmed();
+        const int colon = line.indexOf(':');
+        if (colon <= 0)
+            return reject(400, "Malformed HTTP header");
+        const auto name = QString::fromLatin1(line.left(colon)).toLower();
+        const auto value = QString::fromLatin1(line.mid(colon + 1)).trimmed();
+        if (request.headers.contains(name) && name == "content-length")
+            return reject(400, "Duplicate content length");
+        request.headers[name] = value;
     }
-    
-    // Check for Content-Length
-    int contentLength = 0;
-    if (request.headers.contains("Content-Length")) {
-        contentLength = request.headers["Content-Length"].toInt();
-    }
-    
-    int bodyStart = headerEnd + 4; // After \r\n\r\n
-    if (buffer.size() < bodyStart + contentLength) {
-        return false; // Body not complete yet
-    }
-    
-    // Extract body
-    request.body = buffer.mid(bodyStart, contentLength);
-    
-    // Remove processed request from buffer
-    buffer.remove(0, bodyStart + contentLength);
-    
-    // Process the request
-    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    QString source = m_clients[socket] + " [" + request.method + " " + request.path + "]";
-    
-    // Handle OPTIONS request for CORS preflight
+    if (request.headers.contains("transfer-encoding"))
+        return reject(501, "Transfer encoding is not supported by this mock server");
+    bool lengthOK = true;
+    const qint64 length = request.headers.contains("content-length")
+                              ? request.headers["content-length"].toLongLong(&lengthOK)
+                              : 0;
+    if (!lengthOK || length < 0)
+        return reject(400, "Invalid content length");
+    if (length > 8 * 1024 * 1024)
+        return reject(413, "Body too large");
+    const int bodyStart = headerEnd + 4;
+    if (buffer.size() < bodyStart + length)
+        return false;
+    request.body = buffer.mid(bodyStart, int(length));
+    buffer.remove(0, bodyStart + int(length));
     if (request.method == "OPTIONS") {
-        QByteArray response = buildCORSPreflightResponse();
-        socket->write(response);
-        socket->flush();
+        socket->write(buildCORSPreflightResponse());
         return true;
     }
-    
-    // Detect format from Content-Type header if available
-    DataFormatType requestFormat = m_format;
-    if (request.headers.contains("Content-Type")) {
-        requestFormat = detectContentType(request.headers["Content-Type"]);
-    }
-    
-    DataMessage msg = DataMessage::deserialize(request.body, requestFormat);
-    emit messageReceived(msg, source, timestamp);
-    
-    // Create response in the same format as the request (or use Accept header if provided)
-    DataFormatType responseFormat = requestFormat;
-    if (request.headers.contains("Accept")) {
-        responseFormat = detectAcceptType(request.headers["Accept"]);
-    }
-    
-    // Check if there are queued messages for this client
-    QByteArray responseBody;
-    if (m_messageQueue.contains(socket) && !m_messageQueue[socket].isEmpty()) {
-        // Send queued message instead of standard response
-        DataMessage queuedMsg = m_messageQueue[socket].takeFirst();
-        responseBody = queuedMsg.serialize();
-        responseFormat = queuedMsg.type;
-    } else {
-        // Build standard response message
-        responseBody = buildResponseBody(request, responseFormat);
-    }
-    
-    static const int HTTP_OK = 200;
-    QByteArray response = buildResponse(HTTP_OK, responseBody, responseFormat);
+    const auto format = request.headers.contains("content-type")
+                            ? detectContentType(request.headers["content-type"])
+                            : m_format;
+    emit messageReceived(DataMessage::deserialize(request.body, format),
+                         m_clients[socket] + " [" + request.method + " " + request.path + "]",
+                         QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
+    auto responseFormat =
+        request.headers.contains("accept") ? detectAcceptType(request.headers["accept"]) : format;
+    QByteArray body;
+    if (request.method != "HEAD" && !m_messageQueue[socket].isEmpty()) {
+        const auto message = m_messageQueue[socket].takeFirst();
+        body = message.serialize();
+        queuedBytes -= body.size();
+        responseFormat = message.type;
+    } else
+        body = buildResponseBody(request, responseFormat);
+    auto response = buildResponse(200, body, responseFormat);
+    if (request.method == "HEAD" && !body.isEmpty())
+        response.chop(body.size());
     socket->write(response);
-    socket->flush();
-    
     return true;
 }
 
@@ -287,29 +280,14 @@ QByteArray HttpServer::buildCORSPreflightResponse() {
 }
 
 void HttpServer::sendToAll(const DataMessage& message) {
-    // Use the message's original format
-    QByteArray serialized = message.serialize();
-    QByteArray response = buildResponse(200, serialized, message.type);
-    
-    for (QTcpSocket* client : m_clients.keys()) {
-        if (client && client->isValid() && client->state() == QAbstractSocket::ConnectedState) {
-            client->write(response);
-            client->flush();
-        }
-    }
+    queueMessageForAll(message);
 }
-
 void HttpServer::sendToClient(QTcpSocket* client, const DataMessage& message) {
-    if (!client || !client->isValid() || client->state() != QAbstractSocket::ConnectedState) {
-        emit errorOccurred("Cannot send to client: invalid or disconnected socket");
+    if (!m_clients.contains(client)) {
+        emit errorOccurred("Client is not connected");
         return;
     }
-    
-    // Use the message's original format
-    QByteArray serialized = message.serialize();
-    QByteArray response = buildResponse(200, serialized, message.type);
-    client->write(response);
-    client->flush();
+    queueMessageForClient(client, message);
 }
 
 QTcpSocket* HttpServer::findClientByAddress(const QString& addressPort) {
@@ -321,20 +299,16 @@ QTcpSocket* HttpServer::findClientByAddress(const QString& addressPort) {
     return nullptr;
 }
 
-void HttpServer::queueMessageForClient(QTcpSocket* client, const DataMessage& message) {
-    if (!client) {
-        return;
+void HttpServer::queueMessageForClient(QTcpSocket *client, const DataMessage &message) {
+    const int bytes = message.serialize().size();
+    if (!m_clients.contains(client)) { emit errorOccurred("HTTP client is not connected"); return; }
+    if (m_messageQueue[client].size() >= 100 || bytes > 8 * 1024 * 1024 || queuedBytes + bytes > 32 * 1024 * 1024) {
+        emit errorOccurred("HTTP outgoing queue limit reached"); return;
     }
-    
-    // Keep the message in its original format
-    m_messageQueue[client].append(message);
+    m_messageQueue[client].append(message); queuedBytes += bytes;
 }
-
-void HttpServer::queueMessageForAll(const DataMessage& message) {
-    // Keep the message in its original format
-    for (QTcpSocket* client : m_clients.keys()) {
-        m_messageQueue[client].append(message);
-    }
+void HttpServer::queueMessageForAll(const DataMessage &message) {
+    for (auto *client : m_clients.keys()) queueMessageForClient(client, message);
 }
 
 bool HttpServer::hasQueuedMessages(QTcpSocket* client) const {

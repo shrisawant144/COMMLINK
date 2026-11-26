@@ -108,12 +108,14 @@ void ServerPanel::setupUI()
     sendModeCombo->addItem("Send to Selected Client", SelectedClient);
     sendModeCombo->setMinimumHeight(MIN_HEIGHT);
     sendModeCombo->setToolTip("Select broadcast to all clients or send to specific client");
-    connect(sendModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, [this](int idx) {
-                targetClientCombo->setEnabled(sendModeCombo->itemData(idx).toInt() == SelectedClient); // Enable when "Send to Selected" is chosen
+    connect(sendModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+            [this](int idx) {
+                targetClientCombo->setEnabled(
+                    sendModeCombo->itemData(idx).toInt() ==
+                    SelectedClient); // Enable when "Send to Selected" is chosen
                 emit sendModeChanged(sendModeCombo->currentText());
             });
-    
+
     targetClientCombo = new QComboBox();
     targetClientCombo->setMinimumHeight(MIN_HEIGHT);
     targetClientCombo->setEnabled(false);
@@ -382,5 +384,9 @@ void ServerPanel::populateBindAddresses()
     }
 }
 
-ServerPanel::SendTarget ServerPanel::sendTarget() const { return static_cast<SendTarget>(sendModeCombo->currentData().toInt()); }
-void ServerPanel::setSendTarget(SendTarget target) { sendModeCombo->setCurrentIndex(sendModeCombo->findData(target)); }
+ServerPanel::SendTarget ServerPanel::sendTarget() const {
+    return static_cast<SendTarget>(sendModeCombo->currentData().toInt());
+}
+void ServerPanel::setSendTarget(SendTarget target) {
+    sendModeCombo->setCurrentIndex(sendModeCombo->findData(target));
+}
