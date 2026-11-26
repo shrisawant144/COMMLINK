@@ -2,6 +2,7 @@
 #define TCPCLIENT_H
 
 #include <QObject>
+#include "../core/streamframer.h"
 #include <QTcpSocket>
 #include <QHostAddress>
 #include <QTimer>
@@ -95,6 +96,10 @@ public:
      */
     void setFormat(DataFormatType format) { m_format = format; }
 
+    void setFraming(StreamFramer::Mode mode, const QByteArray &delimiter = "\n");
+    void setKeepAlive(bool enabled);
+    quint16 localPort() const;
+
 signals:
     void connected();
     void disconnected();
@@ -109,6 +114,7 @@ private slots:
     void onConnectionTimeout();
 
 private:
+    StreamFramer m_framer;
     QTcpSocket *m_socket;
     QTimer *m_connectionTimer;
     DataFormatType m_format;

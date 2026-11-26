@@ -5,6 +5,10 @@ add_test(NAME UILayoutTest COMMAND test_layout)
 set_tests_properties(UILayoutTest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 # Unit tests
+find_package(Qt5 REQUIRED COMPONENTS Test)
+add_executable(test_transport unit/test_transport.cpp)
+target_link_libraries(test_transport PRIVATE commlink_network Qt5::Test)
+add_test(NAME TransportTest COMMAND test_transport)
 add_executable(test_startupenvironment unit/test_startupenvironment.cpp
     ${CMAKE_SOURCE_DIR}/src/startupenvironment.cpp)
 target_include_directories(test_startupenvironment PRIVATE ${CMAKE_SOURCE_DIR}/src)

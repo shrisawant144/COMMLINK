@@ -16,6 +16,8 @@ TcpClient::TcpClient(QObject *parent)
 }
 
 void TcpClient::connectToHost(const QString& host, quint16 port) {
+    m_socket->abort();
+    m_framer.reset();
     m_socket->connectToHost(host, port);
     m_connectionTimer->start(CONNECTION_TIMEOUT_MS);
 }
@@ -27,15 +29,16 @@ void TcpClient::disconnect() {
 }
 
 void TcpClient::sendMessage(const DataMessage& message) {
-    QByteArray data = message.serialize();
+    QByteArray data = m_framer.encode(message.serialize());
+    if (!m_connected || message.serialize().size() > StreamFramer::MaximumPayload || (m_framer.mode == StreamFramer::Delimiter && m_framer.delimiter.isEmpty())) {
+        emit errorOccurred("TCP client is not connected or payload is too large"); return;
+    }
     qint64 bytesWritten = m_socket->write(data);
     if (bytesWritten == -1) {
         emit errorOccurred("Failed to write data: " + m_socket->errorString());
         return;
     }
-    if (!m_socket->flush()) {
-        emit errorOccurred("Failed to flush socket");
-    }
+    m_socket->flush();
 }
 
 bool TcpClient::isConnected() const {
@@ -55,11 +58,14 @@ void TcpClient::onDisconnected() {
 }
 
 void TcpClient::onReadyRead() {
-    QByteArray data = m_socket->readAll();
-    DataMessage msg = DataMessage::deserialize(data, m_format);
-    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    QString source = m_socket->peerAddress().toString() + ":" + QString::number(m_socket->peerPort());
-    emit messageReceived(msg, source, timestamp);
+    const auto frames = m_framer.feed(m_socket->readAll());
+    for (const auto &frame : frames) {
+        DataMessage msg = DataMessage::deserialize(frame.payload, m_format);
+        msg.wireBytes = frame.wire;
+        emit messageReceived(msg, m_socket->peerAddress().toString() + ":" + QString::number(m_socket->peerPort()),
+                             QDateTime::currentDateTime().toString(Qt::ISODateWithMs));
+    }
+    if (!m_framer.error.isEmpty()) { emit errorOccurred(m_framer.error); m_socket->abort(); }
 }
 
 void TcpClient::onError(QAbstractSocket::SocketError error) {
@@ -74,3 +80,9 @@ void TcpClient::onConnectionTimeout() {
         emit errorOccurred("Connection timeout");
     }
 }
+
+void TcpClient::setFraming(StreamFramer::Mode mode, const QByteArray &delimiter) {
+    m_framer.reset(); m_framer.mode = mode; m_framer.delimiter = delimiter;
+}
+void TcpClient::setKeepAlive(bool enabled) { m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, enabled ? 1 : 0); }
+quint16 TcpClient::localPort() const { return m_socket->localPort(); }

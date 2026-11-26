@@ -608,15 +608,17 @@ void MainWindow::onSendRequested()
     
     QVariant parsedData = DataMessage::parseInput(messageText, format);
     DataMessage msg(format, parsedData);
+    if (format != DataFormatType::BINARY && format != DataFormatType::HEX)
+        msg = DataMessage::deserialize(messageText.toUtf8(), format);
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
     
-    QString sendMode = serverPanel->getSendMode();
+    auto sendTarget = serverPanel->sendTarget();
     
     // SERVER-SIDE SENDING
-    if (sendMode.contains("Broadcast") || sendMode.contains("Selected")) {
+    if (sendTarget != ServerPanel::RemoteServer) {
         QString serverProto = serverPanel->getProtocol();
         
-        if (sendMode.contains("Broadcast")) {
+        if (sendTarget == ServerPanel::Broadcast) {
             // BROADCAST TO ALL CLIENTS
             if (serverProto == "TCP Server" && tcpServer->isListening()) {
                 tcpServer->sendToAll(msg);
@@ -884,6 +886,7 @@ void MainWindow::onExportLogsRequested()
 void MainWindow::onDataReceived(const DataMessage &msg, const QString &source, const QString &timestamp)
 {
     receivedMessages.append(msg);
+    if (receivedMessages.size() > 2000) receivedMessages.removeFirst();
     
     // Determine protocol based on sender
     QString protocol = "Unknown";
@@ -1128,9 +1131,7 @@ void MainWindow::updateClientStatus()
     QString protocol = connectionPanel->getProtocol();
     statusPanel->setClientStatus(anyConnected ? QString("Connected (%1)").arg(protocol) : "Disconnected", anyConnected);
     
-    if (anyConnected) {
-        connectionPanel->setConnectionState(true);
-    }
+    connectionPanel->setConnectionState(anyConnected);
 }
 
 void MainWindow::updateServerStatus()
@@ -1150,14 +1151,14 @@ void MainWindow::updateSendButtonState()
     bool serverListening = tcpServer->isListening() || udpServer->isListening() || 
                           wsServer->isListening() || httpServer->isListening();
     
-    QString sendMode = serverPanel->getSendMode();
+    auto sendTarget = serverPanel->sendTarget();
     
     bool canSend = false;
-    if (sendMode.contains("Client")) {
+    if (sendTarget == ServerPanel::RemoteServer) {
         canSend = clientConnected || (connectionPanel->getProtocol() == "HTTP");
-    } else if (sendMode.contains("Broadcast")) {
+    } else if (sendTarget == ServerPanel::Broadcast) {
         canSend = serverListening && serverHasClients;
-    } else if (sendMode.contains("Selected")) {
+    } else if (sendTarget == ServerPanel::SelectedClient) {
         canSend = serverListening && !serverPanel->getTargetClient().isEmpty();
     }
     

@@ -26,7 +26,7 @@ bool WebSocketServer::startServer(quint16 port, const QHostAddress& bindAddress)
 }
 
 void WebSocketServer::stopServer() {
-    for (QWebSocket *client : m_clients) {
+    for (QWebSocket *client : QList<QWebSocket *>(m_clients)) {
         client->close();
         client->deleteLater();
     }
@@ -42,7 +42,7 @@ void WebSocketServer::sendToClient(QWebSocket* client, const DataMessage& messag
     if (!client || !m_clients.contains(client)) return;
     QByteArray data = message.serialize();
     bool success = false;
-    if (binary) {
+    if (binary || message.type == DataFormatType::BINARY || message.type == DataFormatType::HEX) {
         success = client->sendBinaryMessage(data) >= 0;
     } else {
         success = client->sendTextMessage(QString::fromUtf8(data)) >= 0;
@@ -65,7 +65,7 @@ void WebSocketServer::sendToAll(const DataMessage& message, bool binary) {
         if (!client) continue;
         
         bool success = false;
-        if (binary) {
+        if (binary || message.type == DataFormatType::BINARY || message.type == DataFormatType::HEX) {
             success = client->sendBinaryMessage(data) >= 0;
         } else {
             success = client->sendTextMessage(QString::fromUtf8(data)) >= 0;

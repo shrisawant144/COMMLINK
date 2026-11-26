@@ -32,12 +32,13 @@ bool TcpServer::startServer(quint16 port, const QHostAddress& bindAddress) {
 }
 
 void TcpServer::stopServer() {
-    for (QTcpSocket *client : m_clients) {
+    for (QTcpSocket *client : QList<QTcpSocket *>(m_clients)) {
         client->disconnectFromHost();
         client->deleteLater();
     }
     m_clients.clear();
     m_lastActivity.clear();
+    m_framers.clear();
     m_server->close();
 }
 
@@ -47,30 +48,28 @@ bool TcpServer::isListening() const {
 
 
 void TcpServer::sendToAll(const DataMessage& message) {
-    QByteArray data = message.serialize();
-    for (QTcpSocket *client : m_clients) {
+    if (message.serialize().size() > StreamFramer::MaximumPayload) { emit errorOccurred("TCP payload exceeds 8 MiB"); return; }
+    QByteArray data = m_framing.encode(message.serialize());
+    for (QTcpSocket *client : QList<QTcpSocket *>(m_clients)) {
         qint64 bytesWritten = client->write(data);
         if (bytesWritten == -1) {
             emit errorOccurred("Failed to write data to client: " + client->peerAddress().toString());
             continue;
         }
-        if (!client->flush()) {
-            emit errorOccurred("Failed to flush data to client: " + client->peerAddress().toString());
-        }
+        client->flush();
     }
 }
 
 void TcpServer::sendToClient(QTcpSocket* client, const DataMessage& message) {
     if (!client || !m_clients.contains(client)) return;
-    QByteArray data = message.serialize();
+    if (message.serialize().size() > StreamFramer::MaximumPayload) { emit errorOccurred("TCP payload exceeds 8 MiB"); return; }
+    QByteArray data = m_framing.encode(message.serialize());
     qint64 bytesWritten = client->write(data);
     if (bytesWritten == -1) {
         emit errorOccurred("Failed to write data to client: " + client->peerAddress().toString());
         return;
     }
-    if (!client->flush()) {
-        emit errorOccurred("Failed to flush data to client: " + client->peerAddress().toString());
-    }
+    client->flush();
 }
 
 QTcpSocket* TcpServer::findClientByAddress(const QString& addressPort) {
@@ -95,6 +94,8 @@ void TcpServer::onNewConnection() {
     connect(client, &QTcpSocket::readyRead, this, &TcpServer::onReadyRead);
     connect(client, &QTcpSocket::disconnected, this, &TcpServer::onClientDisconnected);
     m_clients.append(client);
+    m_framers.insert(client, m_framing);
+    client->setSocketOption(QAbstractSocket::KeepAliveOption, m_keepAlive ? 1 : 0);
     m_lastActivity[client] = QDateTime::currentSecsSinceEpoch();
     QString clientInfo = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
     emit clientConnected(clientInfo);
@@ -106,15 +107,15 @@ void TcpServer::onReadyRead() {
     
     m_lastActivity[client] = QDateTime::currentSecsSinceEpoch();
     
-    QByteArray data = client->readAll();
-    if (data.size() > MAX_BUFFER_SIZE) {
-        emit errorOccurred("Buffer overflow: received data exceeds max buffer size.");
-        return;
+    auto &framer = m_framers[client];
+    const auto frames = framer.feed(client->readAll());
+    for (const auto &frame : frames) {
+        DataMessage msg = DataMessage::deserialize(frame.payload, m_format);
+        msg.wireBytes = frame.wire;
+        emit messageReceived(msg, client->peerAddress().toString() + ":" + QString::number(client->peerPort()),
+                             QDateTime::currentDateTime().toString(Qt::ISODateWithMs));
     }
-    DataMessage msg = DataMessage::deserialize(data, m_format);
-    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    QString source = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
-    emit messageReceived(msg, source, timestamp);
+    if (!framer.error.isEmpty()) { emit errorOccurred(framer.error); client->abort(); }
 }
 
 void TcpServer::onClientDisconnected() {
@@ -124,6 +125,7 @@ void TcpServer::onClientDisconnected() {
     QString clientInfo = client->peerAddress().toString() + ":" + QString::number(client->peerPort());
     m_clients.removeAll(client);
     m_lastActivity.remove(client);
+    m_framers.remove(client);
     
     emit clientDisconnected(clientInfo);
     client->deleteLater();
@@ -145,3 +147,13 @@ void TcpServer::checkIdleConnections() {
         client->disconnectFromHost();
     }
 }
+
+void TcpServer::setFraming(StreamFramer::Mode mode, const QByteArray &delimiter) {
+    m_framing.reset(); m_framing.mode = mode; m_framing.delimiter = delimiter;
+    for (auto &framer : m_framers) framer = m_framing;
+}
+void TcpServer::setKeepAlive(bool enabled) {
+    m_keepAlive = enabled;
+    for (auto *client : m_clients) client->setSocketOption(QAbstractSocket::KeepAliveOption, enabled ? 1 : 0);
+}
+quint16 TcpServer::localPort() const { return m_server->serverPort(); }

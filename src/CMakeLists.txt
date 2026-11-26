@@ -1,6 +1,7 @@
 # Core library
 add_library(commlink_core STATIC
     core/dataformat.cpp
+    core/streamframer.cpp
     core/filemanager.cpp
     core/exportmanager.cpp
     core/logger.cpp

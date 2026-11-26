@@ -103,13 +103,14 @@ void ServerPanel::setupUI()
     
     // Send mode controls
     sendModeCombo = new QComboBox();
-    sendModeCombo->addItem("Broadcast to All Clients", 1);
-    sendModeCombo->addItem("Send to Selected Client", 2);
+    sendModeCombo->addItem("Remote Server", RemoteServer);
+    sendModeCombo->addItem("Broadcast to All Clients", Broadcast);
+    sendModeCombo->addItem("Send to Selected Client", SelectedClient);
     sendModeCombo->setMinimumHeight(MIN_HEIGHT);
     sendModeCombo->setToolTip("Select broadcast to all clients or send to specific client");
     connect(sendModeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int idx) {
-                targetClientCombo->setEnabled(idx == 1); // Enable when "Send to Selected" is chosen
+                targetClientCombo->setEnabled(sendModeCombo->itemData(idx).toInt() == SelectedClient); // Enable when "Send to Selected" is chosen
                 emit sendModeChanged(sendModeCombo->currentText());
             });
     
@@ -380,3 +381,6 @@ void ServerPanel::populateBindAddresses()
         }
     }
 }
+
+ServerPanel::SendTarget ServerPanel::sendTarget() const { return static_cast<SendTarget>(sendModeCombo->currentData().toInt()); }
+void ServerPanel::setSendTarget(SendTarget target) { sendModeCombo->setCurrentIndex(sendModeCombo->findData(target)); }

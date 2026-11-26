@@ -23,7 +23,7 @@ void WebSocketClient::disconnect() {
 void WebSocketClient::sendMessage(const DataMessage& message) {
     QByteArray data = message.serialize();
     qint64 bytesSent = 0;
-    if (m_format == DataFormatType::BINARY) {
+    if (message.type == DataFormatType::BINARY || message.type == DataFormatType::HEX) {
         bytesSent = m_socket.sendBinaryMessage(data);
     } else {
         bytesSent = m_socket.sendTextMessage(QString::fromUtf8(data));

@@ -44,6 +44,9 @@ enum class DataFormatType {
 class DataMessage {
 public:
     DataFormatType type;  //!< Format type (JSON, XML, CSV, TEXT, BINARY, HEX)
+    QByteArray rawBytes;
+    QByteArray wireBytes;
+    bool hasRawBytes = false;
     QVariant data;        //!< Parsed data (QJsonDocument, QString, QByteArray, etc.)
 
     /**

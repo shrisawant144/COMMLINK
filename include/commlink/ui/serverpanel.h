@@ -22,6 +22,9 @@ public:
     explicit ServerPanel(QWidget *parent = nullptr);
     ~ServerPanel() override = default;
 
+    enum SendTarget { RemoteServer, Broadcast, SelectedClient };
+    SendTarget sendTarget() const;
+    void setSendTarget(SendTarget target);
     // Getters
     QString getProtocol() const;
     int getPort() const;

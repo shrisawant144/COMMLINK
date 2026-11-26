@@ -2,6 +2,7 @@
 #define TCPSERVER_H
 
 #include <QObject>
+#include "../core/streamframer.h"
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QSslSocket>
@@ -27,6 +28,10 @@ public:
     void setIdleTimeout(int seconds) { m_idleTimeout = seconds; }
     int getIdleTimeout() const { return m_idleTimeout; }
 
+    void setFraming(StreamFramer::Mode mode, const QByteArray &delimiter = "\n");
+    void setKeepAlive(bool enabled);
+    quint16 localPort() const;
+
 signals:
     void clientConnected(const QString& clientInfo);
     void clientDisconnected(const QString& clientInfo);
@@ -40,6 +45,9 @@ private slots:
     void checkIdleConnections();
 
 private:
+    StreamFramer m_framing;
+    QMap<QTcpSocket *, StreamFramer> m_framers;
+    bool m_keepAlive = false;
     QTcpServer *m_server;
     QList<QTcpSocket*> m_clients;
     QMap<QTcpSocket*, qint64> m_lastActivity;

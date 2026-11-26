@@ -11,6 +11,7 @@
 DataMessage::DataMessage(DataFormatType t, const QVariant& d) : type(t), data(d) {}
 
 QByteArray DataMessage::serialize() const {
+    if (hasRawBytes) return rawBytes;
     switch (type) {
     case DataFormatType::JSON: {
         if (data.canConvert<QJsonDocument>()) {
@@ -21,7 +22,7 @@ QByteArray DataMessage::serialize() const {
     }
     case DataFormatType::XML: {
         // Simple XML serialization
-        QString xml = "<message>" + data.toString() + "</message>";
+        QString xml = data.toString();
         return xml.toUtf8();
     }
     case DataFormatType::CSV: {
@@ -39,7 +40,7 @@ QByteArray DataMessage::serialize() const {
     }
     case DataFormatType::HEX: {
         if (data.type() == QVariant::ByteArray) {
-            return data.toByteArray().toHex();
+            return data.toByteArray();
         }
         return QByteArray();
     }
@@ -50,6 +51,9 @@ QByteArray DataMessage::serialize() const {
 
 DataMessage DataMessage::deserialize(const QByteArray& bytes, DataFormatType type) {
     DataMessage msg(type);
+    msg.rawBytes = bytes;
+    msg.wireBytes = bytes;
+    msg.hasRawBytes = true;
     switch (type) {
     case DataFormatType::JSON: {
         QJsonParseError error;
@@ -82,7 +86,7 @@ DataMessage DataMessage::deserialize(const QByteArray& bytes, DataFormatType typ
         break;
     }
     case DataFormatType::HEX: {
-        msg.data = QByteArray::fromHex(bytes);
+        msg.data = bytes;
         break;
     }
     }
@@ -145,17 +149,21 @@ bool DataMessage::validateInput(const QString& input, DataFormatType type) {
         QJsonDocument::fromJson(input.toUtf8(), &error);
         return error.error == QJsonParseError::NoError;
     }
-    case DataFormatType::XML:
-        return !input.isEmpty(); // Basic check
+    case DataFormatType::XML: {
+        QXmlStreamReader reader(input);
+        while (!reader.atEnd()) reader.readNext();
+        return !reader.hasError() && !input.trimmed().isEmpty();
+    }
     case DataFormatType::CSV:
         return !input.isEmpty();
     case DataFormatType::TEXT:
         return true;
     case DataFormatType::BINARY:
-        return !input.isEmpty(); // Assume hex input
     case DataFormatType::HEX: {
         QRegularExpression hexPattern("^[0-9A-Fa-f\\s]*$");
-        return !input.isEmpty() && hexPattern.match(input).hasMatch();
+        QString compact = input;
+        compact.remove(QRegularExpression("\\s"));
+        return !compact.isEmpty() && compact.size() % 2 == 0 && hexPattern.match(input).hasMatch();
     }
     default:
         return false;
