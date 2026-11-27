@@ -17,7 +17,11 @@ WebSocketClient::WebSocketClient(QObject *parent)
     connect(&m_socket, &QWebSocket::disconnected, this, &WebSocketClient::onDisconnected);
     connect(&m_socket, &QWebSocket::textMessageReceived, this, &WebSocketClient::onTextMessageReceived);
     connect(&m_socket, &QWebSocket::binaryMessageReceived, this, &WebSocketClient::onBinaryMessageReceived);
-    connect(&m_socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    connect(&m_socket, &QWebSocket::errorOccurred,
+#else
+    connect(&m_socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error),
+#endif
             this, &WebSocketClient::onError);
 }
 

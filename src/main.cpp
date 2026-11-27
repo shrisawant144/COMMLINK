@@ -5,11 +5,16 @@
 #include <QCommandLineParser>
 
 int main(int argc, char* argv[]) {
+#ifdef Q_OS_ANDROID
+    qputenv("ANDROID_OPENSSL_SUFFIX", "_3");
+#endif
     StartupEnvironment::prepareDesktopEnvironment();
 
     // Enable High DPI scaling for better display on 4K/5K monitors
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
     
     QApplication app(argc, argv);
     

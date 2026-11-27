@@ -80,7 +80,11 @@ void FileManager::addToRecentFiles(const QString& filePath) {
 }
 
 QString FileManager::getDefaultSaveLocation() {
+#ifdef Q_OS_ANDROID
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Documents";
+#else
     QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + "/CommLink";
+#endif
     QDir().mkpath(path);
     return path;
 }

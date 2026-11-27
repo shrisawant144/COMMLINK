@@ -210,7 +210,7 @@ QList<QVariantMap> MessageHistoryManager::getMessages(const QString &filter,
 
     // Enhanced filter parsing
     if (!filter.isEmpty()) {
-        QStringList filterParts = filter.split(' ', QString::SkipEmptyParts);
+        QStringList filterParts = filter.split(' ', Qt::SkipEmptyParts);
         for (const QString &part : filterParts) {
             if (part.startsWith("direction:")) {
                 conditions << "direction = ?";

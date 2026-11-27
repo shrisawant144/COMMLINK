@@ -1,7 +1,7 @@
 #pragma once
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenuBar>
-#include <QtWidgets/QAction>
+#include <QAction>
 #include <QtCore/QSettings>
 #include <QtGui/QCloseEvent>
 
@@ -396,8 +396,15 @@ private:
     QList<DataMessage> receivedMessages;
 
     // Constants
+#ifdef COMMLINK_MOBILE_UI
+    static constexpr int DEFAULT_WIDTH = 390;
+    static constexpr int DEFAULT_HEIGHT = 780;
+    static constexpr int MIN_WIDTH = 280;
+    static constexpr int MIN_HEIGHT = 320;
+#else
     static constexpr int DEFAULT_WIDTH = 1400;
     static constexpr int DEFAULT_HEIGHT = 800;
     static constexpr int MIN_WIDTH = 1000;
     static constexpr int MIN_HEIGHT = 600;
+#endif
 };

@@ -3,6 +3,7 @@
 #include "commlink/ui/historytab.h"
 
 #include <QTextCursor>
+#include <QComboBox>
 #include <QtCore/QDateTime>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
@@ -117,6 +118,17 @@ void DisplayPanel::setupUI()
     trafficScroll->setWidgetResizable(true);
     trafficScroll->setWidget(traffic);
     tabWidget->addTab(trafficScroll, "Traffic");
+#ifdef COMMLINK_MOBILE_UI
+    auto* view = new QComboBox;
+    view->setAccessibleName("Inspection View");
+    for (int index = 0; index < tabWidget->count(); ++index)
+        view->addItem(tabWidget->tabText(index));
+    tabWidget->tabBar()->hide();
+    view->setCurrentIndex(tabWidget->count() - 1);
+    tabWidget->setCurrentIndex(view->currentIndex());
+    connect(view, qOverload<int>(&QComboBox::currentIndexChanged), tabWidget, &QTabWidget::setCurrentIndex);
+    layout->addWidget(view);
+#endif
     for (auto* edit : {clientReceivedEdit, serverReceivedEdit, sentEdit, allMessagesEdit, logsEdit})
         edit->document()->setMaximumBlockCount(4000);
     layout->addWidget(tabWidget);
@@ -125,17 +137,29 @@ void DisplayPanel::setupUI()
     auto *btnLayout = new QHBoxLayout();
     btnLayout->setSpacing(8);
 
+#ifdef COMMLINK_MOBILE_UI
+    clearBtn = new QPushButton("Clear");
+#else
     clearBtn = new QPushButton("Clear Messages");
+#endif
     clearBtn->setMinimumHeight(BTN_HEIGHT);
     clearBtn->setToolTip("Clear all message displays (Ctrl+L)");
     connect(clearBtn, &QPushButton::clicked, this, &DisplayPanel::clearAllMessages);
 
+#ifdef COMMLINK_MOBILE_UI
+    exportMessagesBtn = new QPushButton("Export");
+#else
     exportMessagesBtn = new QPushButton("Export Messages");
+#endif
     exportMessagesBtn->setMinimumHeight(BTN_HEIGHT);
     exportMessagesBtn->setToolTip("Export received messages to file (Ctrl+E)");
     connect(exportMessagesBtn, &QPushButton::clicked, this, &DisplayPanel::exportMessagesRequested);
 
+#ifdef COMMLINK_MOBILE_UI
+    exportLogsBtn = new QPushButton("Logs");
+#else
     exportLogsBtn = new QPushButton("Export Logs");
+#endif
     exportLogsBtn->setMinimumHeight(BTN_HEIGHT);
     exportLogsBtn->setToolTip("Export application logs to file (Ctrl+Shift+E)");
     connect(exportLogsBtn, &QPushButton::clicked, this, &DisplayPanel::exportLogsRequested);

@@ -5,13 +5,15 @@
 #include <QtWidgets/QScrollArea>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QFileDialog>
-#include <QtWidgets/QShortcut>
-#include <QtWidgets/QActionGroup>
+#include <QShortcut>
+#include <QActionGroup>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QTableWidget>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QTabWidget>
+#include <QtWidgets/QScroller>
 #include <QtWidgets/QTableWidgetItem>
 #include <QtWidgets/QAbstractItemView>
 #include <QtNetwork/QTcpSocket>
@@ -257,6 +259,46 @@ void MainWindow::initializeNetworkComponents()
 
 void MainWindow::setupUI()
 {
+#ifdef COMMLINK_MOBILE_UI
+    auto* tabs = new QTabWidget(this);
+    tabs->setObjectName("phoneTabs");
+    tabs->setTabPosition(QTabWidget::South);
+    tabs->setDocumentMode(true);
+    setCentralWidget(tabs);
+    workbenchPanel = new WorkbenchPanel;
+    workbenchPanel->setProfiles(workspaceStore.names());
+    connectionPanel = new ConnectionPanel;
+    serverPanel = new ServerPanel;
+    messagePanel = new MessagePanel;
+    networkInfoPanel = new NetworkInfoPanel;
+    statusPanel = new StatusPanel;
+    displayPanel = new DisplayPanel(&historyManager);
+    for (auto* panel : {static_cast<QWidget*>(connectionPanel), static_cast<QWidget*>(serverPanel)}) {
+        for (auto* combo : panel->findChildren<QComboBox*>()) {
+            combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+            combo->setMinimumContentsLength(8);
+        }
+    }
+    auto page = [](const QList<QWidget*>& panels) {
+        auto* content = new QWidget;
+        auto* layout = new QVBoxLayout(content);
+        layout->setContentsMargins(6, 6, 6, 6);
+        layout->setSpacing(10);
+        for (auto* panel : panels)
+            layout->addWidget(panel);
+        layout->addStretch();
+        auto* scroll = new QScrollArea;
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setWidgetResizable(true);
+        scroll->setWidget(content);
+        QScroller::grabGesture(scroll->viewport(), QScroller::TouchGesture);
+        return scroll;
+    };
+    tabs->addTab(page({connectionPanel, serverPanel, networkInfoPanel, statusPanel}), "Connect");
+    tabs->addTab(page({workbenchPanel, messagePanel}), "Send");
+    tabs->addTab(displayPanel, "Inspect");
+    return;
+#endif
     auto *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
     
@@ -353,20 +395,27 @@ void MainWindow::setupMenuBar()
     
     // Help menu
     auto *helpMenu = menuBar->addMenu("&Help");
+#ifdef COMMLINK_MOBILE_UI
+    auto* about = helpMenu->addAction("About CommLink");
+    connect(about, &QAction::triggered, this, [this] {
+        QMessageBox::about(this, "CommLink", "CommLink\nTCP, UDP, WebSocket and HTTP communication workbench.\nVersion 1.0.0");
+    });
+#else
     auto *shortcutsAction = new QAction("Keyboard &Shortcuts", this);
     shortcutsAction->setShortcut(QKeySequence("F1"));
     connect(shortcutsAction, &QAction::triggered, this, &MainWindow::showShortcutsHelp);
     helpMenu->addAction(shortcutsAction);
+#endif
 }
 
 void MainWindow::setupShortcuts()
 {
     // Send message (Ctrl+Return)
-    auto *sendShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Return), this);
+    auto *sendShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Return), this);
     connect(sendShortcut, &QShortcut::activated, this, &MainWindow::onSendRequested);
     
     // Connect/Disconnect (Ctrl+K)
-    auto *connectShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_K), this);
+    auto *connectShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), this);
     connect(connectShortcut, &QShortcut::activated, this, &MainWindow::onConnectRequested);
     
     // Load file (Ctrl+O)
@@ -378,19 +427,19 @@ void MainWindow::setupShortcuts()
     connect(saveShortcut, &QShortcut::activated, this, &MainWindow::onSaveMessageRequested);
     
     // Clear messages (Ctrl+L)
-    auto *clearShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_L), this);
+    auto *clearShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), this);
     connect(clearShortcut, &QShortcut::activated, displayPanel, &DisplayPanel::clearAllMessages);
     
     // Export messages (Ctrl+E)
-    auto *exportShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_E), this);
+    auto *exportShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_E), this);
     connect(exportShortcut, &QShortcut::activated, this, &MainWindow::onExportMessagesRequested);
     
     // Export logs (Ctrl+Shift+E)
-    auto *exportLogsShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_E), this);
+    auto *exportLogsShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E), this);
     connect(exportLogsShortcut, &QShortcut::activated, this, &MainWindow::onExportLogsRequested);
     
     // Start/Stop Server (Ctrl+R)
-    auto *serverShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_R), this);
+    auto *serverShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_R), this);
     connect(serverShortcut, &QShortcut::activated, this, [this]() {
         if (serverPanel->isServerRunning()) {
             onStopServerRequested();
@@ -1254,6 +1303,12 @@ void MainWindow::onThemeChanged()
 {
     // Apply theme to the entire application
     ThemeManager::instance().applyTheme(this);
+#ifdef COMMLINK_MOBILE_UI
+    setStyleSheet(styleSheet() + QStringLiteral(
+        "QPushButton, QComboBox, QLineEdit, QSpinBox, QDateTimeEdit { min-height: 34px; }"
+        "QTabBar::tab { padding: 10px 8px; min-height: 24px; }"
+        "QMenuBar::item { padding: 10px; }"));
+#endif
     
     // Update menu checkmarks
     ThemeManager::Theme theme = ThemeManager::instance().currentTheme();
@@ -1449,7 +1504,9 @@ void MainWindow::saveSettings()
 void MainWindow::loadSettings()
 {
     QSettings settings("CommLink", "ModularGUI");
+#ifndef COMMLINK_MOBILE_UI
     restoreGeometry(settings.value("geometry").toByteArray());
+#endif
     
     if (settings.contains("clientProtocol")) {
         connectionPanel->setProtocol(settings.value("clientProtocol").toString());

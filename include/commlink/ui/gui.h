@@ -12,7 +12,7 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QScrollArea>
-#include <QtWidgets/QShortcut>
+#include <QShortcut>
 #include <QtGui/QIntValidator>
 #include <QtGui/QCloseEvent>
 #include <QtCore/QJsonDocument>

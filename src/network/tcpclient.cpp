@@ -11,7 +11,7 @@ TcpClient::TcpClient(QObject *parent)
     connect(m_socket, &QTcpSocket::connected, this, &TcpClient::onConnected);
     connect(m_socket, &QTcpSocket::disconnected, this, &TcpClient::onDisconnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpClient::onReadyRead);
-    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::error), 
+    connect(m_socket, &QTcpSocket::errorOccurred,
             this, &TcpClient::onError);
     connect(m_connectionTimer, &QTimer::timeout, this, &TcpClient::onConnectionTimeout);
 }

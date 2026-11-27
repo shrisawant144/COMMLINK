@@ -1,5 +1,9 @@
 # Build directories
 /build/
+/build-*/
+/dist/
+/artifacts/
+/signing/
 /install/
 *.user
 
@@ -29,6 +33,15 @@ ui_*.h
 *.so
 *.a
 *.exe
+*.apk
+*.aab
+*.idsig
+*.p12
+*.pfx
+*.jks
+*.keystore
+keystore-password
+/android/assets/source/
 
 # Documentation
 /docs/api/html/
@@ -43,3 +56,6 @@ Thumbs.db
 *.rpm
 *.tar.gz
 .cache/
+
+# Python
+__pycache__/

@@ -14,7 +14,7 @@
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QListWidget>
-#include <QtWidgets/QShortcut>
+#include <QShortcut>
 #include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QScrollArea>
 #include <QtWidgets/QTableWidget>
@@ -32,10 +32,10 @@
 #include <QtGui/QFont>
 #include <QtGui/QPalette>
 #include <QtWidgets/QFileDialog>
-#include <QtWidgets/QAction>
+#include <QAction>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QActionGroup>
+#include <QActionGroup>
 #include <QtGui/QIcon>
 #include "commlink/ui/thememanager.h"
 
@@ -1548,11 +1548,11 @@ void CommLinkGUI::onHttpPollingToggled(bool enabled) {
 
 void CommLinkGUI::setupShortcuts() {
     // Send message (Ctrl+Return is more intuitive for send, Ctrl+S for save)
-    auto *sendShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Return), this);
+    auto *sendShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Return), this);
     connect(sendShortcut, &QShortcut::activated, this, &CommLinkGUI::onSend);
     
     // Connect/Disconnect (Ctrl+K)
-    auto *connectShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_K), this);
+    auto *connectShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), this);
     connect(connectShortcut, &QShortcut::activated, this, &CommLinkGUI::onConnect);
     
     // Load file (Ctrl+O - Open)
@@ -1564,19 +1564,19 @@ void CommLinkGUI::setupShortcuts() {
     connect(saveShortcut, &QShortcut::activated, this, &CommLinkGUI::onSaveMessage);
     
     // Clear messages (Ctrl+L)
-    auto *clearShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_L), this);
+    auto *clearShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), this);
     connect(clearShortcut, &QShortcut::activated, this, &CommLinkGUI::onClearMessages);
     
     // Export messages (Ctrl+E)
-    auto *exportShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_E), this);
+    auto *exportShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_E), this);
     connect(exportShortcut, &QShortcut::activated, this, &CommLinkGUI::onExportMessages);
     
     // Export logs (Ctrl+Shift+E)
-    auto *exportLogsShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_E), this);
+    auto *exportLogsShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E), this);
     connect(exportLogsShortcut, &QShortcut::activated, this, &CommLinkGUI::onExportLogs);
     
     // Start/Stop Server (Ctrl+R - Run)
-    auto *serverShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_R), this);
+    auto *serverShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_R), this);
     connect(serverShortcut, &QShortcut::activated, this, [this]() {
         if (startReceiveBtn->isEnabled()) {
             onStartReceive();

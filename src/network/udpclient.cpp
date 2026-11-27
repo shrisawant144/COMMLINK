@@ -8,7 +8,7 @@ UdpClient::UdpClient(QObject *parent)
         m_connected = true;
         emit connected();
     });
-    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QUdpSocket::error), this,
+    connect(m_socket, &QUdpSocket::errorOccurred, this,
             [this](QAbstractSocket::SocketError) {
                 m_connected = false;
                 emit errorOccurred(m_socket->errorString());

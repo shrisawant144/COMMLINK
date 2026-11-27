@@ -5,10 +5,12 @@
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QRegularExpression>
+#include <QScrollArea>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QTextEdit>
@@ -25,7 +27,11 @@ WorkbenchPanel::WorkbenchPanel(QWidget* parent) : QWidget(parent) {
     profiles->setPlaceholderText("Workspace name");
     profiles->lineEdit()->setPlaceholderText("Workspace name");
     layout->addWidget(profiles);
+#ifdef COMMLINK_MOBILE_UI
+    auto* buttons = new QGridLayout;
+#else
     auto* buttons = new QHBoxLayout;
+#endif
     auto* save = new QPushButton("Save");
     auto* open = new QPushButton("Open");
     optionsButton = new QPushButton("Options");
@@ -34,10 +40,17 @@ WorkbenchPanel::WorkbenchPanel(QWidget* parent) : QWidget(parent) {
     stopButton->setEnabled(false);
     replayStatus = new QLabel("Replay ready");
     replayStatus->setWordWrap(true);
+#ifdef COMMLINK_MOBILE_UI
+    buttons->addWidget(save, 0, 0);
+    buttons->addWidget(open, 0, 1);
+    buttons->addWidget(optionsButton, 1, 0);
+    buttons->addWidget(replayButton, 1, 1);
+#else
     buttons->addWidget(save);
     buttons->addWidget(open);
     buttons->addWidget(optionsButton);
     buttons->addWidget(replayButton);
+#endif
     layout->addLayout(buttons);
     outer->addWidget(group);
     auto* status = new QHBoxLayout;
@@ -157,6 +170,21 @@ void WorkbenchPanel::editOptions() {
     varsLayout->addWidget(new QLabel("Delete history older than (applied on startup):"));
     varsLayout->addWidget(retention);
     tabs->addTab(varsPage, "Variables / History");
+#ifdef COMMLINK_MOBILE_UI
+    for (int index = 0; index < tabs->count(); ++index) {
+        auto* content = tabs->widget(index);
+        const auto title = tabs->tabText(index);
+        for (auto* form : content->findChildren<QFormLayout*>())
+            form->setRowWrapPolicy(QFormLayout::WrapAllRows);
+        tabs->removeTab(index);
+        auto* scroll = new QScrollArea;
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setWidget(content);
+        tabs->insertTab(index, scroll, title);
+    }
+    dialog.resize(window()->size());
+#endif
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     layout->addWidget(buttons);
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
@@ -209,7 +237,20 @@ void WorkbenchPanel::editOptions() {
 void WorkbenchPanel::editReplay() {
     QDialog dialog(this);
     dialog.setWindowTitle("Replay Current Payload");
+#ifdef COMMLINK_MOBILE_UI
+    auto* outer = new QVBoxLayout(&dialog);
+    auto* content = new QWidget;
+    auto* layout = new QFormLayout(content);
+    layout->setRowWrapPolicy(QFormLayout::WrapAllRows);
+    auto* scroll = new QScrollArea;
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
+    scroll->setWidget(content);
+    outer->addWidget(scroll);
+    dialog.resize(window()->size());
+#else
     auto* layout = new QFormLayout(&dialog);
+#endif
     const auto previous = settings["replay"].toObject();
     auto* count = new QSpinBox;
     count->setRange(1, 10000);
@@ -238,7 +279,11 @@ void WorkbenchPanel::editReplay() {
     note->setWordWrap(true);
     layout->addRow(note);
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+#ifdef COMMLINK_MOBILE_UI
+    outer->addWidget(buttons);
+#else
     layout->addRow(buttons);
+#endif
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     if (dialog.exec() != QDialog::Accepted)

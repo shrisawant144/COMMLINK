@@ -256,9 +256,9 @@ QByteArray HttpServer::buildResponse(int statusCode, const QByteArray& body, Dat
     }
     
     QByteArray response;
-    response += "HTTP/1.1 " + QString::number(statusCode) + " " + statusText + "\r\n";
-    response += "Content-Type: " + contentType + "\r\n";
-    response += "Content-Length: " + QString::number(body.size()) + "\r\n";
+    response += ("HTTP/1.1 " + QString::number(statusCode) + " " + statusText + "\r\n").toUtf8();
+    response += ("Content-Type: " + contentType + "\r\n").toUtf8();
+    response += ("Content-Length: " + QString::number(body.size()) + "\r\n").toUtf8();
     response += "Server: CommLink/1.0\r\n";
     response += "Access-Control-Allow-Origin: *\r\n";
     response += "Connection: keep-alive\r\n";

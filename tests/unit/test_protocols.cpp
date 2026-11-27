@@ -113,7 +113,7 @@ private slots:
         auto* socket = peer.nextPendingConnection();
         QTRY_VERIFY(socket->bytesAvailable() > 0);
         const auto request = socket->readAll();
-        QVERIFY(request.contains("X-Test: custom"));
+        QVERIFY(request.toLower().contains("x-test: custom"));
         QVERIFY(request.contains("Authorization: Bearer example"));
         socket->write("HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: "
                       "12\r\nX-Trace: abc\r\nConnection: close\r\n\r\n{\"ok\":false}");
@@ -121,7 +121,7 @@ private slots:
         QTRY_COMPARE(metadata.count(), 1);
         QTRY_COMPARE(received.count(), 1);
         QCOMPARE(metadata[0][2].toInt(), 404);
-        QVERIFY(metadata[0][3].toMap().contains("X-Trace"));
+        QVERIFY(QStringList(metadata[0][3].toMap().keys()).contains("X-Trace", Qt::CaseInsensitive));
         QVERIFY(metadata[0][4].toLongLong() >= 0);
         QCOMPARE(qvariant_cast<DataMessage>(received[0][0]).serialize(),
                  QByteArray("{\"ok\":false}"));

@@ -90,9 +90,9 @@ COMMLINK/
 
 ## Build Requirements
 
-- CMake 3.8.2 or newer
+- CMake 3.16 or newer
 - A C++17 compiler
-- Qt 5.15 with `Core`, `Widgets`, `Network`, `Sql`, and `WebSockets` (`Test` for automated tests)
+- Qt 5.15 or Qt 6.2+ with `Core`, `Widgets`, `Network`, `Sql`, and `WebSockets` (`Test` for automated tests)
 
 ## Quick Start
 
@@ -161,6 +161,8 @@ ctest --test-dir build --output-on-failure
 
 GitHub Actions builds Debug and Release on Linux, runs the headless and loopback suites, and builds a Debian package. Remote workflow runs start when the branches are pushed.
 
+See [Platform Packaging](docs/platform-packaging.md) to build the Windows single-file EXE and the signed Android APK.
+
 ## Development Notes
 
 - The default executable target is `commlink`.
@@ -173,6 +175,7 @@ GitHub Actions builds Debug and Release on Linux, runs the headless and loopback
 - [Quick Start](docs/quick-start.md)
 - [User Guide](docs/user-guide-simple.md)
 - [Developer Guide](docs/developer-guide.md)
+- [Platform Packaging](docs/platform-packaging.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Code Flow](docs/CODE_FLOW.md)
 - [Doxygen Guide](docs/DOXYGEN.md)

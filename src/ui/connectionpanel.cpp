@@ -66,6 +66,9 @@ void ConnectionPanel::setupUI()
 
     // HTTP polling option
     httpPollingCheckbox = new QCheckBox("Enable Long-Polling (Auto-receive messages)");
+#ifdef COMMLINK_MOBILE_UI
+    httpPollingCheckbox->setText("Auto-receive (polling)");
+#endif
     httpPollingCheckbox->setVisible(false);
     httpPollingCheckbox->setToolTip(
         "Enable automatic polling to receive messages from HTTP server.\n"
